@@ -1,0 +1,53 @@
+/* ═══════════════════════════════════════════════════════════
+   APP-LEVEL STYLES
+   Styles specific to App.jsx layout and page transitions.
+   Design system tokens live in index.css.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Main content area — pushes content below fixed navbar */
+.app-main {
+  min-height: 100vh;
+  padding-top: 64px; /* Height of fixed navbar */
+}
+
+/* Page transition wrapper (optional — for future route transitions) */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Container widths matching the mockup's max-w patterns */
+.container-sm {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.container-md {
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.container-lg {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+@keyframes fly {
+  0% { transform: translateX(-100vw) rotate(-12deg); }
+  100% { transform: translateX(100vw) rotate(-12deg); }
+}

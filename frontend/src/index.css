@@ -1,0 +1,481 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════
+   FREEL DESIGN SYSTEM — Ocean Teal Theme
+   Source: v2/ux_mockups/landingPage.html (lines 17-87)
+   ═══════════════════════════════════════════════════════════ */
+
+@theme {
+  /* ─── Brand Colors ─── */
+  --color-brand-teal: #00BFA5;
+  --color-brand-teal-dark: #00a892;
+  --color-brand-indigo: #5A4FCF;
+  --color-brand-navy: #1E293B;
+  --color-brand-light: #F8FAFC;
+  --color-brand-gray: #64748B;
+  --color-brand-darkbg: #020817;
+
+  /* ─── Semantic / UI Colors ─── */
+  --color-slate-50: #F8FAFC;
+  --color-slate-100: #F1F5F9;
+  --color-slate-200: #E2E8F0;
+  --color-slate-300: #CBD5E1;
+  --color-slate-400: #94A3B8;
+  --color-slate-500: #64748B;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1E293B;
+  --color-slate-900: #0F172A;
+
+  /* ─── UI Semantic Aliases ─── */
+  /* Used across Services, Solutions, Blog, Contact, About pages */
+  --color-ui-gray: #64748B;       /* Muted body text */
+  --color-ui-border: #E2E8F0;     /* Card/section borders */
+  --color-ui-surface: #F8FAFC;    /* Light surface backgrounds */
+
+  /* ─── Status Colors ─── */
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+  --color-info: #3B82F6;
+
+  /* ─── Font Family ─── */
+  --font-sans: 'Outfit', sans-serif;
+
+  /* ─── Box Shadows ─── */
+  --shadow-premium: 0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px rgba(0, 191, 165, 0.3);
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-card-hover: 0 10px 40px rgba(0, 0, 0, 0.08);
+
+  /* ─── Border Radius ─── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* ─── Transitions ─── */
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+  --transition-slow: 300ms ease;
+
+  /* ─── Spacing (max-width containers) ─── */
+  --container-sm: 900px;
+  --container-md: 1100px;
+  --container-lg: 1200px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL BASE STYLES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Base body — matches mockup: font-sans text-brand-navy antialiased bg-white */
+body {
+  font-family: 'Outfit', sans-serif;
+  color: #1E293B;
+  background: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection highlight — matches mockup: selection:bg-brand-teal selection:text-white */
+::selection {
+  background-color: #00BFA5;
+  color: white;
+}
+
+/* Focus ring for accessibility */
+:focus-visible {
+  outline: 2px solid #00BFA5;
+  outline-offset: 2px;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   CUSTOM UTILITY CLASSES
+   Extracted from landingPage.html <style> block (lines 43-87)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Text gradient (teal → indigo) — used on hero headings */
+.text-gradient {
+  background: linear-gradient(135deg, #00BFA5, #5A4FCF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── UI Semantic Utility Classes ─── */
+/* Mirrors --color-ui-* tokens for Tailwind usage (text-ui-gray, bg-ui-surface, etc.) */
+.text-ui-gray { color: #64748B; }
+.bg-ui-surface { background-color: #F8FAFC; }
+.border-ui-border { border-color: #E2E8F0; }
+
+/* ─── Live Pulse Dot ─── */
+/* Used on Landing hero badge, RFQ page, Rate Comparison page */
+.live-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00BFA5;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+/* ─── Scroll Reveal Animation ─── */
+/* Used by Services, Solutions, Blog, About pages (local .reveal classes) */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* Background gradient (teal → indigo) — used on CTAs, step circles */
+.bg-gradient-premium {
+  background: linear-gradient(135deg, #00BFA5, #5A4FCF);
+}
+
+/* Section vertical padding — consistent spacing across all sections */
+.section-padding {
+  padding-top: 100px;
+  padding-bottom: 100px;
+}
+
+/* Card hover lift effect — used on service cards, feature cards */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  border-color: var(--hover-color, #E2E8F0);
+}
+
+/* Subtle card hover (smaller lift) — for smaller interactive elements */
+.card-hover-sm {
+  transition: all 0.2s ease;
+}
+
+.card-hover-sm:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* Radial glow — top center (used on hero section) */
+.radial-glow-top {
+  background: radial-gradient(circle at top center, rgba(0, 191, 165, 0.08) 0%, rgba(255, 255, 255, 0) 60%);
+}
+
+/* Radial glow — dark variant (used on dark CTA sections) */
+.radial-glow-dark {
+  background: radial-gradient(circle at center, rgba(0, 191, 165, 0.15) 0%, rgba(2, 8, 23, 1) 70%);
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   COMPONENT STYLES
+   Reusable classes for common UI patterns across pages
+   ═══════════════════════════════════════════════════════════ */
+
+/* Section label badge — small pill above section titles */
+.section-label {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 9999px;
+  margin-bottom: 16px;
+}
+
+.section-label-teal {
+  background: #F0FDFA;
+  color: #00BFA5;
+}
+
+.section-label-indigo {
+  background: #EEF2FF;
+  color: #5A4FCF;
+}
+
+.section-label-slate {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+/* Premium card — rounded corners, border, shadow, padding */
+.card-premium {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  padding: 40px;
+}
+
+/* Stat badge — small pill with number + label */
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #F8FAFC;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  color: #475569;
+  border: 1px solid #F1F5F9;
+}
+
+.stat-badge strong {
+  font-weight: 700;
+  color: #00BFA5;
+}
+
+/* Step circle — numbered circles for "How it works" flows */
+.step-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.step-circle-active {
+  background: linear-gradient(135deg, #00BFA5, #5A4FCF);
+  color: white;
+  box-shadow: 0 0 20px rgba(0, 191, 165, 0.3);
+}
+
+.step-circle-inactive {
+  background: #F1F5F9;
+  color: #1E293B;
+  border: 1px solid #E2E8F0;
+}
+
+/* Button styles — primary, secondary, outline */
+.btn-primary {
+  display: inline-block;
+  padding: 14px 32px;
+  background: #00BFA5;
+  color: white;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 191, 165, 0.2);
+}
+
+.btn-primary:hover {
+  background: #00a892;
+}
+
+.btn-secondary {
+  display: inline-block;
+  padding: 14px 32px;
+  border: 1px solid #5A4FCF;
+  color: #5A4FCF;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(90, 79, 207, 0.05);
+}
+
+.btn-gradient {
+  display: inline-block;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #00BFA5, #5A4FCF);
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 24px;
+  box-shadow: 0 0 20px rgba(0, 191, 165, 0.3);
+  transition: opacity 0.2s ease;
+}
+
+.btn-gradient:hover {
+  opacity: 0.9;
+}
+
+/* Icon container — rounded square for feature icons */
+.icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+}
+
+/* Tag / Badge — small status indicators */
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  border-radius: 4px;
+}
+
+.tag-green  { background: #DCFCE7; color: #15803D; }
+.tag-blue   { background: #DBEAFE; color: #1D4ED8; }
+.tag-amber  { background: #FEF3C7; color: #B45309; }
+.tag-red    { background: #FEE2E2; color: #B91C1C; }
+
+/* Mock browser chrome — used in platform preview sections */
+.browser-chrome {
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  background: white;
+}
+
+.browser-chrome-header {
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.browser-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.browser-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.browser-dots span:nth-child(1) { background: #FF5F56; }
+.browser-dots span:nth-child(2) { background: #FFBD2E; }
+.browser-dots span:nth-child(3) { background: #27C93F; }
+
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLLBAR STYLING
+   ═══════════════════════════════════════════════════════════ */
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbar — subtle, matches brand light palette */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATIONS
+   Reusable micro-animations for engagement
+   ═══════════════════════════════════════════════════════════ */
+
+/* Fade in up — for section entrance animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Pulse glow — for highlighted CTAs */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(0, 191, 165, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(0, 191, 165, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Float — subtle hover float for cards */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   RESPONSIVE UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding-top: 60px;
+    padding-bottom: 60px;
+  }
+
+  .card-premium {
+    padding: 24px;
+    border-radius: 18px;
+  }
+}
