@@ -5,6 +5,7 @@ import CinematicHero from './CinematicHero';
 import GlobalScale from './GlobalScale';
 import HowFreightMoves from './HowFreightMoves';
 import CommandCenter from './CommandCenter';
+import './PlatformPreview.css';
 import './Landing.css';
 
 export default function Landing() {
@@ -66,20 +67,25 @@ export default function Landing() {
           </Reveal>
           <div className="services-grid">
             {[
-              { icon: '✈️', bg: 'bg-blue-50', title: 'Air Freight', desc: 'Global air cargo with IATA-certified agents. Ship general, hazardous, pharma, and perishable cargo to 150+ airports.', s1: '150+', s1l: 'Airports', s2: '24hr', s2l: 'Express' },
-              { icon: '🚢', bg: 'bg-cyan-50', title: 'Sea Freight', desc: 'FCL & LCL shipments via top shipping lines. 20ft, 40ft, Reefer containers with HAZ cargo support.', s1: '50+', s1l: 'Shipping Lines', s2: '7-25', s2l: 'Days Transit' },
-              { icon: '🚛', bg: 'bg-amber-50', title: 'Road Transport', desc: 'Full Truck Load & Part Load across India with GPS tracking. 500+ verified transporters with real-time visibility.', s1: '500+', s1l: 'Transporters', s2: 'Pan India', s2l: 'Coverage' },
+              { img: '/images/air-freight/Figure_loading_mail_sacks_airplane_202606071514.jpeg', badge: 'Air Freight', title: 'Global Air Cargo', desc: 'Global air cargo with IATA-certified agents. Ship general, hazardous, pharma, and perishable cargo to 150+ airports.', s1: '150+', s1l: 'Airports', s2: '24hr', s2l: 'Express' },
+              { img: '/images/sea-freight/Figure_overlooking_container_ship_202606071550.jpeg', badge: 'Sea Freight', title: 'Ocean Freight FCL & LCL', desc: 'FCL & LCL shipments via top shipping lines. 20ft, 40ft, Reefer containers with HAZ cargo support.', s1: '50+', s1l: 'Shipping Lines', s2: '7-25', s2l: 'Days Transit' },
+              { img: '/images/road-freight/Figure_watching_semi_trucks_travel_202606071631.jpeg', badge: 'Road Transport', title: 'Pan-India Trucking', desc: 'Full Truck Load & Part Load across India with GPS tracking. 500+ verified transporters with real-time visibility.', s1: '500+', s1l: 'Transporters', s2: 'Pan India', s2l: 'Coverage' },
             ].map((s, i) => (
               <Reveal key={i} delay={`reveal-delay-${i + 1}`}>
                 <TiltCard>
                   <div className="service-card">
-                    <div className={`service-icon ${s.bg}`}>{s.icon}</div>
-                    <h3 className="text-xl font-bold text-brand-navy mb-3">{s.title}</h3>
-                    <p className="text-slate-600 text-sm leading-relaxed mb-6">{s.desc}</p>
-                    <div className="service-stats">
-                      <div><span className="font-bold text-brand-navy">{s.s1}</span> <span className="text-slate-500">{s.s1l}</span></div>
-                      <div className="w-px bg-slate-200"></div>
-                      <div><span className="font-bold text-brand-navy">{s.s2}</span> <span className="text-slate-500">{s.s2l}</span></div>
+                    <div className="service-card-image">
+                      <img src={s.img} alt={s.title} />
+                      <div className="service-badge">{s.badge}</div>
+                    </div>
+                    <div className="service-card-content">
+                      <h3 className="text-xl font-bold text-brand-navy mb-3">{s.title}</h3>
+                      <p className="text-slate-600 text-sm leading-relaxed mb-6">{s.desc}</p>
+                      <div className="service-stats">
+                        <div><span className="font-bold text-brand-navy">{s.s1}</span> <span className="text-slate-500">{s.s1l}</span></div>
+                        <div className="w-px bg-slate-200"></div>
+                        <div><span className="font-bold text-brand-navy">{s.s2}</span> <span className="text-slate-500">{s.s2l}</span></div>
+                      </div>
                     </div>
                   </div>
                 </TiltCard>
@@ -131,88 +137,150 @@ export default function Landing() {
       </section>
 
       {/* ═══ PLATFORM PREVIEW ═══ */}
-      <section className="section-padding bg-white">
-        <div className="container-md">
+      <section className="platform-preview-section">
+        {/* Glows */}
+        <div className="pp-glow pp-glow-left"></div>
+        <div className="pp-glow pp-glow-right"></div>
+
+        <div className="container-md relative z-10">
+          {/* Header */}
           <Reveal>
-            <SectionHeader label="Platform Preview" title="Your Freight Command Center"
-              subtitle="Everything you need to run a high-performance logistics business." />
-          </Reveal>
-          <Reveal>
-            <div className="platform-tabs">
-              {[
-                { id: 'rates', label: '📈 Rate Comparison' },
-                { id: 'tracking', label: '📍 Live Tracking' },
-                { id: 'rfq', label: '📋 RFQ System' },
-                { id: 'compliance', label: '🛡️ Compliance' },
-              ].map(t => (
-                <button key={t.id} className={`platform-tab ${activeTab === t.id ? 'active' : ''}`}
-                  onClick={() => setActiveTab(t.id)}>{t.label}</button>
-              ))}
+            <div className="pp-header">
+              <div className="pp-badge">Platform Preview</div>
+              <h2 className="pp-title">Run Your Entire Logistics Operation<br/>From One Intelligent Platform</h2>
+              <p className="pp-subtitle">
+                Compare freight rates, track shipments in real time, manage RFQs, handle compliance and monitor carrier performance from a single connected dashboard.
+              </p>
             </div>
           </Reveal>
-          <Reveal>
-            <div className="platform-browser">
-              <div className="platform-bar">
-                <span className="platform-dot" style={{ background: '#FF5F56' }} />
-                <span className="platform-dot" style={{ background: '#FFBD2E' }} />
-                <span className="platform-dot" style={{ background: '#27C93F' }} />
-                <span className="text-xs text-slate-400 ml-4">🔒 freel.in/dashboard/{activeTab}</span>
+
+          {/* KPI Row */}
+          <Reveal delay="reveal-delay-1">
+            <div className="pp-kpi-row">
+              <div className="pp-kpi-card">
+                <div className="kpi-val"><Counter end={2847} suffix="+" /></div>
+                <div className="kpi-label">Active Shipments</div>
               </div>
-              <div className="platform-content">
-                <div key={activeTab} className="tab-content-animate">
-                  {activeTab === 'rates' && (
-                    <div>
-                      <div className="flex gap-2 mb-4 flex-wrap">
-                        <span className="px-4 py-1.5 bg-brand-teal text-white rounded-md text-sm font-medium">🚛 Road</span>
-                        <span className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-sm transition-colors hover:bg-slate-50 cursor-pointer">✈️ Air</span>
-                        <span className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-sm transition-colors hover:bg-slate-50 cursor-pointer">🚢 Sea</span>
-                      </div>
-                      <table className="w-full text-left text-sm">
-                        <thead><tr className="border-b border-slate-200 text-xs text-slate-500 uppercase">
-                          <th className="py-3 px-3">Vendor</th><th className="py-3 px-3">Rate</th><th className="py-3 px-3">Transit</th><th className="py-3 px-3">Tag</th>
-                        </tr></thead>
-                        <tbody>
-                          <tr className="border-b border-slate-100 stagger-row"><td className="py-3 px-3 font-medium">SafeExpress</td><td className="py-3 px-3 font-bold text-brand-teal">₹58,000</td><td className="py-3 px-3 text-slate-600">2 days</td><td className="py-3 px-3"><span className="tag tag-green">BEST</span></td></tr>
-                          <tr className="border-b border-slate-100 stagger-row"><td className="py-3 px-3 font-medium">TCI Freight</td><td className="py-3 px-3 font-bold">₹60,500</td><td className="py-3 px-3 text-slate-600">2 days</td><td className="py-3 px-3"><span className="tag tag-blue">FAST</span></td></tr>
-                          <tr className="stagger-row"><td className="py-3 px-3 font-medium">VRL Logistics</td><td className="py-3 px-3 font-bold">₹62,000</td><td className="py-3 px-3 text-slate-600">3 days</td><td className="py-3 px-3"><span className="tag tag-amber">RELIABLE</span></td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {activeTab === 'tracking' && (
-                    <div>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">On Road</span><span className="font-bold text-green-600">6 🚛</span></div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">In Air</span><span className="font-bold text-blue-600">3 ✈️</span></div>
-                        <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">At Sea</span><span className="font-bold text-amber-600">2 🚢</span></div>
-                      </div>
-                      <div className="bg-slate-100 rounded-lg h-48 flex items-center justify-center map-scan border border-slate-200 stagger-row" style={{ animationDelay: '0.4s' }}>
-                        <div className="text-center relative z-10">
-                          <div className="flex justify-center items-center gap-2 mb-2"><span className="live-pulse"></span><span className="text-4xl">🗺️</span></div>
-                          <div className="font-bold text-brand-navy">Live Global Tracking</div>
-                          <div className="text-xs text-slate-500 mt-1">GPS • AIS • FlightAware</div>
+              <div className="pp-kpi-card">
+                <div className="kpi-val"><Counter end={500} suffix="+" /></div>
+                <div className="kpi-label">Verified Carriers</div>
+              </div>
+              <div className="pp-kpi-card">
+                <div className="kpi-val"><Counter end={98} suffix=".2%" /></div>
+                <div className="kpi-label">On-Time Delivery</div>
+              </div>
+              <div className="pp-kpi-card">
+                <div className="kpi-val"><Counter end={42} suffix="+" /></div>
+                <div className="kpi-label">Countries Served</div>
+              </div>
+            </div>
+          </Reveal>
+
+          <Reveal delay="reveal-delay-2">
+            <div className="pp-dashboard-area">
+              
+              {/* Floating Badges */}
+              <div className="pp-float-badge badge-tl">
+                <span className="b-val">2,847</span>
+                <span className="b-lbl">Shipments</span>
+              </div>
+              <div className="pp-float-badge badge-tr">
+                <span className="b-val">98.2%</span>
+                <span className="b-lbl">On-Time Rate</span>
+              </div>
+              <div className="pp-float-badge badge-bl">
+                <span className="b-val">24/7</span>
+                <span className="b-lbl">Monitoring</span>
+              </div>
+              <div className="pp-float-badge badge-br">
+                <span className="b-val">500+</span>
+                <span className="b-lbl">Carriers</span>
+              </div>
+
+              {/* Status Indicator */}
+              <div className="pp-status-indicator">
+                <span className="status-dot-green"></span> Platform Online <span className="text-slate-300 mx-2">|</span> Real-Time Logistics Network Active
+              </div>
+
+              {/* Tabs */}
+              <div className="pp-tabs">
+                {[
+                  { id: 'rates', label: '📊 Rate Comparison' },
+                  { id: 'tracking', label: '📍 Live Tracking' },
+                  { id: 'rfq', label: '📦 RFQ System' },
+                  { id: 'compliance', label: '🛡️ Compliance' },
+                ].map(t => (
+                  <button key={t.id} className={`pp-tab ${activeTab === t.id ? 'active' : ''}`}
+                    onClick={() => setActiveTab(t.id)}>{t.label}</button>
+                ))}
+              </div>
+
+              {/* Showcase Container */}
+              <div className="pp-showcase-container">
+                <div className="platform-browser">
+                  <div className="platform-bar">
+                    <span className="platform-dot" style={{ background: '#FF5F56' }} />
+                    <span className="platform-dot" style={{ background: '#FFBD2E' }} />
+                    <span className="platform-dot" style={{ background: '#27C93F' }} />
+                    <span className="text-xs text-slate-400 ml-4">🔒 freel.in/dashboard/{activeTab}</span>
+                  </div>
+                  <div className="platform-content">
+                    <div key={activeTab} className="tab-content-animate">
+                      {activeTab === 'rates' && (
+                        <div>
+                          <div className="flex gap-2 mb-4 flex-wrap">
+                            <span className="px-4 py-1.5 bg-brand-teal text-white rounded-md text-sm font-medium">🚛 Road</span>
+                            <span className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-sm transition-colors hover:bg-slate-50 cursor-pointer">✈️ Air</span>
+                            <span className="px-4 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-sm transition-colors hover:bg-slate-50 cursor-pointer">🚢 Sea</span>
+                          </div>
+                          <table className="w-full text-left text-sm">
+                            <thead><tr className="border-b border-slate-200 text-xs text-slate-500 uppercase">
+                              <th className="py-3 px-3">Vendor</th><th className="py-3 px-3">Rate</th><th className="py-3 px-3">Transit</th><th className="py-3 px-3">Tag</th>
+                            </tr></thead>
+                            <tbody>
+                              <tr className="border-b border-slate-100 stagger-row"><td className="py-3 px-3 font-medium">SafeExpress</td><td className="py-3 px-3 font-bold text-brand-teal">₹58,000</td><td className="py-3 px-3 text-slate-600">2 days</td><td className="py-3 px-3"><span className="tag tag-green">BEST</span></td></tr>
+                              <tr className="border-b border-slate-100 stagger-row"><td className="py-3 px-3 font-medium">TCI Freight</td><td className="py-3 px-3 font-bold">₹60,500</td><td className="py-3 px-3 text-slate-600">2 days</td><td className="py-3 px-3"><span className="tag tag-blue">FAST</span></td></tr>
+                              <tr className="stagger-row"><td className="py-3 px-3 font-medium">VRL Logistics</td><td className="py-3 px-3 font-bold">₹62,000</td><td className="py-3 px-3 text-slate-600">3 days</td><td className="py-3 px-3"><span className="tag tag-amber">RELIABLE</span></td></tr>
+                            </tbody>
+                          </table>
                         </div>
-                      </div>
+                      )}
+                      {activeTab === 'tracking' && (
+                        <div>
+                          <div className="grid grid-cols-3 gap-4 mb-4">
+                            <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">On Road</span><span className="font-bold text-green-600">6 🚛</span></div>
+                            <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">In Air</span><span className="font-bold text-blue-600">3 ✈️</span></div>
+                            <div className="bg-white border border-slate-200 rounded-lg p-3 flex justify-between items-center stagger-row"><span className="text-sm text-slate-600">At Sea</span><span className="font-bold text-amber-600">2 🚢</span></div>
+                          </div>
+                          <div className="bg-slate-100 rounded-lg h-48 flex items-center justify-center map-scan border border-slate-200 stagger-row" style={{ animationDelay: '0.4s' }}>
+                            <div className="text-center relative z-10">
+                              <div className="flex justify-center items-center gap-2 mb-2"><span className="live-pulse"></span><span className="text-4xl">🗺️</span></div>
+                              <div className="font-bold text-brand-navy">Live Global Tracking</div>
+                              <div className="text-xs text-slate-500 mt-1">GPS • AIS • FlightAware</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {activeTab === 'rfq' && (
+                        <div className="space-y-3">
+                          <h3 className="font-bold text-brand-navy mb-3">📋 Active RFQs</h3>
+                          <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center stagger-row hover:-translate-y-1 transition-transform cursor-pointer shadow-sm"><div><div className="font-bold text-sm text-brand-indigo mb-1">#RFQ-089 · JNPT → Rotterdam</div><div className="text-xs text-slate-500">🚢 FCL 40ft · Chemicals (DG) · 6 vendors</div></div><span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-3 py-1 rounded-full font-medium flex items-center gap-2"><span className="loading-spinner w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></span> 4/6 Quotes</span></div>
+                          <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center stagger-row hover:-translate-y-1 transition-transform cursor-pointer shadow-sm"><div><div className="font-bold text-sm text-brand-indigo mb-1">#RFQ-088 · DEL → SIN</div><div className="text-xs text-slate-500">✈️ Air 800kg · Electronics · 4 vendors</div></div><span className="bg-green-50 text-green-700 border border-green-200 text-xs px-3 py-1 rounded-full font-medium">✓ Complete</span></div>
+                        </div>
+                      )}
+                      {activeTab === 'compliance' && (
+                        <div>
+                          <h3 className="font-bold text-brand-navy mb-3">🔍 HSN Code Lookup</h3>
+                          <input type="text" value="Methanol" readOnly className="w-full bg-white border border-brand-teal focus:ring-2 focus:ring-brand-teal/20 rounded-lg px-4 py-2.5 text-sm mb-4 outline-none transition-all" />
+                          <div className="bg-white border border-red-200 p-4 rounded-lg flex gap-4 items-start stagger-row bg-red-50/30">
+                            <div className="text-2xl animate-bounce">⚠️</div>
+                            <div><div className="font-bold text-sm text-red-700">2905.11 — Methanol</div><div className="text-xs text-red-600/80 mt-1">Duty: 7.5% | GST: 18% | Class 3 Flammable</div></div>
+                            <span className="tag tag-red ml-auto shadow-sm shadow-red-200">HAZ</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {activeTab === 'rfq' && (
-                    <div className="space-y-3">
-                      <h3 className="font-bold text-brand-navy mb-3">📋 Active RFQs</h3>
-                      <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center stagger-row hover:-translate-y-1 transition-transform cursor-pointer shadow-sm"><div><div className="font-bold text-sm text-brand-indigo mb-1">#RFQ-089 · JNPT → Rotterdam</div><div className="text-xs text-slate-500">🚢 FCL 40ft · Chemicals (DG) · 6 vendors</div></div><span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs px-3 py-1 rounded-full font-medium flex items-center gap-2"><span className="loading-spinner w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></span> 4/6 Quotes</span></div>
-                      <div className="bg-white border border-slate-200 p-4 rounded-lg flex justify-between items-center stagger-row hover:-translate-y-1 transition-transform cursor-pointer shadow-sm"><div><div className="font-bold text-sm text-brand-indigo mb-1">#RFQ-088 · DEL → SIN</div><div className="text-xs text-slate-500">✈️ Air 800kg · Electronics · 4 vendors</div></div><span className="bg-green-50 text-green-700 border border-green-200 text-xs px-3 py-1 rounded-full font-medium">✓ Complete</span></div>
-                    </div>
-                  )}
-                  {activeTab === 'compliance' && (
-                    <div>
-                      <h3 className="font-bold text-brand-navy mb-3">🔍 HSN Code Lookup</h3>
-                      <input type="text" value="Methanol" readOnly className="w-full bg-white border border-brand-teal focus:ring-2 focus:ring-brand-teal/20 rounded-lg px-4 py-2.5 text-sm mb-4 outline-none transition-all" />
-                      <div className="bg-white border border-red-200 p-4 rounded-lg flex gap-4 items-start stagger-row bg-red-50/30">
-                        <div className="text-2xl animate-bounce">⚠️</div>
-                        <div><div className="font-bold text-sm text-red-700">2905.11 — Methanol</div><div className="text-xs text-red-600/80 mt-1">Duty: 7.5% | GST: 18% | Class 3 Flammable</div></div>
-                        <span className="tag tag-red ml-auto shadow-sm shadow-red-200">HAZ</span>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
