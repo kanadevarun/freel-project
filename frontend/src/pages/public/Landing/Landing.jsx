@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageLoader, ScrollProgress, LogisticsCanvas, StaggerTitle, TiltCard, MagneticBtn, Timeline, StickyStackCards, Reveal, Counter, SectionHeader, StickyShowcase } from './LandingComponents';
-import { Logistics3D } from './Logistics3D';
+import CinematicHero from './CinematicHero';
+import GlobalScale from './GlobalScale';
+import HowFreightMoves from './HowFreightMoves';
+import CommandCenter from './CommandCenter';
 import './Landing.css';
 
 export default function Landing() {
@@ -12,31 +15,17 @@ export default function Landing() {
       <PageLoader />
       <ScrollProgress />
 
-      {/* ═══ HERO — Full Width 3D WebGL Background ═══ */}
-      <section className="hero-section">
-        <div className="hero-3d-background">
-          <Logistics3D />
-        </div>
-        <div className="hero-glow" />
-        <div className="hero-content">
-          <div className="hero-badge"><span className="pulse-dot" /> Now in Early Access</div>
-          <StaggerTitle line1="The Operating System for" line2="Modern Logistics" />
-          <p className="hero-sub">
-            Compare freight rates across Road, Air &amp; Sea. Track shipments in real-time.
-            Manage your entire supply chain from one powerful command center.
-          </p>
-          <div className="hero-cta-row">
-            <MagneticBtn><Link to="/signup" className="btn-primary">Start Free Trial →</Link></MagneticBtn>
-            <MagneticBtn><Link to="/contact" className="btn-secondary">Request Demo</Link></MagneticBtn>
-          </div>
-          <div className="stats-bar">
-            <div className="stat-pill"><strong>500+</strong> Verified Vendors</div>
-            <div className="stat-pill"><strong>3</strong> Transport Modes</div>
-            <div className="stat-pill"><strong>150+</strong> Global Ports</div>
-            <div className="stat-pill"><strong>10K+</strong> Trade Lanes</div>
-          </div>
-        </div>
-      </section>
+      {/* ═══ CINEMATIC HERO ═══ */}
+      <CinematicHero />
+
+      {/* ═══ GLOBAL SCALE — Cinematic Introduction ═══ */}
+      <GlobalScale />
+
+      {/* ═══ HOW FREIGHT MOVES — Cinematic Storytelling ═══ */}
+      <HowFreightMoves />
+
+      {/* ═══ COMMAND CENTER — Visibility & Control ═══ */}
+      <CommandCenter />
 
       {/* ═══ TRUST LOGOS — Marquee ═══ */}
       <Reveal>

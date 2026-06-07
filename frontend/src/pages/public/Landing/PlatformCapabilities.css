@@ -1,0 +1,154 @@
+/* ═══════════════════════════════════════════════════════════
+   PLATFORM CAPABILITIES — Clean Light SaaS Showcase
+   ═══════════════════════════════════════════════════════════ */
+
+.pc-light-section {
+  background: #ffffff;
+  padding: 140px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── HEADER ─── */
+.pc-light-header {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 100px;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-light-section.pc-visible .pc-light-header {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pc-light-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  font-size: clamp(2.5rem, 4.5vw, 3.8rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #0f172a;
+  margin-bottom: 24px;
+}
+
+.pc-light-subtitle {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  color: #64748b;
+  margin: 0 auto;
+}
+
+/* ─── FEATURE BLOCKS ─── */
+.pc-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 120px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.pc-block {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  opacity: 0;
+  transform: translateY(60px);
+  transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-block.block-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── IMAGE WRAPPER ─── */
+.pc-block-image {
+  width: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 30px 60px rgba(15, 23, 42, 0.08), 0 10px 20px rgba(15, 23, 42, 0.04);
+  background: #f8fafc; /* Subtle fallback color before image loads */
+}
+
+.pc-block-image img {
+  width: 100%;
+  display: block;
+  min-height: 400px;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pc-block-image:hover img {
+  transform: scale(1.03);
+}
+
+/* ─── CONTENT ─── */
+.pc-block-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 10px; /* Slight inset so text perfectly aligns visually under rounded corners */
+}
+
+.pc-block-content h3 {
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.pc-block-content p {
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: #64748b;
+  margin: 0;
+  max-width: 800px;
+}
+
+/* ─── CHECKLIST ─── */
+.pc-check-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.pc-check-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pc-check-list .check {
+  color: #00bfa5;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  .pc-light-section {
+    padding: 100px 0;
+  }
+  
+  .pc-blocks {
+    gap: 80px;
+  }
+  
+  .pc-block {
+    gap: 32px;
+  }
+  
+  .pc-check-list {
+    grid-template-columns: 1fr; /* Stack vertically on small screens */
+  }
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './Navbar.css';
 
 const servicesDropdown = [
@@ -44,6 +44,9 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileDropdown, setMobileDropdown] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const location = useLocation();
+
+  const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -55,8 +58,10 @@ export default function Navbar() {
     setMobileDropdown(mobileDropdown === name ? null : name);
   };
 
+  const navClass = (scrolled || mobileOpen || !isLandingPage) ? 'navbar-scrolled' : '';
+
   return (
-    <nav className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`} id="main-navbar">
+    <nav className={`navbar ${navClass}`} id="main-navbar">
       <div className="navbar-container">
         {/* Logo */}
         <Link to="/" className="navbar-logo">Freel</Link>

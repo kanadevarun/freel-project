@@ -1,0 +1,141 @@
+/* ═══════════════════════════════════════════════════════════
+   HOW FREIGHT MOVES — Full Viewport Journey Sequence
+   ═══════════════════════════════════════════════════════════ */
+
+.hfm-section {
+  position: relative;
+  background: #030712;
+  color: #fff;
+  /* Removed top/bottom padding to allow seamless connection */
+  overflow: hidden;
+}
+
+/* ─── Story Panels ─── */
+.hfm-panel {
+  position: relative;
+  height: 100vh;
+  min-height: 700px;
+  width: 100%;
+  display: flex;
+  align-items: flex-end; /* Align content to bottom */
+}
+
+/* Visual Background */
+.hfm-visual {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.hfm-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.08); /* Start slightly zoomed for cinematic reveal */
+  transition: transform 6s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: brightness(0.65) contrast(1.15); /* Keep it dark & moody */
+}
+
+.hfm-panel.hfm-visible .hfm-media {
+  transform: scale(1); /* Smooth zoom out when visible */
+}
+
+/* Cinematic Dark Overlays */
+.hfm-overlay {
+  position: absolute;
+  inset: 0;
+  /* Top to Bottom gradient for bottom text alignment */
+  background: linear-gradient(180deg, rgba(3,7,18,0.2) 0%, rgba(3,7,18,0) 40%, rgba(3,7,18,0.4) 70%, rgba(3,7,18,0.9) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Add a subtle vignette to all panels to focus attention */
+.hfm-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 90% 90% at 50% 50%, transparent 60%, rgba(3,7,18,0.5) 100%);
+  pointer-events: none;
+}
+
+/* Content Layout — Text is minimal, <20% of panel */
+.hfm-content-wrapper {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 64px 80px; /* Generous bottom padding */
+}
+
+.hfm-content {
+  max-width: 600px; /* Minimal text width */
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s, transform 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.3s;
+}
+
+.hfm-panel.hfm-visible .hfm-content {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Typography */
+.hfm-panel-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+  font-size: clamp(2.5rem, 4vw, 4rem);
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #fff;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-shadow: 0 4px 30px rgba(0,0,0,0.6);
+}
+
+.hfm-panel-desc {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", sans-serif;
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.5);
+  margin: 0;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1024px) {
+  .hfm-panel {
+    height: 85vh; /* slightly shorter on tablets to avoid feeling too long */
+    min-height: 600px;
+  }
+  
+  .hfm-content-wrapper {
+    padding: 0 40px 60px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hfm-panel {
+    height: 100svh; /* full mobile screen */
+    min-height: auto;
+  }
+  
+  .hfm-content-wrapper {
+    padding: 0 24px 48px;
+  }
+  
+  .hfm-panel-title {
+    font-size: clamp(2.2rem, 8vw, 3rem);
+    margin-bottom: 12px;
+  }
+  
+  .hfm-panel-desc {
+    font-size: 1.1rem;
+  }
+  
+  .hfm-overlay {
+    background: linear-gradient(180deg, rgba(3,7,18,0.1) 0%, rgba(3,7,18,0) 30%, rgba(3,7,18,0.5) 60%, rgba(3,7,18,0.95) 100%);
+  }
+}

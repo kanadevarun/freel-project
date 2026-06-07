@@ -1,0 +1,880 @@
+/* ═══════════════════════════════════════════════════════════
+   CINEMATIC HERO — Living Logistics Command Center
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Base Container ─── */
+.cin-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 700px;
+  overflow: hidden;
+  background: #030712;
+  cursor: default;
+  margin-top: -64px; /* Pull up behind the navbar */
+}
+
+/* ─── LAYER 1: Image with Slow Camera Drift ─── */
+.cin-img-wrapper {
+  position: absolute;
+  inset: -20px; /* Reduced inset to show more of image */
+  z-index: 1;
+}
+
+.cin-base-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 50%;
+  will-change: transform;
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: cin-camera-drift 25s ease-in-out infinite alternate;
+}
+
+@keyframes cin-camera-drift {
+  0% {
+    transform: scale(1.02) translate(0px, 0px);
+  }
+  25% {
+    transform: scale(1.03) translate(-2px, -1px);
+  }
+  50% {
+    transform: scale(1.02) translate(1px, -2px);
+  }
+  75% {
+    transform: scale(1.04) translate(-1px, 1px);
+  }
+  100% {
+    transform: scale(1.03) translate(2px, -1px);
+  }
+}
+
+/* ─── LAYER 2: Overlays ─── */
+.cin-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cin-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    /* Bottom heavy gradient for text readability */
+    linear-gradient(180deg,
+      rgba(3, 7, 18, 0.4) 0%,
+      rgba(3, 7, 18, 0.3) 25%,
+      rgba(3, 7, 18, 0.4) 50%,
+      rgba(3, 7, 18, 0.7) 75%,
+      rgba(3, 7, 18, 0.9) 100%
+    ),
+    /* Left gradient for content area */
+    linear-gradient(90deg,
+      rgba(3, 7, 18, 0.6) 0%,
+      rgba(3, 7, 18, 0.2) 50%,
+      transparent 100%
+    );
+}
+
+.cin-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    transparent 30%,
+    rgba(3, 7, 18, 0.5) 100%
+  );
+}
+
+/* ─── LAYER 3: Animated Route SVG ─── */
+.cin-routes-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  opacity: 0.7;
+}
+
+.cin-route-path {
+  stroke-dasharray: 8 12;
+  animation: cin-route-dash 3s linear infinite;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.cin-route-2 {
+  animation-duration: 4s;
+  animation-direction: reverse;
+}
+
+.cin-route-3 {
+  animation-duration: 5s;
+}
+
+@keyframes cin-route-dash {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+
+/* Shipment pulses */
+.cin-shipment-pulse {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.cin-pulse-1 { opacity: 0.9; }
+.cin-pulse-2 { opacity: 0.8; }
+.cin-pulse-3 { opacity: 0.85; }
+
+/* ─── LAYER 4: Blinking Lights ─── */
+.cin-lights-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cin-light {
+  position: absolute;
+  border-radius: 50%;
+  will-change: opacity;
+}
+
+/* Truck headlights */
+.cin-truck-light {
+  width: 6px;
+  height: 6px;
+  background: #fef3c7;
+  box-shadow:
+    0 0 8px 3px rgba(253, 230, 138, 0.6),
+    0 0 20px 8px rgba(253, 230, 138, 0.3),
+    0 0 40px 12px rgba(253, 230, 138, 0.1);
+  animation: cin-truck-blink 3s ease-in-out infinite;
+}
+
+@keyframes cin-truck-blink {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  30% { opacity: 1; transform: scale(1.3); }
+  60% { opacity: 0.5; transform: scale(0.9); }
+}
+
+/* Highway light streaks — moving along the road */
+.cin-light-streak {
+  position: absolute;
+  width: 30px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(253, 230, 138, 0.8), transparent);
+  filter: blur(0.5px);
+}
+
+.cin-streak-1 {
+  top: 78%;
+  left: 65%;
+  transform: rotate(-15deg);
+  animation: cin-streak-move 4s linear infinite;
+}
+
+.cin-streak-2 {
+  top: 75%;
+  left: 70%;
+  width: 25px;
+  transform: rotate(-18deg);
+  animation: cin-streak-move 5s linear infinite 1.5s;
+}
+
+.cin-streak-3 {
+  top: 81%;
+  left: 60%;
+  width: 20px;
+  transform: rotate(-12deg);
+  animation: cin-streak-move 6s linear infinite 3s;
+}
+
+@keyframes cin-streak-move {
+  0% {
+    opacity: 0;
+    transform: rotate(-15deg) translateX(-20px);
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(-15deg) translateX(120px);
+  }
+}
+
+/* Port lights */
+.cin-port-light {
+  width: 5px;
+  height: 5px;
+  background: #fb923c;
+  box-shadow:
+    0 0 6px 2px rgba(251, 146, 60, 0.6),
+    0 0 16px 6px rgba(251, 146, 60, 0.2);
+  animation: cin-port-blink 2.5s ease-in-out infinite;
+}
+
+@keyframes cin-port-blink {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* Warehouse operational lights */
+.cin-warehouse-light {
+  width: 4px;
+  height: 4px;
+  background: #e2e8f0;
+  box-shadow:
+    0 0 6px 2px rgba(226, 232, 240, 0.5),
+    0 0 14px 5px rgba(226, 232, 240, 0.2);
+  animation: cin-warehouse-pulse 4s ease-in-out infinite;
+}
+
+@keyframes cin-warehouse-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.2); }
+}
+
+/* Ship wake */
+.cin-ship-wake {
+  position: absolute;
+  width: 40px;
+  height: 10px;
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+  transform: rotate(-10deg);
+  animation: cin-ship-wake-anim 6s ease-in-out infinite;
+  filter: blur(1px);
+}
+
+.cin-wake-delay {
+  animation-delay: 2s;
+}
+
+@keyframes cin-ship-wake-anim {
+  0% { transform: rotate(-10deg) scale(1) translateX(0); opacity: 0.2; }
+  50% { transform: rotate(-10deg) scale(1.5) translateX(-5px); opacity: 0.5; }
+  100% { transform: rotate(-10deg) scale(1) translateX(0); opacity: 0.2; }
+}
+
+/* Ship navigation lights */
+.cin-ship-light {
+  width: 5px;
+  height: 5px;
+  background: #67e8f9;
+  box-shadow:
+    0 0 8px 3px rgba(103, 232, 249, 0.5),
+    0 0 20px 8px rgba(103, 232, 249, 0.15);
+  animation: cin-ship-bob 6s ease-in-out infinite;
+}
+
+@keyframes cin-ship-bob {
+  0%, 100% { opacity: 0.6; transform: translate(0, 0); }
+  25% { opacity: 0.8; transform: translate(2px, -1px); }
+  50% { opacity: 1; transform: translate(0, 1px); }
+  75% { opacity: 0.7; transform: translate(-1px, -1px); }
+}
+
+/* Network node glows */
+.cin-network-node {
+  width: 8px;
+  height: 8px;
+  background: rgba(96, 165, 250, 0.8);
+  box-shadow:
+    0 0 10px 4px rgba(96, 165, 250, 0.4),
+    0 0 30px 10px rgba(96, 165, 250, 0.1);
+  animation: cin-node-pulse 3s ease-in-out infinite;
+}
+
+@keyframes cin-node-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.5); }
+}
+
+/* Light animation delays */
+.cin-light-delay-1 { animation-delay: 0.7s; }
+.cin-light-delay-2 { animation-delay: 1.4s; }
+.cin-light-delay-3 { animation-delay: 2.1s; }
+
+/* ─── LAYER 5: Satellite Effects ─── */
+.cin-satellite-layer {
+  position: absolute;
+  top: 12%;
+  right: 18%;
+  z-index: 5;
+  pointer-events: none;
+  width: 200px;
+  height: 200px;
+}
+
+.cin-radar-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  transform: translate(-50%, -50%);
+  animation: cin-radar-expand 4s ease-out infinite;
+}
+
+.cin-radar-delay {
+  animation-delay: 2s;
+}
+
+@keyframes cin-radar-expand {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.8;
+    border-width: 2px;
+  }
+  100% {
+    width: 200px;
+    height: 200px;
+    opacity: 0;
+    border-width: 0.5px;
+  }
+}
+
+.cin-scan-beam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(96, 165, 250, 0.6), transparent);
+  transform-origin: 0% 50%;
+  animation: cin-scan-rotate 8s linear infinite;
+}
+
+@keyframes cin-scan-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── LAYER 5.5: Airplane ─── */
+.cin-airplane-layer {
+  position: absolute;
+  top: 15%;
+  left: 20%;
+  z-index: 5;
+  pointer-events: none;
+  animation: cin-airplane-fly 40s linear infinite;
+}
+
+.cin-airplane-body {
+  position: relative;
+  transform: rotate(65deg) scale(0.8);
+  filter: drop-shadow(0 15px 10px rgba(0,0,0,0.4));
+}
+
+.cin-airplane-icon {
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
+}
+
+.cin-airplane-contrail {
+  position: absolute;
+  bottom: -40px;
+  left: 12px;
+  width: 2px;
+  height: 60px;
+  background: linear-gradient(to top, transparent, rgba(255,255,255,0.4));
+  filter: blur(2px);
+  transform-origin: top center;
+  animation: cin-contrail-fade 2s ease-out infinite alternate;
+}
+
+.cin-contrail-right {
+  left: 18px;
+}
+
+@keyframes cin-airplane-fly {
+  0% { transform: translate(-200px, 100px); }
+  100% { transform: translate(600px, -300px); }
+}
+
+@keyframes cin-contrail-fade {
+  from { opacity: 0.3; height: 40px; }
+  to { opacity: 0.7; height: 80px; }
+}
+
+/* ─── LAYER 6: Particles ─── */
+.cin-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cin-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(147, 197, 253, 0.7);
+  animation: cin-particle-float linear infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes cin-particle-float {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  90% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(30px, -60px) scale(0);
+    opacity: 0;
+  }
+}
+
+/* ─── LAYER 7: Ambient Glows ─── */
+.cin-ambient-glows {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transition: transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.cin-ambient-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  will-change: transform, opacity;
+}
+
+.cin-glow-blue {
+  width: 400px;
+  height: 400px;
+  background: rgba(59, 130, 246, 0.08);
+  top: 10%;
+  left: 30%;
+  animation: cin-glow-drift 12s ease-in-out infinite alternate;
+}
+
+.cin-glow-teal {
+  width: 350px;
+  height: 350px;
+  background: rgba(0, 191, 165, 0.06);
+  bottom: 20%;
+  left: 50%;
+  animation: cin-glow-drift 15s ease-in-out infinite alternate-reverse;
+}
+
+.cin-glow-purple {
+  width: 300px;
+  height: 300px;
+  background: rgba(139, 92, 246, 0.05);
+  top: 30%;
+  right: 10%;
+  animation: cin-glow-drift 18s ease-in-out infinite alternate;
+}
+
+@keyframes cin-glow-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(30px, -20px) scale(1.15); }
+  100% { transform: translate(-20px, 15px) scale(0.9); }
+}
+
+/* ─── LAYER 8: Content ─── */
+.cin-content-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.cin-content-inner {
+  max-width: 900px;
+  padding: 140px 40px 0; /* Extra 64px padding to compensate for negative margin */
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Badge */
+.cin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  margin-bottom: 32px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cin-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00BFA5;
+  animation: cin-badge-pulse 2s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(0, 191, 165, 0.6);
+}
+
+@keyframes cin-badge-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+/* Title */
+.cin-title {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: clamp(2.5rem, 5.5vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin: 0 0 24px 0;
+  color: #FFFFFF;
+  text-shadow: 0 4px 32px rgba(0, 0, 0, 0.8);
+}
+
+.cin-title-line {
+  display: block;
+  will-change: transform, opacity;
+}
+
+.cin-title-accent {
+  background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 50%, #ea580c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  background-size: 200% 200%;
+  animation: cin-gradient-shift 6s ease-in-out infinite alternate;
+  display: inline-block;
+  padding: 0 4px;
+}
+
+@keyframes cin-gradient-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Subtitle */
+.cin-subtitle {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: clamp(1rem, 1.8vw, 1.25rem);
+  color: rgba(248, 250, 252, 0.85);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.6;
+  margin: 0 auto 40px auto;
+  max-width: 680px;
+}
+
+/* CTA Buttons */
+.cin-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.cin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  background: linear-gradient(135deg, #00BFA5, #0ea5e9);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 4px 16px rgba(0, 191, 165, 0.3),
+    0 0 0 0 rgba(0, 191, 165, 0);
+  position: relative;
+  overflow: hidden;
+}
+
+.cin-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #0ea5e9, #00BFA5);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.cin-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 8px 32px rgba(0, 191, 165, 0.4),
+    0 0 0 4px rgba(0, 191, 165, 0.1);
+}
+
+.cin-btn-primary:hover::before {
+  opacity: 1;
+}
+
+.cin-btn-primary span,
+.cin-btn-primary svg {
+  position: relative;
+  z-index: 1;
+}
+
+.cin-btn-primary:hover svg {
+  transform: translateX(4px);
+  transition: transform 0.3s ease;
+}
+
+.cin-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  padding: 16px 36px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 14px;
+  text-decoration: none;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cin-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Stats */
+.cin-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 20px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+}
+
+.cin-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px;
+}
+
+.cin-stat:first-child {
+  padding-left: 0;
+}
+
+.cin-stat-num {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.cin-stat-label {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.8);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+
+.cin-stat-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Scroll Indicator ─── */
+.cin-scroll-hint {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+  animation: cin-scroll-fade 3s ease-in-out infinite;
+}
+
+.cin-scroll-text {
+  font-size: 0.7rem;
+  color: rgba(148, 163, 184, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 500;
+}
+
+.cin-scroll-line {
+  width: 1px;
+  height: 48px;
+  background: rgba(148, 163, 184, 0.15);
+  position: relative;
+  overflow: hidden;
+  border-radius: 1px;
+}
+
+.cin-scroll-dot {
+  position: absolute;
+  top: -4px;
+  left: -1.5px;
+  width: 4px;
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(0, 191, 165, 0.7);
+  animation: cin-scroll-move 2s ease-in-out infinite;
+}
+
+@keyframes cin-scroll-move {
+  0% { top: -12px; opacity: 0; }
+  30% { opacity: 1; }
+  100% { top: 48px; opacity: 0; }
+}
+
+@keyframes cin-scroll-fade {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 1024px) {
+  .cin-content-inner {
+    padding: 0 40px;
+    max-width: 600px;
+  }
+
+  .cin-satellite-layer {
+    top: 8%;
+    right: 10%;
+    width: 140px;
+    height: 140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .cin-hero {
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+
+  .cin-content-layer {
+    align-items: flex-end;
+    padding-bottom: 100px;
+  }
+
+  .cin-content-inner {
+    padding: 0 24px;
+    max-width: 100%;
+  }
+
+  .cin-title {
+    font-size: clamp(2.2rem, 10vw, 3.5rem);
+  }
+
+  .cin-subtitle {
+    font-size: 0.95rem;
+  }
+
+  .cin-cta-row {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .cin-btn-primary,
+  .cin-btn-secondary {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 28px;
+  }
+
+  .cin-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .cin-stat {
+    padding: 8px 16px;
+  }
+
+  .cin-stat-divider {
+    display: none;
+  }
+
+  .cin-satellite-layer {
+    display: none;
+  }
+
+  .cin-gradient-overlay {
+    background:
+      linear-gradient(180deg,
+        rgba(3, 7, 18, 0.4) 0%,
+        rgba(3, 7, 18, 0.3) 30%,
+        rgba(3, 7, 18, 0.5) 50%,
+        rgba(3, 7, 18, 0.8) 75%,
+        rgba(3, 7, 18, 0.95) 100%
+      );
+  }
+
+  .cin-scroll-hint {
+    bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cin-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+
+  .cin-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 28px;
+  }
+
+  .cin-badge {
+    font-size: 0.7rem;
+    padding: 6px 14px;
+  }
+
+  .cin-stat-num {
+    font-size: 1.2rem;
+  }
+}
