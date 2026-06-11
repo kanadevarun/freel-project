@@ -1,306 +1,533 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import './AirFreight.css';
 
-/* ─── Scroll Reveal ─── */
-function useReveal() {
+/* ═══════════════════════════════════════════════════════════
+   AIR FREIGHT — CINEMATIC HERO
+   "The opening scene of a Netflix documentary about
+    how global air cargo powers world commerce."
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Ambient Route Lines SVG ─── */
+function AmbientRoutes() {
+  return (
+    <div className="af-hero__ambient">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+        {/* Route arcs */}
+        <path
+          className="af-route-line"
+          d="M-50,600 Q400,200 750,350 T1500,250"
+        />
+        <path
+          className="af-route-line af-route-line--2"
+          d="M-100,300 Q300,700 700,500 T1550,600"
+        />
+        <path
+          className="af-route-line af-route-line--3"
+          d="M200,850 Q600,100 1000,400 T1600,150"
+        />
+
+        {/* Glowing waypoint dots */}
+        <circle className="af-route-dot" cx="400" cy="320" r="3" />
+        <circle className="af-route-dot af-route-dot--2" cx="750" cy="350" r="3" />
+        <circle className="af-route-dot af-route-dot--3" cx="1050" cy="290" r="3" />
+        <circle className="af-route-dot" cx="300" cy="550" r="3" />
+        <circle className="af-route-dot af-route-dot--2" cx="850" cy="480" r="3" />
+      </svg>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════ */
+/*             COUNT UP HELPER                               */
+/* ═══════════════════════════════════════════════════════════ */
+const CountUp = ({ end, duration = 2000, decimals = 0 }) => {
+  const [count, setCount] = useState(0);
   const ref = useRef(null);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('opacity-100', 'translate-y-0'); el.classList.remove('opacity-0', 'translate-y-8'); obs.unobserve(el); } },
-      { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return ref;
-}
+    let startTimestamp = null;
+    let observer;
+    let hasAnimated = false;
+    let animationFrameId;
 
-function Reveal({ children, className = '', delay = '' }) {
-  const ref = useReveal();
-  return <div ref={ref} className={`transition-all duration-1000 opacity-0 translate-y-8 ${delay} ${className}`}>{children}</div>;
-}
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      const easeProgress = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      setCount(easeProgress * end);
+      if (progress < 1) {
+        animationFrameId = window.requestAnimationFrame(step);
+      }
+    };
 
-const stats = [
-  { value: '150+', label: 'Airports Worldwide' },
-  { value: '24hr', label: 'Express Delivery' },
-  { value: 'DG', label: 'Certified Handler' },
-  { value: 'Live', label: 'FlightAware Tracking' },
-];
+    observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !hasAnimated) {
+        hasAnimated = true;
+        animationFrameId = window.requestAnimationFrame(step);
+      }
+    }, { threshold: 0.1 });
 
-const capabilities = [
-  { icon: '📦', title: 'General Cargo', desc: 'Standard air freight for electronics, textiles, auto parts, and consumer goods. Consolidation available.', color: 'from-blue-400 to-blue-600' },
-  { icon: '☣️', title: 'Dangerous Goods (DG)', desc: 'IATA DGR certified. We handle Class 1-9 hazardous materials with full MSDS documentation.', color: 'from-red-400 to-red-600' },
-  { icon: '💊', title: 'Pharma & Temperature', desc: 'GDP-compliant cold chain for pharmaceuticals, biologics. Active & passive temp control.', color: 'from-teal-400 to-teal-600' },
-  { icon: '🍎', title: 'Perishable Cargo', desc: 'Fresh produce, flowers, seafood with priority handling. Cool chain integrity to destination.', color: 'from-green-400 to-green-600' },
-];
+    if (ref.current) observer.observe(ref.current);
 
-/* ═══════════════════════════════════════════ */
-/*             AIR FREIGHT PAGE               */
-/* ═══════════════════════════════════════════ */
+    return () => {
+      if (observer) observer.disconnect();
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [end, duration]);
+
+  return <span ref={ref}>{count.toFixed(decimals)}</span>;
+};
+
+/* ═══════════════════════════════════════════════════════════ */
+/*             AIR FREIGHT PAGE                              */
+/* ═══════════════════════════════════════════════════════════ */
 export default function AirFreight() {
-  const [activeRoute, setActiveRoute] = useState(0);
-  
-  const routes = [
-    { origin: 'DEL', dest: 'JFK', time: '14h 30m', status: 'In Air', progress: '65%' },
-    { origin: 'BOM', dest: 'LHR', time: '9h 15m', status: 'Departed', progress: '10%' },
-    { origin: 'BLR', dest: 'SIN', time: '4h 20m', status: 'Arriving', progress: '90%' },
-  ];
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('af-in-view');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    const elements = document.querySelectorAll('.af-reveal');
+    elements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <div className="bg-white min-h-screen overflow-hidden">
-      {/* ═══ HERO ═══ */}
-      <section className="relative pt-32 pb-32 lg:pt-48 lg:pb-48 bg-gradient-to-br from-teal-50/30 via-slate-50 to-indigo-50/30 text-slate-900 overflow-hidden">
-        {/* Photorealistic Background */}
-        <div className="absolute inset-0 z-0">
-          <img src="/assets/air_freight_hero.png" alt="Cargo Plane Taking Off" className="w-full h-full object-cover object-center opacity-[0.06] scale-105 mix-blend-multiply animate-[pulse_15s_ease-in-out_infinite_alternate]" />
-          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-slate-50/80"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-7xl h-full pointer-events-none opacity-40">
-            <div className="absolute -top-[10%] right-[-5%] w-[450px] h-[450px] rounded-full bg-brand-teal/15 blur-3xl"></div>
-            <div className="absolute bottom-[-10%] left-[-5%] w-[550px] h-[550px] rounded-full bg-brand-indigo/10 blur-3xl"></div>
+    <div>
+      {/* ═══ CINEMATIC HERO — 100vh ═══ */}
+      <section className="af-hero" id="af-hero">
+
+        {/* Background Video */}
+        <video
+          className="af-hero__video af-anim-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/images/air-freight/Figure_on_platform_overlooking_a…_202606071514.jpeg"
+        >
+          <source
+            src="/videos/air-freight/Air_cargo_hub_at_night_202606071525.mp4"
+            type="video/mp4"
+          />
+        </video>
+
+        {/* Cinematic Overlay */}
+        <div className="af-hero__overlay" />
+
+        {/* Ambient Route Lines */}
+        <AmbientRoutes />
+
+        {/* ─── Content ─── */}
+        <div className="af-hero__content">
+
+          {/* Eyebrow Badge */}
+          <div className="af-badge af-anim-badge">
+            <span className="af-badge__icon">✈</span>
+            GLOBAL AIR FREIGHT NETWORK
           </div>
+
+          {/* Main Headline — Dominant first line */}
+          <h1 className="af-headline af-anim-headline">
+            <span className="af-headline__line">Air Freight.</span>
+          </h1>
+
+          {/* Sub-headline — Smaller, lighter */}
+          <p className="af-headline--sub af-anim-headline">
+            Moving The World's<br />
+            Most Critical Cargo.
+          </p>
+
+          {/* Subtext */}
+          <p className="af-subtext af-anim-subtext">
+            Move critical cargo across continents through a connected network
+            of airlines, airports and logistics partners.
+          </p>
+
+          {/* CTAs */}
+          <div className="af-ctas af-anim-ctas">
+            <Link to="/contact" className="af-btn-primary">
+              Request Air Quote
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12 5 19 12 12 19" />
+              </svg>
+            </Link>
+            <button className="af-btn-secondary" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Watch Network
+            </button>
+          </div>
+
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <Reveal>
-              <div>
-                <div className="inline-flex items-center justify-center px-4 py-1.5 mb-6 text-xs font-bold text-brand-indigo bg-brand-indigo/10 rounded-full border border-brand-indigo/20 tracking-widest uppercase">
-                  <span className="mr-2">✈️</span> Global Air Cargo
-                </div>
-                <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6 leading-tight text-slate-900">
-                  Time-Critical <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-brand-teal">
-                    Deliveries
-                  </span>
-                </h1>
-                <p className="text-xl text-slate-600 max-w-2xl font-light leading-relaxed mb-10">
-                  When time is money, fly your cargo with confidence. Direct access to 150+ airports, guaranteed space on premium carriers, and live FlightAware tracking.
-                </p>
-                
-                <div className="flex flex-wrap gap-4">
-                  <Link to="/contact" className="px-8 py-4 bg-brand-teal text-white font-bold rounded-full hover:bg-teal-400 transition-colors shadow-[0_0_20px_rgba(0,191,165,0.4)]">
-                    Get Air Freight Quote
-                  </Link>
-                  <a href="#tracking-demo" className="px-8 py-4 bg-white/80 border border-slate-200 text-slate-700 font-bold rounded-full hover:bg-slate-100 hover:border-slate-300 transition-colors shadow-sm backdrop-blur-md">
-                    View Tracking Demo
-                  </a>
-                </div>
-              </div>
-            </Reveal>
+        {/* Floating Caption — Lower Right */}
+        <div className="af-caption af-anim-caption">
+          <span className="af-caption__dot" />
+          150+ Airports Connected Worldwide
+        </div>
 
-            {/* Visual Hero Element */}
-            <Reveal delay="delay-200">
-              <div className="relative h-[400px] bg-white/80 rounded-3xl border border-slate-200/80 backdrop-blur-md p-6 shadow-2xl flex flex-col justify-between overflow-hidden">
-                <div className="absolute -top-32 -right-32 w-64 h-64 bg-brand-indigo/10 rounded-full blur-[80px]"></div>
-                
-                <div className="flex justify-between items-center relative z-10">
-                  <div>
-                    <div className="text-sm text-slate-500 mb-1">Status</div>
-                    <div className="text-slate-800 font-bold text-xl flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> In Transit</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-slate-500 mb-1">Flight</div>
-                    <div className="text-slate-800 font-bold text-xl font-mono">EK-982</div>
-                  </div>
-                </div>
+        {/* Scroll Indicator */}
+        <div className="af-scroll af-anim-scroll">
+          <span className="af-scroll__text">Explore Network</span>
+          <svg className="af-scroll__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14" />
+            <path d="M19 12l-7 7-7-7" />
+          </svg>
+        </div>
 
-                <div className="relative z-10 py-10">
-                  <div className="flex justify-between text-3xl font-black mb-2 text-slate-800">
-                    <span>DEL</span>
-                    <span className="text-brand-indigo">✈️</span>
-                    <span>DXB</span>
-                  </div>
-                  
-                  <div className="relative h-2 bg-slate-200 rounded-full mt-4">
-                    <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-brand-teal to-blue-500 rounded-full w-[65%]">
-                      <div className="absolute -right-2 -top-1 w-4 h-4 bg-white border border-slate-300 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.15)]"></div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
-                    <span>Indira Gandhi Intl</span>
-                    <span>Dubai Intl</span>
-                  </div>
-                </div>
+      </section>
 
-                <div className="grid grid-cols-2 gap-4 relative z-10">
-                  <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3">
-                    <div className="text-xs text-slate-500">Est. Arrival</div>
-                    <div className="text-lg font-bold text-slate-800">14:30 GMT</div>
-                  </div>
-                  <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3">
-                    <div className="text-xs text-slate-500">Cargo Type</div>
-                    <div className="text-lg font-bold text-slate-800">Pharma (Cold)</div>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 2: GLOBAL AIR FREIGHT NETWORK ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-network" id="af-network">
+        <div className="af-network__container af-reveal">
+          
+          <div className="af-network__image-wrapper">
+            {/* Image Layer with border radius */}
+            <div className="af-network__img-frame">
+              <div className="af-network__gradient"></div>
+              <img 
+                src="/images/air-freight/Human_figure_observing_air_cargo_202606071514.jpeg" 
+                alt="Global Network Scale" 
+                className="af-network__img"
+              />
+            </div>
+
+            {/* Overlaid Header */}
+            <div className="af-network__header">
+              <div className="af-network__label">GLOBAL AIR FREIGHT NETWORK</div>
+              <h2 className="af-network__title">
+                Every Flight.<br />
+                Every Airport.<br />
+                One Connected System.
+              </h2>
+              <p className="af-network__desc">
+                Freel continuously orchestrates air cargo
+                across global airline and airport networks
+                in real time.
+              </p>
+            </div>
+
+            {/* Floating Glassmorphism Pills */}
+            <div className="af-pill af-pill--1">150+ Airports</div>
+            <div className="af-pill af-pill--2">Live Capacity</div>
+            <div className="af-pill af-pill--3">24 Hour Movement</div>
+            <div className="af-pill af-pill--4">Temperature Controlled</div>
+            <div className="af-pill af-pill--5">Dangerous Goods</div>
+            <div className="af-pill af-pill--6">Real Time Visibility</div>
           </div>
+          
         </div>
       </section>
 
-      {/* ═══ STATS BAR (Floating) ═══ */}
-      <Reveal>
-        <section className="max-w-6xl mx-auto px-4 sm:px-6 relative z-20 -mt-10">
-          <div className="bg-white rounded-[2rem] p-8 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] border border-slate-100 grid grid-cols-2 md:grid-cols-4 gap-6 divide-x-0 md:divide-x divide-slate-100">
-            {stats.map((s, i) => (
-              <div key={i} className="text-center group">
-                <div className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-blue-500 to-brand-teal mb-2 group-hover:scale-110 transition-transform">{s.value}</div>
-                <div className="text-sm font-bold uppercase tracking-wider text-slate-500">{s.label}</div>
-              </div>
-            ))}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 3: HOW CARGO MOVES (STORYBOARD) ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-storyboard">
+        
+        {/* Intro - 35vh */}
+        <div className="af-storyboard__intro af-reveal">
+          <div className="af-storyboard__label">HOW CARGO MOVES</div>
+          <h2 className="af-storyboard__title">How Cargo Moves.</h2>
+          <p className="af-storyboard__desc">
+            Four stages.<br />
+            Thousands of flights.<br />
+            One connected network.
+          </p>
+        </div>
+
+        {/* Stages */}
+        <div className="af-storyboard__stages">
+          
+          {/* Stage 1 */}
+          <div className="af-storyboard__stage af-reveal">
+            <video autoPlay muted loop playsInline className="af-storyboard__video">
+              <source src="/videos/air-freight/Air_freight_sorting_facility_pac…_202606071530.mp4" type="video/mp4" />
+            </video>
+            <div className="af-storyboard__gradient"></div>
+            <div className="af-storyboard__content">
+              <div className="af-storyboard__number">01</div>
+              <h3 className="af-storyboard__stage-title">SORTED</h3>
+              <p className="af-storyboard__stage-desc">Warehouse orchestration begins.</p>
+            </div>
           </div>
-        </section>
-      </Reveal>
 
-      {/* ═══ TARMAC OPERATIONS & WHAT WE HANDLE ═══ */}
-      <section className="py-32 bg-slate-50 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            
-            <Reveal>
-              <div className="relative rounded-[3rem] overflow-hidden shadow-2xl group">
-                <div className="absolute inset-0 bg-blue-500/20 group-hover:bg-transparent transition-colors z-10 mix-blend-overlay duration-700"></div>
-                <img src="/assets/air_cargo_operations.png" alt="Air Cargo Loading Operations" className="w-full h-auto object-cover transform group-hover:scale-105 transition-transform duration-1000" />
-                <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-[#0a192f] to-transparent z-20">
-                  <div className="text-blue-400 font-mono text-sm mb-1">TARMAC OPERATIONS</div>
-                  <div className="text-white font-bold text-xl">Specialized Pallet Loading</div>
-                </div>
+          {/* Stage 2 */}
+          <div className="af-storyboard__stage af-reveal">
+            <video autoPlay muted loop playsInline className="af-storyboard__video">
+              <source src="/videos/air-freight/Air_cargo_loading_operation_befo…_202606071526.mp4" type="video/mp4" />
+            </video>
+            <div className="af-storyboard__gradient"></div>
+            <div className="af-storyboard__content">
+              <div className="af-storyboard__number">02</div>
+              <h3 className="af-storyboard__stage-title">LOADED</h3>
+              <p className="af-storyboard__stage-desc">Prepared for departure.</p>
+            </div>
+          </div>
+
+          {/* Stage 3 */}
+          <div className="af-storyboard__stage af-reveal">
+            <video autoPlay muted loop playsInline className="af-storyboard__video">
+              <source src="/videos/air-freight/Aircraft_loading_mail_sacks_sunrise_202606071519.mp4" type="video/mp4" />
+            </video>
+            <div className="af-storyboard__gradient"></div>
+            <div className="af-storyboard__content">
+              <div className="af-storyboard__number">03</div>
+              <h3 className="af-storyboard__stage-title">IN TRANSIT</h3>
+              <p className="af-storyboard__stage-desc">Moving across continents.</p>
+            </div>
+          </div>
+
+          {/* Stage 4 */}
+          <div className="af-storyboard__stage af-reveal">
+            <video autoPlay muted loop playsInline className="af-storyboard__video">
+              <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
+            </video>
+            <div className="af-storyboard__gradient"></div>
+            <div className="af-storyboard__content">
+              <div className="af-storyboard__number">04</div>
+              <h3 className="af-storyboard__stage-title">CONNECTED</h3>
+              <p className="af-storyboard__stage-desc">One coordinated network.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 4: OPERATIONS CONTROL TOWER ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-control">
+        <div className="af-control__container">
+          
+          {/* Left Side: Visual */}
+          <div className="af-control__visual af-reveal">
+            <div className="af-control__dashboard">
+              <video autoPlay muted loop playsInline className="af-control__video">
+                <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
+              </video>
+              <div className="af-control__overlay"></div>
+            </div>
+
+            {/* Floating Badges */}
+            <div className="af-badge af-badge--1">98% On-Time</div>
+            <div className="af-badge af-badge--2">Live Capacity</div>
+            <div className="af-badge af-badge--3">Customs Cleared</div>
+            <div className="af-badge af-badge--4">Temperature Controlled</div>
+            <div className="af-badge af-badge--5">Dangerous Goods</div>
+            <div className="af-badge af-badge--6">24/7 Monitoring</div>
+          </div>
+
+          {/* Right Side: Content */}
+          <div className="af-control__content af-reveal">
+            <div className="af-control__label">OPERATIONS CONTROL TOWER</div>
+            <h2 className="af-control__title">One View Of The Entire Network.</h2>
+            <p className="af-control__desc">
+              Monitor flights, capacity, cargo status and airport operations across a connected global network in real time.
+            </p>
+
+            <div className="af-control__stats">
+              <div className="af-control__stat">
+                <div className="af-control__stat-value">150+</div>
+                <div className="af-control__stat-label">Airports</div>
               </div>
-            </Reveal>
-
-            <div>
-              <Reveal>
-                <div className="mb-10">
-                  <span className="text-blue-500 font-bold tracking-widest uppercase text-sm mb-3 block">Specialized Cargo</span>
-                  <h2 className="text-4xl md:text-5xl font-extrabold text-brand-navy mb-4 leading-tight">We Fly Everything.</h2>
-                  <p className="text-slate-600 text-lg">
-                    From sensitive pharmaceuticals to oversized machinery, our air freight network is equipped to handle any cargo type with precision directly on the tarmac.
-                  </p>
-                </div>
-              </Reveal>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {capabilities.map((c, i) => (
-                  <Reveal key={i} delay={`delay-${(i % 2) * 100}`}>
-                    <div className="bg-white rounded-3xl p-6 border border-slate-200 hover:border-blue-300 hover:shadow-xl transition-all group h-full">
-                      <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${c.color} flex items-center justify-center text-2xl text-white shadow-lg mb-4 group-hover:scale-110 transition-transform`}>
-                        {c.icon}
-                      </div>
-                      <h3 className="text-lg font-bold text-brand-navy mb-2">{c.title}</h3>
-                      <p className="text-slate-500 text-sm leading-relaxed">{c.desc}</p>
-                    </div>
-                  </Reveal>
-                ))}
+              <div className="af-control__stat">
+                <div className="af-control__stat-value">24/7</div>
+                <div className="af-control__stat-label">Monitoring</div>
+              </div>
+              <div className="af-control__stat">
+                <div className="af-control__stat-value">10M+</div>
+                <div className="af-control__stat-label">Shipments</div>
+              </div>
+              <div className="af-control__stat">
+                <div className="af-control__stat-value">98%</div>
+                <div className="af-control__stat-label">On-Time</div>
               </div>
             </div>
-            
           </div>
+
         </div>
       </section>
 
-      {/* ═══ LIVE TRACKING INTERACTIVE ═══ */}
-      <section id="tracking-demo" className="py-32 bg-brand-navy text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAzNHYtNGgtdjRoLTR2NGgtdjRoNHY0aDR2LTRoNHptMC0xMnYtNGgtdjRoLTR2NGgtdjRoNHY0aDR2LTRoNHptLTExIDEwaC00djRoLTR2LTRoLTR2LTRoNHYtNGg0djRoNHY0em0tMTEgMTBoLTR2NGgtdjRoLTR2LTRoNHYtNGg0djRoNHY0em0xMSAwaC00djRoLTR2LTRoLTR2LTRoNHYtNGg0djRoNHY0em0xMSAwaC00djRoLTR2LTRoLTR2LTRoNHYtNGg0djRoNHY0eiIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjAyIi8+PC9nPjwvc3ZnPg==')] opacity-50 z-0"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <Reveal>
-              <div>
-                <h2 className="text-4xl md:text-5xl font-extrabold mb-6">Real-Time Radar.</h2>
-                <p className="text-slate-300 text-lg mb-8 leading-relaxed">
-                  We integrate directly with FlightAware to give you granular, second-by-second updates on your air cargo. No more calling airlines for ETAs.
-                </p>
-                
-                <div className="space-y-4">
-                  {routes.map((route, idx) => (
-                    <button 
-                      key={idx}
-                      onClick={() => setActiveRoute(idx)}
-                      className={`w-full text-left p-4 rounded-2xl border transition-all ${activeRoute === idx ? 'bg-white/10 border-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.2)]' : 'bg-transparent border-white/10 hover:bg-white/5'}`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-3 h-3 rounded-full ${route.status === 'In Air' ? 'bg-green-400 animate-pulse' : route.status === 'Arriving' ? 'bg-yellow-400' : 'bg-blue-400'}`}></div>
-                          <span className="font-bold font-mono">{route.origin} → {route.dest}</span>
-                        </div>
-                        <span className="text-sm text-slate-400">{route.status}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-
-            <Reveal delay="delay-200">
-              <div className="bg-[#0f172a] rounded-[2rem] p-8 border border-slate-700 shadow-2xl relative overflow-hidden">
-                {/* Radar sweep effect */}
-                <div className="absolute top-1/2 left-1/2 w-[150%] h-[150%] -translate-x-1/2 -translate-y-1/2 bg-[conic-gradient(from_0deg,transparent_0_340deg,rgba(59,130,246,0.3)_360deg)] rounded-full animate-[spin_4s_linear_infinite] z-0 mix-blend-screen pointer-events-none"></div>
-                
-                {/* Radar circles */}
-                <div className="absolute top-1/2 left-1/2 w-[100%] h-[100%] -translate-x-1/2 -translate-y-1/2 border border-slate-700 rounded-full z-0"></div>
-                <div className="absolute top-1/2 left-1/2 w-[70%] h-[70%] -translate-x-1/2 -translate-y-1/2 border border-slate-700 rounded-full z-0"></div>
-                <div className="absolute top-1/2 left-1/2 w-[40%] h-[40%] -translate-x-1/2 -translate-y-1/2 border border-slate-700 rounded-full z-0"></div>
-
-                <div className="relative z-10">
-                  <div className="flex justify-between items-center border-b border-slate-700 pb-4 mb-8">
-                    <div className="font-mono text-blue-400">FLIGHTAWARE_SYNC_OK</div>
-                    <div className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded">LIVE</div>
-                  </div>
-
-                  <div className="text-center mb-12">
-                    <div className="text-6xl font-black text-white mb-2 tracking-tighter">
-                      {routes[activeRoute].origin} <span className="text-blue-500">→</span> {routes[activeRoute].dest}
-                    </div>
-                    <div className="text-slate-400 font-mono">Flight Duration: {routes[activeRoute].time}</div>
-                  </div>
-
-                  <div className="relative">
-                    <div className="h-1 w-full bg-slate-800 rounded-full relative">
-                      {/* Interactive moving plane based on progress */}
-                      <div 
-                        className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-2xl text-white transition-all duration-1000 z-20"
-                        style={{ left: routes[activeRoute].progress }}
-                      >
-                        ✈️
-                      </div>
-                      
-                      {/* Trail */}
-                      <div 
-                        className="absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-1000 z-10"
-                        style={{ width: routes[activeRoute].progress }}
-                      >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_10px_#fff]"></div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex justify-between mt-4 text-xs font-bold text-slate-500 uppercase">
-                      <div>Departed</div>
-                      <div>{routes[activeRoute].status}</div>
-                      <div>Arrival</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ CTA SECTION ═══ */}
-      <section className="py-24 bg-white text-center">
-        <Reveal>
-          <div className="max-w-3xl mx-auto px-4">
-            <h2 className="text-4xl md:text-5xl font-black text-brand-navy mb-6">Fly Your Cargo Today.</h2>
-            <p className="text-lg text-slate-600 mb-10">
-              Stop waiting days for air freight quotes. Compare rates instantly and book space on premium carriers.
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 5: CARGO CAPABILITIES ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-capabilities">
+        <div className="af-capabilities__container">
+          
+          {/* Header */}
+          <div className="af-capabilities__header af-reveal">
+            <div className="af-capabilities__label">CARGO CAPABILITIES</div>
+            <h2 className="af-capabilities__title">Built For Every Type Of Critical Freight.</h2>
+            <p className="af-capabilities__desc">
+              From temperature-sensitive pharmaceuticals to emergency humanitarian aid, the network adapts to every cargo requirement.
             </p>
-            <Link to="/contact" className="inline-flex items-center gap-2 px-10 py-5 bg-gradient-to-r from-blue-600 to-brand-teal text-white font-bold text-lg rounded-full hover:shadow-[0_10px_30px_rgba(0,191,165,0.3)] transition-all hover:-translate-y-1">
-              Request Air Quote <span>✈️</span>
-            </Link>
           </div>
-        </Reveal>
+
+          {/* Grid */}
+          <div className="af-capabilities__grid">
+            
+            {/* Card 1 */}
+            <div className="af-capabilities__card af-reveal">
+              <video autoPlay muted loop playsInline className="af-capabilities__video">
+                <source src="/videos/air-freight/Cargo_aircraft_interior_moving_p…_202606071518.mp4" type="video/mp4" />
+              </video>
+              <div className="af-capabilities__gradient"></div>
+              <div className="af-capabilities__content">
+                <div className="af-capabilities__badge">2°–8°C</div>
+                <h3 className="af-capabilities__card-title">Pharmaceutical Logistics</h3>
+                <p className="af-capabilities__card-desc">Temperature-controlled movement of vaccines, biologics and critical healthcare shipments.</p>
+              </div>
+            </div>
+
+            {/* Card 2 */}
+            <div className="af-capabilities__card af-reveal">
+              <video autoPlay muted loop playsInline className="af-capabilities__video">
+                <source src="/videos/air-freight/Drone_push_toward_airport_cargo_202606071523.mp4" type="video/mp4" />
+              </video>
+              <div className="af-capabilities__gradient"></div>
+              <div className="af-capabilities__content">
+                <div className="af-capabilities__badge">24 Hour Movement</div>
+                <h3 className="af-capabilities__card-title">E-Commerce Fulfillment</h3>
+                <p className="af-capabilities__card-desc">High-frequency shipments supporting modern retail and direct-to-consumer delivery.</p>
+              </div>
+            </div>
+
+            {/* Card 3 */}
+            <div className="af-capabilities__card af-reveal">
+              <video autoPlay muted loop playsInline className="af-capabilities__video">
+                <source src="/videos/air-freight/Humanitarian_airlift_in_progress…_202606071529.mp4" type="video/mp4" />
+              </video>
+              <div className="af-capabilities__gradient"></div>
+              <div className="af-capabilities__content">
+                <div className="af-capabilities__badge">Priority Access</div>
+                <h3 className="af-capabilities__card-title">Humanitarian Relief</h3>
+                <p className="af-capabilities__card-desc">Rapid deployment of emergency aid, food and medical supplies worldwide.</p>
+              </div>
+            </div>
+
+            {/* Card 4 */}
+            <div className="af-capabilities__card af-reveal">
+              <video autoPlay muted loop playsInline className="af-capabilities__video">
+                <source src="/videos/air-freight/Air_cargo_hub_loading_freighter_202606071526.mp4" type="video/mp4" />
+              </video>
+              <div className="af-capabilities__gradient"></div>
+              <div className="af-capabilities__content">
+                <div className="af-capabilities__badge">24/7 Security</div>
+                <h3 className="af-capabilities__card-title">High Value Cargo</h3>
+                <p className="af-capabilities__card-desc">Secure transport of electronics, aerospace components and mission-critical freight.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 6: NETWORK PERFORMANCE ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-performance">
+        
+        {/* Header */}
+        <div className="af-performance__header af-reveal">
+          <div className="af-performance__label">NETWORK PERFORMANCE</div>
+          <h2 className="af-performance__title">Built For Reliability At Global Scale.</h2>
+          <p className="af-performance__desc">
+            Every route, airport and shipment is continuously optimized to keep freight moving.
+          </p>
+        </div>
+
+        {/* Body */}
+        <div className="af-performance__body af-reveal">
+          
+          {/* Left Metrics */}
+          <div className="af-performance__column">
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={98.7} decimals={1} /><span className="af-performance__symbol">%</span></div>
+              <div className="af-performance__text">On-Time Performance</div>
+            </div>
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={150} /><span className="af-performance__symbol">+</span></div>
+              <div className="af-performance__text">Airport Partners</div>
+            </div>
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={10} /><span className="af-performance__symbol">M+</span></div>
+              <div className="af-performance__text">Shipments Managed</div>
+            </div>
+          </div>
+
+          {/* Center Globe */}
+          <div className="af-performance__globe-container">
+            <div className="af-performance__globe">
+              <video autoPlay muted loop playsInline className="af-performance__globe-video">
+                <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
+              </video>
+              <div className="af-performance__globe-overlay"></div>
+            </div>
+          </div>
+
+          {/* Right Metrics */}
+          <div className="af-performance__column">
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={24} /><span className="af-performance__symbol">/7</span></div>
+              <div className="af-performance__text">Monitoring</div>
+            </div>
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={99.99} decimals={2} /><span className="af-performance__symbol">%</span></div>
+              <div className="af-performance__text">Platform Availability</div>
+            </div>
+            <div className="af-performance__metric">
+              <div className="af-performance__number"><CountUp end={48} /><span className="af-performance__symbol af-performance__symbol--text">Hours</span></div>
+              <div className="af-performance__text">Average Global Transit</div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════ */}
+      {/* ═══ SECTION 7: READY FOR TAKEOFF (CONVERSION) ═══ */}
+      {/* ═══════════════════════════════════════════════════════════ */}
+      <section className="af-takeoff">
+        <video autoPlay muted loop playsInline className="af-takeoff__video">
+          <source src="/videos/air-freight/Air_cargo_hub_at_night_202606071525.mp4" type="video/mp4" />
+        </video>
+        
+        <div className="af-takeoff__overlay"></div>
+        <div className="af-takeoff__gradient"></div>
+
+        <div className="af-takeoff__content">
+          <div className="af-takeoff__label af-reveal">GLOBAL AIR FREIGHT PLATFORM</div>
+          <h2 className="af-takeoff__title af-reveal">The World Doesn't Wait.<br/>Neither Should Your Freight.</h2>
+          <p className="af-takeoff__desc af-reveal">
+            Connect airlines, airports and logistics partners through one intelligent operating system.
+          </p>
+
+          <div className="af-takeoff__actions af-reveal">
+            <Link to="/signup" className="af-takeoff__btn af-takeoff__btn--primary">Start Free</Link>
+            <Link to="/demo" className="af-takeoff__btn af-takeoff__btn--secondary">Book Demo</Link>
+          </div>
+
+          <div className="af-takeoff__trust">
+            <div className="af-takeoff__trust-item af-reveal">150+ Airports</div>
+            <div className="af-takeoff__trust-divider af-reveal"></div>
+            <div className="af-takeoff__trust-item af-reveal">24/7 Monitoring</div>
+            <div className="af-takeoff__trust-divider af-reveal"></div>
+            <div className="af-takeoff__trust-item af-reveal">10M+ Shipments</div>
+            <div className="af-takeoff__trust-divider af-reveal"></div>
+            <div className="af-takeoff__trust-item af-reveal">98% On-Time</div>
+          </div>
+        </div>
       </section>
 
     </div>

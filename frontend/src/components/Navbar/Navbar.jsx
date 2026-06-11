@@ -46,7 +46,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
-  const isLandingPage = location.pathname === '/';
+  const isLandingPage = location.pathname === '/' || location.pathname === '/services/air-freight';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
