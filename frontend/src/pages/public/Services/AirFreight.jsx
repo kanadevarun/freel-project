@@ -253,7 +253,7 @@ export default function AirFreight() {
           {/* Stage 1 */}
           <div className="af-storyboard__stage af-reveal">
             <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Air_freight_sorting_facility_pac…_202606071530.mp4" type="video/mp4" />
+              <source src="/videos/air-freight/Air_freight_sorting_facility_pac_202606071530.mp4" type="video/mp4" />
             </video>
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
@@ -266,7 +266,7 @@ export default function AirFreight() {
           {/* Stage 2 */}
           <div className="af-storyboard__stage af-reveal">
             <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Air_cargo_loading_operation_befo…_202606071526.mp4" type="video/mp4" />
+              <source src="/videos/air-freight/Air_cargo_loading_operation_befo_202606071526.mp4" type="video/mp4" />
             </video>
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
@@ -380,7 +380,7 @@ export default function AirFreight() {
             {/* Card 1 */}
             <div className="af-capabilities__card af-reveal">
               <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Cargo_aircraft_interior_moving_p…_202606071518.mp4" type="video/mp4" />
+                <source src="/videos/air-freight/Cargo_aircraft_interior_moving_p_202606071518.mp4" type="video/mp4" />
               </video>
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
@@ -406,7 +406,7 @@ export default function AirFreight() {
             {/* Card 3 */}
             <div className="af-capabilities__card af-reveal">
               <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Humanitarian_airlift_in_progress…_202606071529.mp4" type="video/mp4" />
+                <source src="/videos/air-freight/Humanitarian_airlift_in_progress_202606071529.mp4" type="video/mp4" />
               </video>
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
