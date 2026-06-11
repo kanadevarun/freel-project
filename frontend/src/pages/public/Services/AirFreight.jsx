@@ -82,6 +82,39 @@ const CountUp = ({ end, duration = 2000, decimals = 0 }) => {
 /* ═══════════════════════════════════════════════════════════ */
 /*             AIR FREIGHT PAGE                              */
 /* ═══════════════════════════════════════════════════════════ */
+
+const LazyVideo = ({ src, className }) => {
+  const [isIntersecting, setIsIntersecting] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsIntersecting(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px' }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <video
+      ref={ref}
+      className={className}
+      autoPlay={isIntersecting}
+      muted
+      loop
+      playsInline
+    >
+      {isIntersecting && <source src={src} type="video/mp4" />}
+    </video>
+  );
+};
+
 export default function AirFreight() {
 
   useEffect(() => {
@@ -252,9 +285,7 @@ export default function AirFreight() {
           
           {/* Stage 1 */}
           <div className="af-storyboard__stage af-reveal">
-            <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Air_freight_sorting_facility_pac_202606071530.mp4" type="video/mp4" />
-            </video>
+            <LazyVideo className="af-storyboard__video" src="/videos/air-freight/Air_freight_sorting_facility_pac_202606071530.mp4" />
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
               <div className="af-storyboard__number">01</div>
@@ -265,9 +296,7 @@ export default function AirFreight() {
 
           {/* Stage 2 */}
           <div className="af-storyboard__stage af-reveal">
-            <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Air_cargo_loading_operation_befo_202606071526.mp4" type="video/mp4" />
-            </video>
+            <LazyVideo className="af-storyboard__video" src="/videos/air-freight/Air_cargo_loading_operation_befo_202606071526.mp4" />
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
               <div className="af-storyboard__number">02</div>
@@ -278,9 +307,7 @@ export default function AirFreight() {
 
           {/* Stage 3 */}
           <div className="af-storyboard__stage af-reveal">
-            <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Aircraft_loading_mail_sacks_sunrise_202606071519.mp4" type="video/mp4" />
-            </video>
+            <LazyVideo className="af-storyboard__video" src="/videos/air-freight/Aircraft_loading_mail_sacks_sunrise_202606071519.mp4" />
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
               <div className="af-storyboard__number">03</div>
@@ -291,9 +318,7 @@ export default function AirFreight() {
 
           {/* Stage 4 */}
           <div className="af-storyboard__stage af-reveal">
-            <video autoPlay muted loop playsInline className="af-storyboard__video">
-              <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
-            </video>
+            <LazyVideo className="af-storyboard__video" src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" />
             <div className="af-storyboard__gradient"></div>
             <div className="af-storyboard__content">
               <div className="af-storyboard__number">04</div>
@@ -313,9 +338,7 @@ export default function AirFreight() {
           {/* Left Side: Visual */}
           <div className="af-control__visual af-reveal">
             <div className="af-control__dashboard">
-              <video autoPlay muted loop playsInline className="af-control__video">
-                <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-control__video" src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" />
               <div className="af-control__overlay"></div>
             </div>
 
@@ -379,9 +402,7 @@ export default function AirFreight() {
             
             {/* Card 1 */}
             <div className="af-capabilities__card af-reveal">
-              <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Cargo_aircraft_interior_moving_p_202606071518.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-capabilities__video" src="/videos/air-freight/Cargo_aircraft_interior_moving_p_202606071518.mp4" />
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
                 <div className="af-capabilities__badge">2°–8°C</div>
@@ -392,9 +413,7 @@ export default function AirFreight() {
 
             {/* Card 2 */}
             <div className="af-capabilities__card af-reveal">
-              <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Drone_push_toward_airport_cargo_202606071523.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-capabilities__video" src="/videos/air-freight/Drone_push_toward_airport_cargo_202606071523.mp4" />
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
                 <div className="af-capabilities__badge">24 Hour Movement</div>
@@ -405,9 +424,7 @@ export default function AirFreight() {
 
             {/* Card 3 */}
             <div className="af-capabilities__card af-reveal">
-              <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Humanitarian_airlift_in_progress_202606071529.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-capabilities__video" src="/videos/air-freight/Humanitarian_airlift_in_progress_202606071529.mp4" />
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
                 <div className="af-capabilities__badge">Priority Access</div>
@@ -418,9 +435,7 @@ export default function AirFreight() {
 
             {/* Card 4 */}
             <div className="af-capabilities__card af-reveal">
-              <video autoPlay muted loop playsInline className="af-capabilities__video">
-                <source src="/videos/air-freight/Air_cargo_hub_loading_freighter_202606071526.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-capabilities__video" src="/videos/air-freight/Air_cargo_hub_loading_freighter_202606071526.mp4" />
               <div className="af-capabilities__gradient"></div>
               <div className="af-capabilities__content">
                 <div className="af-capabilities__badge">24/7 Security</div>
@@ -469,9 +484,7 @@ export default function AirFreight() {
           {/* Center Globe */}
           <div className="af-performance__globe-container">
             <div className="af-performance__globe">
-              <video autoPlay muted loop playsInline className="af-performance__globe-video">
-                <source src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" type="video/mp4" />
-              </video>
+              <LazyVideo className="af-performance__globe-video" src="/videos/air-freight/Global_logistics_network_in_motion_202606071527.mp4" />
               <div className="af-performance__globe-overlay"></div>
             </div>
           </div>
@@ -499,9 +512,7 @@ export default function AirFreight() {
       {/* ═══ SECTION 7: READY FOR TAKEOFF (CONVERSION) ═══ */}
       {/* ═══════════════════════════════════════════════════════════ */}
       <section className="af-takeoff">
-        <video autoPlay muted loop playsInline className="af-takeoff__video">
-          <source src="/videos/air-freight/Air_cargo_hub_at_night_202606071525.mp4" type="video/mp4" />
-        </video>
+        <LazyVideo className="af-takeoff__video" src="/videos/air-freight/Air_cargo_hub_at_night_202606071525.mp4" />
         
         <div className="af-takeoff__overlay"></div>
         <div className="af-takeoff__gradient"></div>
