@@ -46,10 +46,10 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
 
-  const isLandingPage = location.pathname === '/' || location.pathname === '/services/air-freight';
+  const isLandingPage = location.pathname === '/' || location.pathname.includes('/services/air-freight') || location.pathname.includes('/services/sea-freight');
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
