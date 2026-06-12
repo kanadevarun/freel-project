@@ -1,0 +1,281 @@
+/* ═══════════════════════════════════════════════════════════ */
+/*             ROAD TRANSPORT PAGE - CINEMATIC HERO            */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* ─── Base Hero Container ─── */
+.rt-hero {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 850px;
+  overflow: hidden;
+  background-color: #020817;
+  color: #ffffff;
+  margin-top: -64px; /* Pull up behind transparent navbar */
+}
+
+/* ─── Background Video ─── */
+.rt-hero__video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  filter: brightness(0.9) contrast(1.1);
+  transform-origin: center center;
+}
+
+/* ─── Cinematic Overlay ─── */
+.rt-hero__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  /* Deep dark vignette and gradient overlay */
+  background: 
+    linear-gradient(to bottom, rgba(2, 8, 23, 0.4) 0%, rgba(2, 8, 23, 0.2) 30%, rgba(2, 8, 23, 0.6) 80%, rgba(2, 8, 23, 0.95) 100%),
+    radial-gradient(ellipse at center, transparent 0%, rgba(2, 8, 23, 0.4) 100%);
+}
+
+/* ─── Content Wrapper ─── */
+.rt-hero__content {
+  position: relative;
+  z-index: 5;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+}
+
+/* ─── Eyebrow Badge ─── */
+.rt-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 32px;
+}
+
+.rt-badge__icon {
+  color: #fb923c;
+  font-size: 1rem;
+}
+
+/* ─── Headlines ─── */
+.rt-headline {
+  font-size: clamp(64px, 8vw, 110px);
+  font-weight: 800;
+  line-height: 0.9;
+  margin: 0 0 16px;
+  letter-spacing: -0.02em;
+}
+
+.rt-headline__line {
+  display: block;
+}
+
+.rt-headline--sub {
+  font-size: clamp(24px, 3vw, 42px);
+  font-weight: 500;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 28px;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Subtext ─── */
+.rt-subtext {
+  max-width: 700px;
+  font-size: clamp(16px, 2vw, 22px);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 40px;
+  font-weight: 400;
+}
+
+/* ─── Floating Caption (lower right) ─── */
+.rt-caption {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+}
+
+.rt-caption__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fb923c;
+  box-shadow: 0 0 8px rgba(251, 146, 60, 0.5);
+  animation: rt-caption-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rt-caption-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+/* ─── CTA Buttons ─── */
+.rt-ctas {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 0;
+}
+
+.rt-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 40px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #f59e0b, #ea580c);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 20px rgba(234, 88, 12, 0.3);
+}
+
+.rt-btn-primary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 8px 40px rgba(234, 88, 12, 0.45), 0 0 60px rgba(245, 158, 11, 0.2);
+}
+
+.rt-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 36px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.rt-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Scroll Indicator (Bottom Center) ─── */
+.rt-scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.rt-scroll-indicator svg {
+  animation: rt-bounce 2s infinite ease-in-out;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+@keyframes rt-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+/* ─── Initial States (Before Animation) ─── */
+.rt-anim-video    { transform: scale(1.1); transition: transform 4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rt-anim-badge    { opacity: 0; transform: translateY(20px); transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rt-anim-headline { opacity: 0; transform: translateY(30px); transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rt-anim-subtext  { opacity: 0; transform: translateY(20px); transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rt-anim-ctas     { opacity: 0; transform: translateY(20px); transition: opacity 1s ease, transform 1s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* ─── Animated States (Triggered via IntersectionObserver) ─── */
+.rt-in-view .rt-anim-video    { transform: scale(1); }
+.rt-in-view .rt-anim-badge    { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
+.rt-in-view .rt-anim-headline { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+.rt-in-view .rt-anim-subtext  { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
+.rt-in-view .rt-anim-ctas     { opacity: 1; transform: translateY(0); transition-delay: 0.8s; }
+
+/* ═══════════════════════════════════════════════════════════ */
+/*                 THE NATION IN MOTION (SCROLL)               */
+/* ═══════════════════════════════════════════════════════════ */
+
+/* Glass HUD for Video Overlays */
+.glass-hud {
+  padding: 16px 24px;
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Floating Tag Animations */
+.tag-drift-1 { animation: drift1 8s ease-in-out infinite; }
+.tag-drift-2 { animation: drift2 10s ease-in-out infinite; }
+.tag-drift-3 { animation: drift3 9s ease-in-out infinite; }
+.tag-drift-4 { animation: drift4 11s ease-in-out infinite; }
+
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(15px, -15px); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-10px, -20px); }
+}
+@keyframes drift3 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(20px, 10px); }
+}
+@keyframes drift4 {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-15px, 15px); }
+}

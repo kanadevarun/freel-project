@@ -1,0 +1,132 @@
+.fin-container {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 8rem 0;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Background Grid Pattern */
+.fin-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
+  background-size: 30px 30px;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Map Container */
+.fin-map-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  aspect-ratio: 16/9;
+}
+
+@media (max-width: 1024px) {
+  .fin-map-wrapper {
+    aspect-ratio: 1/1;
+  }
+}
+
+/* SVG Line Animations */
+.fin-route-line {
+  stroke: #cbd5e1;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 2000;
+  stroke-dashoffset: 2000;
+  transition: stroke-dashoffset 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.fin-container.is-active .fin-route-line {
+  stroke-dashoffset: 0;
+}
+
+/* City Nodes */
+.fin-node {
+  fill: #0f172a;
+  transition: r 0.3s ease;
+}
+
+.fin-node-pulse {
+  fill: #f59e0b;
+  opacity: 0;
+  transform-origin: center;
+}
+
+.fin-container.is-active .fin-node-pulse {
+  animation: fin-pulse 3s infinite ease-out;
+}
+
+@keyframes fin-pulse {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(3.5); opacity: 0; }
+}
+
+/* Glowing Freight Particles */
+.fin-freight-particle {
+  fill: #f59e0b;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.8));
+  opacity: 0;
+  transition: opacity 1s ease-out;
+}
+
+.fin-container.is-active .fin-freight-particle {
+  opacity: 1;
+}
+
+/* Floating Stats Cards */
+.fin-stat-card {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 1s ease-out, transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.fin-container.is-active .fin-stat-card {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fin-stat-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+
+.fin-stat-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Map positioning overrides */
+@media (max-width: 768px) {
+  .fin-stat-card {
+    position: relative !important;
+    transform: none !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+}

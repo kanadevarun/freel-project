@@ -1,0 +1,153 @@
+.csj-chapter {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Base Video Scale (Subtle zoom out) */
+.csj-video-wrapper {
+  position: absolute;
+  inset: 0;
+  transform: scale(1.1);
+  transition: transform 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.csj-chapter.is-active .csj-video-wrapper {
+  transform: scale(1);
+}
+
+/* Crop out bottom right watermark by overflowing the video container */
+.csj-video-wrapper video {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 115vw !important;
+  height: 115vh !important;
+  object-fit: cover !important;
+  object-position: top left !important;
+}
+
+/* Base Text Reveal */
+.csj-text-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 1s ease-out, transform 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.csj-chapter.is-active .csj-text-reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.csj-delay-100 { transition-delay: 100ms; }
+.csj-delay-200 { transition-delay: 200ms; }
+.csj-delay-300 { transition-delay: 300ms; }
+.csj-delay-400 { transition-delay: 400ms; }
+.csj-delay-500 { transition-delay: 500ms; }
+
+/* Glass Cards */
+.csj-glass-card {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border-radius: 1.5rem;
+}
+
+/* Event Cards (Live Operations) */
+.csj-event-card {
+  background: rgba(245, 158, 11, 0.15);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  opacity: 0;
+  transform: translateY(30px) scale(0.95);
+}
+
+.csj-chapter.is-active .csj-event-card {
+  animation: csj-card-float 3s ease-out forwards;
+}
+
+@keyframes csj-card-float {
+  0% { opacity: 0; transform: translateY(30px) scale(0.95); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; transform: translateY(-10px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.95); }
+}
+
+/* SVG Line Drawing */
+.csj-line-pulse {
+  stroke-dasharray: 1500;
+  stroke-dashoffset: 1500;
+  transition: stroke-dashoffset 2s ease-out;
+}
+
+.csj-chapter.is-active .csj-line-pulse {
+  stroke-dashoffset: 0;
+}
+
+/* Glowing Map Node */
+.csj-node-pulse {
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: center;
+  transition: opacity 0.5s ease-out, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.csj-chapter.is-active .csj-node-pulse {
+  opacity: 1;
+  transform: scale(1);
+  animation: csj-pulse-infinite 2s infinite ease-in-out;
+}
+
+@keyframes csj-pulse-infinite {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+  70% { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+/* Highway Moving Lines Overlay */
+.csj-highway-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent,
+    transparent 10vh,
+    rgba(255,255,255,0.05) 10vh,
+    rgba(255,255,255,0.05) 15vh
+  );
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.csj-chapter.is-active .csj-highway-lines {
+  opacity: 1;
+  animation: csj-road-move 0.5s linear infinite;
+}
+
+@keyframes csj-road-move {
+  to {
+    transform: translateY(0%);
+  }
+}
+
+.csj-text-glow {
+  text-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+}
+
+/* Clean UI Overlays */
+.csj-progress-badge {
+  position: absolute;
+  top: 10%;
+  left: 5%;
+  font-family: monospace;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.5);
+  z-index: 20;
+}
+
+.csj-progress-badge span {
+  color: white;
+}
