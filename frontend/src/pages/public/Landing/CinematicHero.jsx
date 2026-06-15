@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { MagneticBtn } from './LandingComponents';
+import LazyVideo from '../../../components/LazyVideo';
 import './CinematicHero.css';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -128,14 +129,11 @@ export default function CinematicHero() {
     >
       {/* ━━ LAYER 1: Base Video with Camera Drift ━━ */}
       <div className="cin-img-wrapper">
-        <video
+        <LazyVideo
           ref={imgRef}
           src="/videos/Package_across_global_supply_chain_202606052243.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
           className="cin-base-video"
+          eager={true}
           style={{ transform: imgTransform }}
         />
       </div>

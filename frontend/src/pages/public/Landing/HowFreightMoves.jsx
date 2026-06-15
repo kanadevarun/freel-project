@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import LazyVideo from '../../../components/LazyVideo';
 import './HowFreightMoves.css';
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -31,13 +32,10 @@ export default function HowFreightMoves() {
       {/* ─── Panel 1: Air Freight ─── */}
       <div className="hfm-panel">
         <div className="hfm-visual">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
+          <LazyVideo
             className="hfm-media"
             src="/videos/air-freight/Air_cargo_hub_loading_freighter_202606071526.mp4"
+            rootMargin="600px"
           />
           <div className="hfm-overlay" />
         </div>
@@ -54,13 +52,10 @@ export default function HowFreightMoves() {
       {/* ─── Panel 2: Sea Freight ─── */}
       <div className="hfm-panel">
         <div className="hfm-visual">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
+          <LazyVideo
             className="hfm-media"
             src="/videos/sea-freight/Steel_leviathan_cutting_through_…_202606071605.mp4"
+            rootMargin="600px"
           />
           <div className="hfm-overlay" />
         </div>
@@ -77,13 +72,10 @@ export default function HowFreightMoves() {
       {/* ─── Panel 3: Road Freight ─── */}
       <div className="hfm-panel">
         <div className="hfm-visual">
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
+          <LazyVideo
             className="hfm-media"
             src="/videos/Packages_moving_through_logistic…_202606052239.mp4"
+            rootMargin="600px"
           />
           <div className="hfm-overlay" />
         </div>

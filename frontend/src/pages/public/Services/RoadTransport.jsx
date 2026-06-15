@@ -137,6 +137,7 @@ export default function RoadTransport() {
           muted
           loop
           playsInline
+          preload="metadata"
         >
           <source
             src="/videos/road-freight/Convoy_of_trucks_moving_highway_202606071649.mp4"

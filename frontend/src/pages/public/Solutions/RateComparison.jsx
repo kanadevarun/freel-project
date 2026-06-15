@@ -1,645 +1,690 @@
-import { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import '../../../styles/Solutions.css';
-import '../../../styles/ServiceDetail.css';
+import { TrendingUp, Globe, Ship, BarChart2, Mail, Phone, FileSpreadsheet, BarChart, Brain, Route, ShieldCheck, ArrowRight, Zap, Anchor, Fuel, CalendarClock, Plane, MapPin, Activity, Truck } from 'lucide-react';
+import './RateComparison.css';
 
-/* ─── Scroll Reveal ─── */
-function useReveal() {
-  const ref = useRef(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.unobserve(el); } },
-      { threshold: 0.15 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
-  return ref;
-}
-function Reveal({ children, className = '', delay = '' }) {
-  const ref = useReveal();
-  return <div ref={ref} className={`reveal ${delay} ${className}`}>{children}</div>;
-}
-
-/* ─── Page Data ─── */
-const stats = [
-  { value: '200+', label: 'Carrier Rates' },
-  { value: 'Live', label: 'Dynamic Pricing' },
-  { value: '3 Modes', label: 'Road, Air, Sea' },
-  { value: 'Auto', label: 'Margin Calc' },
-];
-
-
-
-
-/* ═══════════════════════════════════════════ */
-/*          RATE COMPARISON PAGE              */
-/* ═══════════════════════════════════════════ */
 export default function RateComparison() {
-  const [selectedMode, setSelectedMode] = useState('sea'); // 'sea', 'air', 'road'
-  
-  // Volumetric Weight Calculator tool state variables
-  const [volLength, setVolLength] = useState(120);
-  const [volWidth, setVolWidth] = useState(80);
-  const [volHeight, setVolHeight] = useState(60);
-  const [volWeight, setVolWeight] = useState(150);
-
-  const volCbm = ((volLength * volWidth * volHeight) / 1000000).toFixed(3);
-  const volumetricWeight = Math.round((volLength * volWidth * volHeight) / 5000);
-  const chargeableWeight = Math.max(volWeight, volumetricWeight);
-  
-  const [modesData, setModesData] = useState({
-    sea: {
-      lane: 'Shenzhen Port → JNPT Port',
-      details: '🚢 FCL 40ft High Cube • 21 Days transit',
-      carriers: [
-        { name: 'Maersk Line', rate: '₹2,38,500', time: 'Direct', rank: 1, active: true },
-        { name: 'MSC Shipping', rate: '₹2,46,000', time: '1 stop', rank: 2, active: false },
-        { name: 'CMA CGM Group', rate: '₹2,55,000', time: 'Direct', rank: 3, active: false }
-      ],
-      margin: '+₹42,500 (17.8%)'
-    },
-    air: {
-      lane: 'Delhi (DEL) → London (LHR)',
-      details: '✈️ Air Cargo • 2-3 Days transit',
-      carriers: [
-        { name: 'Emirates SkyCargo', rate: '₹185 / kg', time: 'Direct', rank: 1, active: true },
-        { name: 'Lufthansa Cargo', rate: '₹198 / kg', time: 'Direct', rank: 2, active: false },
-        { name: 'Qatar Airways Cargo', rate: '₹210 / kg', time: '1 stop', rank: 3, active: false }
-      ],
-      margin: '+₹34 / kg (18.4%)'
-    },
-    road: {
-      lane: 'Mumbai (BOM) → Bangalore (BLR)',
-      details: '🚚 Full Truckload (FTL) • 36 Hours transit',
-      carriers: [
-        { name: 'TCI Freight', rate: '₹46,200', time: 'Direct', rank: 1, active: true },
-        { name: 'SafeExpress FTL', rate: '₹48,500', time: 'Direct', rank: 2, active: false },
-        { name: 'VRL Logistics', rate: '₹51,000', time: 'Direct', rank: 3, active: false }
-      ],
-      margin: '+₹8,920 (19.3%)'
-    }
-  });
-
-  // Dynamic Price Fluctuations Effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setModesData(prevData => {
-        const nextData = { ...prevData };
-        
-        // Pick active mode carriers to update
-        const activeMode = selectedMode;
-        const carriers = [...nextData[activeMode].carriers];
-        
-        const updateIndex = Math.floor(Math.random() * carriers.length);
-        const isPerKg = carriers[updateIndex].rate.includes('/ kg');
-        
-        const currentRateStr = carriers[updateIndex].rate;
-        const currentRateVal = isPerKg
-          ? parseInt(currentRateStr.replace('₹', '').replace('/ kg', '').trim())
-          : parseInt(currentRateStr.replace('₹', '').replace(/,/g, '').trim());
-
-        // Apply a small fluctuation
-        const delta = isPerKg ? (Math.floor(Math.random() * 6) - 3) : (Math.floor(Math.random() * 2000) - 1000);
-        let newRateVal = currentRateVal + delta;
-        if (isPerKg) newRateVal = Math.max(160, newRateVal);
-        else newRateVal = Math.max(40000, newRateVal);
-
-        carriers[updateIndex] = {
-          ...carriers[updateIndex],
-          rate: isPerKg ? `₹${newRateVal} / kg` : `₹${newRateVal.toLocaleString('en-IN')}`,
-          active: true
-        };
-
-        // Reset active dots on other carriers
-        carriers.forEach((c, idx) => {
-          if (idx !== updateIndex) {
-            carriers[idx] = { ...c, active: false };
-          }
-        });
-
-        // Re-calculate ranks
-        const sorted = [...carriers].sort((a, b) => {
-          const parseRate = (r) => isPerKg
-            ? parseInt(r.rate.replace('₹', '').replace('/ kg', '').trim())
-            : parseInt(r.rate.replace('₹', '').replace(/,/g, '').trim());
-          return parseRate(a) - parseRate(b);
-        });
-
-        nextData[activeMode] = {
-          ...nextData[activeMode],
-          carriers: carriers.map(c => {
-            const rank = sorted.findIndex(s => s.name === c.name) + 1;
-            return { ...c, rank };
-          })
-        };
-
-        return nextData;
-      });
-    }, 4500);
-
-    return () => clearInterval(interval);
-  }, [selectedMode]);
-
   return (
-    <>
-      {/* ═══ HERO ═══ */}
-      <section className="rfq-split-hero" style={{ position: 'relative', overflow: 'hidden', padding: '120px 16px 80px' }} id="rate-hero">
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '48px', alignItems: 'center' }} className="rfq-hero-grid">
-          {/* Left Column: Premium Content */}
-          <Reveal>
-            <div style={{ zIndex: 1 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 18px', borderRadius: '999px', background: 'rgba(0,191,165,0.08)', border: '1px solid rgba(0,191,165,0.2)', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-brand-teal)', marginBottom: '24px' }}>
-                <span className="live-pulse"></span> DYNAMIC RATE INTELLIGENCE
+    <div className="rc-page">
+      <section className="rc-hero">
+        {/* Background Elements */}
+        <div className="rc-hero-bg">
+          <div className="rc-glow rc-glow-1"></div>
+          <div className="rc-glow rc-glow-2"></div>
+          <div className="rc-world-lines"></div>
+        </div>
+
+        <div className="rc-container">
+          <div className="rc-hero-grid">
+            
+            {/* Left Content */}
+            <div className="rc-hero-content">
+              <div className="rc-badge">
+                <span className="rc-pulse"></span>
+                LIVE FREIGHT MARKET INTELLIGENCE
               </div>
-              <h1 style={{ fontSize: 'clamp(2.5rem, 5.5vw, 4rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--color-brand-navy)', marginBottom: '20px' }}>
-                Compare Rates <br />
-                <span className="text-gradient bg-gradient-to-r from-brand-teal via-cyan-500 to-brand-indigo">
-                  Across 200+ Carriers
-                </span>
+              
+              <h1 className="rc-headline">
+                Compare Freight Rates<br />
+                <span className="rc-gradient-text">Before The Market Moves.</span>
               </h1>
-              <p style={{ fontSize: '1.15rem', color: 'var(--color-ui-gray)', lineHeight: 1.7, maxWidth: '580px', marginBottom: '36px', fontWeight: 300 }}>
-                Stop checking dozen carrier portals manually. Analyze and compare live freight rates across Road, Air, and Ocean modes instantly with integrated margin security.
+              
+              <p className="rc-subheadline">
+                Monitor live Road, Air and Ocean freight pricing across hundreds of carriers. Compare rates instantly, protect margins, and make smarter procurement decisions.
               </p>
               
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-                <Link to="/contact" className="solutions-cta-btn" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Start Rate Comparison →
+              <div className="rc-cta-group">
+                <Link to="/contact" className="rc-btn-primary">
+                  Compare Rates Now →
                 </Link>
-                <a href="#how-it-works" className="solutions-cta-btn" style={{ background: 'white', color: 'var(--color-brand-navy)', border: '1px solid var(--color-ui-border)', boxShadow: 'none', fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Analyze Factors ↓
-                </a>
+                <Link to="/contact" className="rc-btn-secondary">
+                  Watch Live Demo
+                </Link>
               </div>
               
-              {/* Telemetry Micro-Stat Row */}
-              <div className="rfq-hero-stats" style={{ display: 'flex', gap: '32px', marginTop: '48px', borderTop: '1px solid var(--color-ui-border)', paddingTop: '24px' }}>
-                {stats.map((s, i) => (
-                  <div key={i}>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>{s.value}</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-ui-gray)', textTransform: 'uppercase', marginTop: '2px' }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Right Column: Animated perspective Bidding showcase */}
-          <Reveal delay="reveal-delay-2">
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {/* Background gradient shadow */}
-              <div style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                background: 'radial-gradient(circle at center, rgba(90,79,207,0.12) 0%, transparent 70%)',
-                filter: 'blur(40px)',
-                zIndex: -1
-              }}></div>
-
-              {/* 3D Styled Rotating Dashboard mock */}
-              <div className="rfq-perspective-dashboard" style={{
-                width: '100%',
-                maxWidth: '460px',
-                background: 'rgba(255, 255, 255, 0.75)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(226, 232, 240, 0.8)',
-                borderRadius: '24px',
-                padding: '24px',
-                boxShadow: '0 30px 60px -15px rgba(15,23,42,0.12), 0 0 0 1px rgba(0,0,0,0.02)',
-                transition: 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
-                position: 'relative'
-              }}>
-                {/* Segmented Controller Tabs */}
-                <div className="rate-selector-row">
-                  <button className={`rate-mode-tab ${selectedMode === 'sea' ? 'active' : ''}`} onClick={() => setSelectedMode('sea')}>
-                    🚢 Ocean
-                  </button>
-                  <button className={`rate-mode-tab ${selectedMode === 'air' ? 'active' : ''}`} onClick={() => setSelectedMode('air')}>
-                    ✈️ Air
-                  </button>
-                  <button className={`rate-mode-tab ${selectedMode === 'road' ? 'active' : ''}`} onClick={() => setSelectedMode('road')}>
-                    🚚 Road
-                  </button>
+              <div className="rc-trust-indicators">
+                <div className="rc-trust-item">
+                  <span className="rc-check">✓</span> Live Market Data
                 </div>
-
-                {/* Cargo Details */}
-                <div style={{ background: 'var(--color-brand-navy)', borderRadius: '16px', padding: '16px', color: 'white', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }}></div>
-                  <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700, letterSpacing: '0.05em' }}>Freight Lane Quote</div>
-                  <div style={{ fontSize: '1.05rem', fontWeight: 800, marginTop: '4px' }}>
-                    {modesData[selectedMode].lane}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#CBD5E1', marginTop: '6px' }}>
-                    {modesData[selectedMode].details}
-                  </div>
+                <div className="rc-trust-item">
+                  <span className="rc-check">✓</span> Margin Protection
                 </div>
-
-                {/* Bidding Telemetry Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-brand-navy)' }}>Carrier Rates Breakdown</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-brand-teal)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span className="live-pulse" style={{ width: '6px', height: '6px' }}></span> Live Feed
-                  </div>
-                </div>
-
-                {/* Bids List Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="rfq-bids-list">
-                  {modesData[selectedMode].carriers.map((c, idx) => (
-                    <div key={idx} className={`rfq-bid-card ${c.active ? 'active' : ''}`} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: c.active ? 'rgba(0,191,165,0.06)' : 'white',
-                      border: c.active ? '1px solid rgba(0,191,165,0.3)' : '1px solid rgba(226, 232, 240, 0.8)',
-                      borderRadius: '12px',
-                      padding: '12px 16px',
-                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
-                      transition: 'all 0.4s cubic-bezier(0.16,1,0.3,1)'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-brand-navy)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {c.name}
-                          {c.active && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-brand-teal)', display: 'inline-block' }}></span>}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--color-ui-gray)', marginTop: '2px' }}>
-                          Rank #{c.rank} • {c.time}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: c.rank === 1 ? 'var(--color-brand-teal)' : 'var(--color-brand-navy)' }}>{c.rate}</div>
-                        {c.rank === 1 && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-brand-teal)', background: 'rgba(0,191,165,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BEST VALUE</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Instant Margin Calculator Floating Badge */}
-                <div className="rfq-margin-badge" style={{
-                  position: 'absolute',
-                  bottom: '-20px',
-                  right: '-20px',
-                  background: 'white',
-                  border: '1px solid rgba(226, 232, 240, 0.8)',
-                  borderRadius: '16px',
-                  padding: '12px 18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-                  zIndex: 2
-                }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0,191,165,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: 'var(--color-brand-teal)' }}>
-                    📈
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-ui-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Auto-Protected Margin</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>
-                      {modesData[selectedMode].margin}
-                    </div>
-                  </div>
+                <div className="rc-trust-item">
+                  <span className="rc-check">✓</span> Multi-Modal Coverage
                 </div>
               </div>
             </div>
-          </Reveal>
-        </div>
-      </section>
 
-      {/* ═══ WHY DYNAMIC RATES ═══ */}
-      <section className="solution-module solution-module-alt">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">Why Dynamic Rates?</h2>
-            <p className="solution-module-desc">
-              The difference between legacy procurement and modern rate intelligence.
-            </p>
-          </div>
-        </Reveal>
-
-        <div className="comparison-grid" style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-          <Reveal delay="reveal-delay-1">
-            <div className="comparison-panel comparison-panel-bad" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-brand-navy)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ background: '#FEE2E2', width: '36px', height: '36px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>❌</span> Without Freel
-                </h3>
-                <ul className="comparison-list" style={{ fontSize: '0.85rem', color: 'var(--color-ui-gray)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <li>Call 5-10 vendors manually for each quote</li>
-                  <li>Rates valid for 24-48 hours only</li>
-                  <li>No margin visibility until final invoice</li>
-                  <li>Excel sheets with rapidly outdated rates</li>
-                  <li>Takes 2-3 days to finalize a simple rate</li>
-                </ul>
-              </div>
-              <div className="messy-excel-simulator" style={{ marginTop: '24px', opacity: 0.85, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px', overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', fontSize: '0.65rem', fontFamily: 'monospace', color: '#64748b' }}>
-                  <div style={{ background: '#e2e8f0', padding: '4px', fontWeight: 'bold' }}>Lane ID</div>
-                  <div style={{ background: '#e2e8f0', padding: '4px', fontWeight: 'bold' }}>Carrier Quote</div>
-                  <div style={{ background: '#e2e8f0', padding: '4px', fontWeight: 'bold' }}>Valid Until</div>
-                  
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px' }}>BOM-BLR-01</div>
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px', textDecoration: 'line-through' }}>₹46,200</div>
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px', color: 'red' }}>EXPIRED</div>
-                  
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px' }}>BOM-BLR-02</div>
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px', textDecoration: 'line-through' }}>₹48,500</div>
-                  <div style={{ borderBottom: '1px solid #e2e8f0', padding: '4px', color: 'red' }}>EXPIRED</div>
-
-                  <div style={{ padding: '4px' }}>BOM-BLR-03</div>
-                  <div style={{ padding: '4px', color: '#f59e0b' }}>CALL CARRIER</div>
-                  <div style={{ padding: '4px' }}>--</div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          <Reveal delay="reveal-delay-2">
-            <div className="comparison-panel comparison-panel-good" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-brand-navy)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ background: '#D1FAE5', width: '36px', height: '36px', borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>✅</span> With Freel
-                </h3>
-                <ul className="comparison-list" style={{ fontSize: '0.85rem', color: 'var(--color-ui-gray)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <li>Compare 10+ carriers in under 30 seconds</li>
-                  <li>Dynamic rates updated every single hour</li>
-                  <li>Margin auto-calculated per quote instantly</li>
-                  <li>Digital rate cards from verified vendors</li>
-                  <li>Instant quotation PDF with one click</li>
-                </ul>
-              </div>
-              <div style={{ marginTop: '24px', overflow: 'hidden', borderRadius: '12px', border: '1px solid var(--color-ui-border)', boxShadow: '0 8px 24px rgba(0,0,0,0.04)' }}>
-                <img src="/assets/digital_platform_dashboard.png" alt="With Freel Analytics Dashboard" style={{ width: '100%', height: '115px', objectFit: 'cover', display: 'block' }} className="hover-scale-img" />
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ═══ GLOBAL LANE COMPARISON SHOWCASE ═══ */}
-      <section className="solution-module">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">Global Shipping Lane Intel</h2>
-            <p className="solution-module-desc">
-              Real-time actionable metrics across major maritime routes and air corridors. Compare carrier performance metrics and current index rates instantly.
-            </p>
-          </div>
-        </Reveal>
-
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '32px', alignItems: 'center' }} className="rfq-hero-grid">
-          {/* Left: Active lanes list */}
-          <Reveal delay="reveal-delay-1">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: 'white', border: '1px solid var(--color-ui-border)', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'transform 0.3s ease' }} className="rfq-bid-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-brand-teal)', background: 'rgba(0,191,165,0.08)', padding: '4px 10px', borderRadius: '6px' }}>SHANGHAI ➔ ROTTERDAM</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>$3,420 <span style={{ color: 'var(--color-brand-teal)', fontSize: '0.7rem' }}>➔ 4.2%</span></span>
-                </div>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: 'var(--color-ui-gray)' }}>
-                  <span>🚢 Ocean FCL</span>
-                  <span>⏱️ 28 Days</span>
-                  <span>🏆 MSC (Best Rate)</span>
-                </div>
-              </div>
-
-              <div style={{ background: 'white', border: '1px solid var(--color-ui-border)', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'transform 0.3s ease' }} className="rfq-bid-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-brand-indigo)', background: 'rgba(90,79,207,0.08)', padding: '4px 10px', borderRadius: '6px' }}>MUMBAI ➔ DUBAI (DXB)</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>₹95 / kg <span style={{ color: 'red', fontSize: '0.7rem' }}>➔ 1.8%</span></span>
-                </div>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: 'var(--color-ui-gray)' }}>
-                  <span>✈️ Air Cargo</span>
-                  <span>⏱️ 4 Hours</span>
-                  <span>🏆 Air India (Best Value)</span>
-                </div>
-              </div>
-
-              <div style={{ background: 'white', border: '1px solid var(--color-ui-border)', borderRadius: '16px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', transition: 'transform 0.3s ease' }} className="rfq-bid-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-brand-teal)', background: 'rgba(0,191,165,0.08)', padding: '4px 10px', borderRadius: '6px' }}>SINGAPORE ➔ NEW YORK</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>$4,890 <span style={{ color: 'var(--color-brand-teal)', fontSize: '0.7rem' }}>➔ 3.5%</span></span>
-                </div>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '0.75rem', color: 'var(--color-ui-gray)' }}>
-                  <span>🚢 Ocean FCL</span>
-                  <span>⏱️ 34 Days</span>
-                  <span>🏆 ONE Line (Best Rate)</span>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Right: Premium Global Lanes Map */}
-          <Reveal delay="reveal-delay-2">
-            <div style={{ overflow: 'hidden', borderRadius: '24px', border: '1px solid var(--color-ui-border)', boxShadow: '0 20px 40px -15px rgba(0,0,0,0.08)', position: 'relative' }}>
-              <img src="/assets/smart_routing.png" alt="Global shipping lanes map visualization" style={{ width: '100%', height: '320px', objectFit: 'cover', display: 'block', transition: 'transform 0.5s ease' }} className="hover-scale-img" />
-              <div style={{ position: 'absolute', bottom: '16px', left: '16px', background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(10px)', color: 'white', padding: '10px 16px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 600 }}>
-                🟢 384 active global carrier lanes tracked live
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ═══ WHAT AFFECTS RATES ═══ */}
-      <section className="solution-module solution-module-alt">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">What Affects Rates?</h2>
-            <p className="solution-module-desc">
-              Freight pricing isn't arbitrary. Freel's engine analyzes dozens of variables in real-time to ensure you get the most accurate, executable rate.
-            </p>
-          </div>
-        </Reveal>
-        
-        <div className="feature-grid-3">
-          {/* Factor 1: Fuel Surcharge */}
-          <Reveal delay="reveal-delay-1">
-            <div className="feature-card" style={{ background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'var(--color-ui-surface)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>⛽</div>
-                <h3 className="feature-card-title">Fuel Surcharge</h3>
-                <p className="feature-card-desc">Diesel/bunker fuel prices directly impact road and sea freight. Freel tracks global fuel indices and adjusts rate calculations in real-time.</p>
-              </div>
-              <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>
-                  <span>Brent Crude (Global Index)</span>
-                  <span style={{ color: 'red' }}>$84.50 (➔ +2.4%)</span>
-                </div>
-                <div style={{ height: '8px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: '84%', height: '100%', background: 'linear-gradient(90deg, var(--color-brand-indigo), red)' }}></div>
-                </div>
-                <div style={{ fontSize: '0.65rem', color: '#94A3B8' }}>⚠️ Automatically updates active carrier road/sea quotes hourly</div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Factor 2: Container Type */}
-          <Reveal delay="reveal-delay-2">
-            <div className="feature-card" style={{ background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'var(--color-ui-surface)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>📦</div>
-                <h3 className="feature-card-title">Container Type</h3>
-                <p className="feature-card-desc">20ft, 40ft, High Cube, Reefer — each has different pricing structures. Specialized equipment like open top command premium rates.</p>
-              </div>
-              <div style={{ marginTop: '16px', background: '#F8FAFC', borderRadius: '12px', padding: '12px', border: '1px solid #E2E8F0', fontSize: '0.75rem' }}>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ background: 'rgba(90,79,207,0.1)', color: 'var(--color-brand-indigo)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>20ft FCL</span>
-                  <span style={{ background: 'rgba(0,191,165,0.1)', color: 'var(--color-brand-teal)', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>40ft HC</span>
-                </div>
-                <div style={{ color: '#64748B', lineHeight: 1.5 }}>
-                  Max Payload: <b>28,600 kg</b><br />
-                  Internal Vol: <b>76.2 CBM</b>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Factor 3: HAZ / DG Cargo */}
-          <Reveal delay="reveal-delay-3">
-            <div className="feature-card" style={{ background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'var(--color-ui-surface)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>⚠️</div>
-                <h3 className="feature-card-title">HAZ / DG Cargo</h3>
-                <p className="feature-card-desc">Hazardous goods require MSDS documentation, special handling, and carry a 15-40% surcharge depending on IMO classification.</p>
-              </div>
-              <div style={{ marginTop: '16px', border: '1px dashed #F59E0B', background: 'rgba(245,158,11,0.06)', borderRadius: '12px', padding: '12px', fontSize: '0.75rem', color: '#D97706' }}>
-                ⚠️ <b>DG Class 3, 6 & 9 Supported</b><br />
-                MSDS validation completes in under 12 minutes with automated regulatory checkups.
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Factor 4: Season & Demand */}
-          <Reveal delay="reveal-delay-1">
-            <div className="feature-card" style={{ background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'var(--color-ui-surface)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>📅</div>
-                <h3 className="feature-card-title">Season & Demand</h3>
-                <p className="feature-card-desc">Peak season (Oct-Mar), regional holiday periods, and port congestion events cause sudden rate spikes of 20-50%.</p>
-              </div>
-              <div style={{ marginTop: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', fontSize: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', marginBottom: '6px' }}>
-                  <span>Peak Season Surcharge (PSS)</span>
-                  <span style={{ color: 'var(--color-brand-teal)', fontWeight: 700 }}>ACTIVE</span>
-                </div>
-                <div style={{ height: '24px', display: 'flex', alignItems: 'flex-end', gap: '4px' }}>
-                  <div style={{ height: '40%', flex: 1, background: '#CBD5E1', borderRadius: '2px' }}></div>
-                  <div style={{ height: '45%', flex: 1, background: '#CBD5E1', borderRadius: '2px' }}></div>
-                  <div style={{ height: '60%', flex: 1, background: '#CBD5E1', borderRadius: '2px' }}></div>
-                  <div style={{ height: '95%', flex: 1, background: 'var(--color-brand-teal)', borderRadius: '2px' }}></div>
-                  <div style={{ height: '80%', flex: 1, background: 'var(--color-brand-teal)', borderRadius: '2px' }}></div>
-                </div>
-                <div style={{ fontSize: '0.65rem', color: '#94A3B8', marginTop: '6px', textAlign: 'center' }}>Q4 Rate Trend Multiplier: 1.28x</div>
-              </div>
-            </div>
-          </Reveal>
-
-          {/* Factor 5: Volumetric Weight Calculator Slider Card */}
-          <Reveal delay="reveal-delay-2">
-            <div className="feature-card" style={{ background: 'white', border: '1px solid var(--color-brand-teal)', boxShadow: '0 10px 25px -10px rgba(0,191,165,0.15)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'rgba(0,191,165,0.08)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>♟️</div>
-                <h3 className="feature-card-title">Weight vs Volume</h3>
-                <p className="feature-card-desc">Chargeable weight is calculated as MAX(actual weight, volumetric weight). Freel automatically calculates this using cargo size.</p>
-              </div>
-              
-              <div style={{ marginTop: '16px', background: '#F8FAFC', borderRadius: '12px', padding: '16px', border: '1px solid #E2E8F0', fontSize: '0.8rem' }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-brand-navy)', marginBottom: '10px' }}>Volumetric Weight Tool</div>
+            {/* Right Visual Composition */}
+            <div className="rc-hero-visual">
+              <div className="rc-composition">
                 
-                <div style={{ marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '0.7rem', fontWeight: 600 }}>
-                    <span>Length: {volLength} cm</span>
-                  </div>
-                  <input type="range" min="20" max="250" value={volLength} onChange={(e) => setVolLength(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--color-brand-teal)', cursor: 'pointer' }} />
+                {/* Images */}
+                <div className="rc-img-wrapper rc-img-port">
+                  <img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80" alt="Global shipping container port" />
+                </div>
+                <div className="rc-img-wrapper rc-img-air">
+                  <img src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=800&q=80" alt="Cargo aircraft" />
+                </div>
+                <div className="rc-img-wrapper rc-img-truck">
+                  <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=800&q=80" alt="Freight truck" />
                 </div>
 
-                <div style={{ marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '0.7rem', fontWeight: 600 }}>
-                    <span>Width: {volWidth} cm</span>
+                {/* Floating Market Cards */}
+                <div className="rc-float-card rc-card-1">
+                  <div className="rc-card-lane">Mumbai → Dubai</div>
+                  <div className="rc-card-data">
+                    <span className="rc-card-price">₹95/kg</span>
+                    <span className="rc-card-trend rc-down">↓ 2.4%</span>
                   </div>
-                  <input type="range" min="20" max="200" value={volWidth} onChange={(e) => setVolWidth(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--color-brand-teal)', cursor: 'pointer' }} />
                 </div>
 
-                <div style={{ marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '0.7rem', fontWeight: 600 }}>
-                    <span>Height: {volHeight} cm</span>
+                <div className="rc-float-card rc-card-2">
+                  <div className="rc-card-lane">Shanghai → Rotterdam</div>
+                  <div className="rc-card-data">
+                    <span className="rc-card-price">$4,820</span>
+                    <span className="rc-card-trend rc-up">↑ 3.1%</span>
                   </div>
-                  <input type="range" min="20" max="200" value={volHeight} onChange={(e) => setVolHeight(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--color-brand-teal)', cursor: 'pointer' }} />
                 </div>
 
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '0.7rem', fontWeight: 600 }}>
-                    <span>Actual Weight: {volWeight} kg</span>
+                <div className="rc-float-card rc-card-3">
+                  <div className="rc-card-lane">Singapore → New York</div>
+                  <div className="rc-card-data">
+                    <span className="rc-card-price">$5,240</span>
+                    <span className="rc-card-trend rc-down">↓ 1.7%</span>
                   </div>
-                  <input type="range" min="10" max="500" value={volWeight} onChange={(e) => setVolWeight(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--color-brand-indigo)', cursor: 'pointer' }} />
                 </div>
 
-                <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748B' }}>Total Volume:</span>
-                    <span style={{ fontWeight: 700 }}>{volCbm} CBM</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748B' }}>Volumetric Weight:</span>
-                    <span style={{ fontWeight: 700, color: volumetricWeight > volWeight ? 'var(--color-brand-teal)' : '#64748B' }}>{volumetricWeight} kg</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(0,191,165,0.06)', padding: '6px', borderRadius: '6px', marginTop: '4px', border: '1px solid rgba(0,191,165,0.2)' }}>
-                    <span style={{ fontWeight: 700, color: 'var(--color-brand-navy)' }}>Chargeable Weight:</span>
-                    <span style={{ fontWeight: 800, color: 'var(--color-brand-teal)' }}>{chargeableWeight} kg</span>
-                  </div>
+                <div className="rc-float-card rc-card-4">
+                  <div className="rc-card-label">Best Carrier Today</div>
+                  <div className="rc-card-value">MSC Shipping</div>
+                  <div className="rc-card-sub rc-success">Savings Opportunity 14.2%</div>
                 </div>
+
+                <div className="rc-float-card rc-card-5">
+                  <div className="rc-card-label">Market Update</div>
+                  <div className="rc-card-value">Fuel Index Rising</div>
+                  <div className="rc-card-sub rc-danger">+3.4%</div>
+                </div>
+
               </div>
             </div>
-          </Reveal>
 
-          {/* Factor 6: FCL vs LCL */}
-          <Reveal delay="reveal-delay-3">
-            <div className="feature-card" style={{ background: 'white', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
-              <div>
-                <div className="feature-card-icon" style={{ background: 'var(--color-ui-surface)', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>🚢</div>
-                <h3 className="feature-card-title">FCL vs LCL</h3>
-                <p className="feature-card-desc">Full container load vs shared container. LCL rates are quoted per CBM while FCL rates are priced per whole container unit.</p>
-              </div>
-              <div style={{ marginTop: '16px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '12px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
-                  <span>📦 FCL (Container Load)</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-brand-indigo)' }}>Flat / Container</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
-                  <span>📥 LCL (Shared Volume)</span>
-                  <span style={{ fontWeight: 700, color: 'var(--color-brand-teal)' }}>Variable / CBM</span>
-                </div>
-              </div>
-            </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
-      {/* ═══ CTA ═══ */}
-      <section className="detail-cta-banner">
-        <Reveal>
-          <h2>Compare Rates in Real-Time</h2>
-          <p>Stop calling vendors and managing spreadsheets. Get instant freight rate comparisons and protect your margins today.</p>
-          <Link to="/contact" style={{
-            display: 'inline-block',
-            padding: '16px 40px',
-            background: 'white',
-            color: 'var(--color-brand-indigo)',
-            fontWeight: 700,
-            borderRadius: '999px',
-            fontSize: '1.1rem',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease',
-            position: 'relative',
-            zIndex: 1,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
-          }}>
-            Try Rate Engine →
-          </Link>
-        </Reveal>
+      {/* ─── SECTION 1: THE PROBLEM & VISUAL COMPARISON ─── */}
+      <section className="rc-problem-section">
+        <div className="rc-container">
+          <div className="rc-problem-header">
+            <div className="rc-problem-label">WHY FREIGHT TEAMS MISS THE MARKET</div>
+            <h2 className="rc-problem-heading">
+              You Can't Buy Smart<br />
+              If You're Buying Blind.
+            </h2>
+            <p className="rc-problem-desc">
+              Most freight teams still rely on calls, emails and spreadsheets to collect rates.<br />
+              By the time quotes arrive, the market has already changed.
+            </p>
+          </div>
+
+          <div className="rc-problem-comparison">
+            
+            {/* Left Card: Traditional Procurement */}
+            <div className="rc-prob-card rc-prob-left">
+              <h3 className="rc-prob-card-title">Traditional Procurement</h3>
+              <div className="rc-prob-img-box">
+                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1200&q=80" alt="Traditional Procurement" />
+                <div className="rc-prob-chip rc-pchip-1">📞 18 Vendor Calls</div>
+                <div className="rc-prob-chip rc-pchip-2">📧 43 Emails Waiting</div>
+                <div className="rc-prob-chip rc-pchip-3">📊 12 Spreadsheet Versions</div>
+                <div className="rc-prob-chip rc-pchip-4">⏳ 2 Days For Quotes</div>
+              </div>
+              <div className="rc-prob-card-msg">The market moved before<br/>the quotes arrived.</div>
+            </div>
+
+            {/* Right Card: Freel Intelligence */}
+            <div className="rc-prob-card rc-prob-right">
+              <h3 className="rc-prob-card-title">Freel Intelligence</h3>
+              <div className="rc-prob-img-box">
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" alt="Freel Intelligence" />
+                <div className="rc-prob-chip rc-pchip-5">✅ 200+ Live Rates</div>
+                <div className="rc-prob-chip rc-pchip-6">✅ Updated Hourly</div>
+                <div className="rc-prob-chip rc-pchip-7">✅ Best Carrier Identified</div>
+                <div className="rc-prob-chip rc-pchip-8">✅ Margin Protected</div>
+              </div>
+              <div className="rc-prob-card-msg">See the market before<br/>you buy from it.</div>
+            </div>
+
+          </div>
+        </div>
       </section>
-    </>
+
+
+      {/* ─── SECTION 3: LIVE MARKET INTELLIGENCE ─── */}
+      <section className="rc-live-section">
+        <div className="rc-container">
+          <div className="rc-live-header">
+            <div className="rc-live-label">GLOBAL MARKET INTELLIGENCE</div>
+            <h2 className="rc-live-heading">
+              See Global Freight Markets<br />
+              In Real Time.
+            </h2>
+            <p className="rc-live-desc">
+              Track lane performance, carrier pricing, fuel movements,<br />
+              port congestion and demand shifts.
+            </p>
+          </div>
+
+          <div className="rc-live-hero-img-box">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1600&q=80" alt="Global Market Intelligence" />
+            
+            {/* New Design Floating Insight Chips */}
+            <div className="rc-live-fcard rc-lf-1">
+              <div className="rc-lf-header">Shanghai → Rotterdam</div>
+              <div className="rc-lf-body">
+                <span className="rc-lf-trend rc-lf-down">▼ 4.2%</span>
+                <span className="rc-lf-sub">This Week</span>
+              </div>
+            </div>
+            
+            <div className="rc-live-fcard rc-lf-2">
+              <div className="rc-lf-header">Mumbai → Dubai</div>
+              <div className="rc-lf-body">
+                <span className="rc-lf-trend rc-lf-up">▲ 1.8%</span>
+                <span className="rc-lf-sub">This Week</span>
+              </div>
+            </div>
+
+            <div className="rc-live-fcard rc-lf-3">
+              <div className="rc-lf-icon">⛽</div>
+              <div className="rc-lf-text-col">
+                <div className="rc-lf-header">Fuel Index</div>
+                <div className="rc-lf-trend rc-lf-down">▼ 1.8%</div>
+              </div>
+            </div>
+
+            <div className="rc-live-fcard rc-lf-4">
+              <div className="rc-lf-icon">🚚</div>
+              <div className="rc-lf-text-col">
+                <div className="rc-lf-header">India Road Freight</div>
+                <div className="rc-lf-trend rc-lf-stable">Stable</div>
+              </div>
+            </div>
+
+            <div className="rc-live-fcard rc-lf-5">
+              <div className="rc-lf-icon">⚓</div>
+              <div className="rc-lf-text-col">
+                <div className="rc-lf-header">Port Congestion</div>
+                <div className="rc-lf-trend rc-lf-warn">Moderate</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rc-live-grid">
+            <div className="rc-lgrid-card">
+              <div className="rc-lgrid-img rc-ocean-accent">
+                <img src="https://images.pexels.com/photos/2226458/pexels-photo-2226458.jpeg?auto=compress&cs=tinysrgb&w=800" alt="Ocean Freight" />
+              </div>
+              <div className="rc-lgrid-content">
+                <h3>Ocean Freight</h3>
+                <p>Live visibility into major port pairs, vessel schedules, and spot vs contract variance.</p>
+              </div>
+            </div>
+            <div className="rc-lgrid-card">
+              <div className="rc-lgrid-img rc-air-accent">
+                <img src="https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=800&q=80" alt="Air Freight" />
+              </div>
+              <div className="rc-lgrid-content">
+                <h3>Air Freight</h3>
+                <p>Track capacity constraints, peak season surcharges, and real-time cargo rates.</p>
+              </div>
+            </div>
+            <div className="rc-lgrid-card">
+              <div className="rc-lgrid-img rc-road-accent">
+                <img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=800&q=80" alt="Road Freight" />
+              </div>
+              <div className="rc-lgrid-content">
+                <h3>Road Freight</h3>
+                <p>Monitor local carrier availability, fuel indexing, and domestic linehaul costs.</p>
+              </div>
+            </div>
+            <div className="rc-lgrid-card">
+              <div className="rc-lgrid-img rc-signals-accent">
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=800&q=80" alt="Market Signals" />
+              </div>
+              <div className="rc-lgrid-content">
+                <h3>Market Signals</h3>
+                <p>Predictive indicators warning you of congestion, strikes, or price volatility.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION: BUSINESS IMPACT TRANSFORMATION ─── */}
+      <section className="rc-impact-section">
+        <div className="rc-container">
+
+          {/* Header */}
+          <div className="rc-impact-header">
+            <div className="rc-impact-label">BUSINESS IMPACT</div>
+            <h2 className="rc-impact-heading">
+              Stop Chasing Rates.<br />
+              Start Controlling Spend.
+            </h2>
+            <p className="rc-impact-desc">
+              Freel helps procurement teams buy at the right time,<br />
+              from the right carrier, at the right price.
+            </p>
+          </div>
+
+          {/* Transformation Journey */}
+          <div className="rc-journey">
+
+            {/* Stage 1 */}
+            <div className="rc-journey-stage rc-stage-reactive">
+              <div className="rc-stage-icon-wrap rc-accent-red">
+                <Mail size={28} strokeWidth={1.5} />
+              </div>
+              <div className="rc-stage-num">01</div>
+              <h3 className="rc-stage-title">Reactive Procurement</h3>
+              <div className="rc-stage-pills">
+                <span className="rc-pill rc-pill-red"><Phone size={14} /> Calls</span>
+                <span className="rc-pill rc-pill-red"><Mail size={14} /> Emails</span>
+                <span className="rc-pill rc-pill-red"><FileSpreadsheet size={14} /> Spreadsheets</span>
+              </div>
+              <p className="rc-stage-caption">Waiting.<br />Comparing.<br />Reacting.</p>
+            </div>
+
+            {/* Connector */}
+            <div className="rc-journey-connector">
+              <svg viewBox="0 0 120 40" preserveAspectRatio="none">
+                <path className="rc-connector-path" d="M0,20 C40,5 80,35 120,20" />
+              </svg>
+              <ArrowRight size={18} className="rc-connector-arrow" />
+            </div>
+
+            {/* Stage 2 */}
+            <div className="rc-journey-stage rc-stage-intelligence">
+              <div className="rc-stage-icon-wrap rc-accent-blue">
+                <BarChart size={28} strokeWidth={1.5} />
+              </div>
+              <div className="rc-stage-num">02</div>
+              <h3 className="rc-stage-title">Market Intelligence</h3>
+              <div className="rc-stage-pills">
+                <span className="rc-pill rc-pill-blue"><TrendingUp size={14} /> Live Data</span>
+                <span className="rc-pill rc-pill-blue"><Globe size={14} /> Lane Visibility</span>
+                <span className="rc-pill rc-pill-blue"><Zap size={14} /> Carrier Intel</span>
+              </div>
+              <p className="rc-stage-caption">See the market as it moves.</p>
+            </div>
+
+            {/* Connector */}
+            <div className="rc-journey-connector">
+              <svg viewBox="0 0 120 40" preserveAspectRatio="none">
+                <path className="rc-connector-path" d="M0,20 C40,5 80,35 120,20" />
+              </svg>
+              <ArrowRight size={18} className="rc-connector-arrow" />
+            </div>
+
+            {/* Stage 3 */}
+            <div className="rc-journey-stage rc-stage-decisions">
+              <div className="rc-stage-icon-wrap rc-accent-purple">
+                <Brain size={28} strokeWidth={1.5} />
+              </div>
+              <div className="rc-stage-num">03</div>
+              <h3 className="rc-stage-title">Smarter Decisions</h3>
+              <div className="rc-stage-pills">
+                <span className="rc-pill rc-pill-purple"><BarChart2 size={14} /> Comparison</span>
+                <span className="rc-pill rc-pill-purple"><Ship size={14} /> Carrier Select</span>
+                <span className="rc-pill rc-pill-purple"><Route size={14} /> Route Optim.</span>
+              </div>
+              <p className="rc-stage-caption">Buy with confidence.</p>
+            </div>
+
+            {/* Connector */}
+            <div className="rc-journey-connector">
+              <svg viewBox="0 0 120 40" preserveAspectRatio="none">
+                <path className="rc-connector-path" d="M0,20 C40,5 80,35 120,20" />
+              </svg>
+              <ArrowRight size={18} className="rc-connector-arrow" />
+            </div>
+
+            {/* Stage 4 */}
+            <div className="rc-journey-stage rc-stage-margins">
+              <div className="rc-stage-icon-wrap rc-accent-green">
+                <ShieldCheck size={28} strokeWidth={1.5} />
+              </div>
+              <div className="rc-stage-num">04</div>
+              <h3 className="rc-stage-title">Protected Margins</h3>
+              <div className="rc-stage-pills">
+                <span className="rc-pill rc-pill-green"><TrendingUp size={14} /> Growth</span>
+                <span className="rc-pill rc-pill-green"><ShieldCheck size={14} /> Margin Safe</span>
+                <span className="rc-pill rc-pill-green"><BarChart size={14} /> Profitability</span>
+              </div>
+              <p className="rc-stage-caption">Better procurement outcomes.</p>
+            </div>
+
+          </div>
+
+          {/* Bottom Metrics Bar */}
+          <div className="rc-impact-metrics">
+            <div className="rc-impact-metric">
+              <Globe size={22} className="rc-metric-icon" />
+              <strong>384+</strong>
+              <span>Active Trade Lanes</span>
+            </div>
+            <div className="rc-impact-metric">
+              <Ship size={22} className="rc-metric-icon" />
+              <strong>200+</strong>
+              <span>Carrier Integrations</span>
+            </div>
+            <div className="rc-impact-metric">
+              <TrendingUp size={22} className="rc-metric-icon" />
+              <strong>12,000+</strong>
+              <span>Daily Updates</span>
+            </div>
+            <div className="rc-impact-metric">
+              <BarChart2 size={22} className="rc-metric-icon" />
+              <strong>98.7%</strong>
+              <span>Market Coverage</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─── SECTION: MARKET DRIVERS (UNIFIED INTELLIGENCE) ─── */}
+      <section className="rc-drivers-section">
+        <div className="rc-container">
+          
+          {/* Header */}
+          <div className="rc-drivers-header">
+            <div className="rc-drivers-label">MARKET DRIVERS</div>
+            <h2 className="rc-drivers-heading">
+              What Actually Moves Freight Prices?
+            </h2>
+            <p className="rc-drivers-desc">
+              Rates change because markets move.<br />
+              Freel helps you understand why.
+            </p>
+          </div>
+
+          {/* Unified Intelligence Dashboard */}
+          <div className="rc-unified-dashboard">
+            
+            <div className="rc-unified-main">
+              {/* Left Side (40%) */}
+              <div className="rc-unified-left">
+                <h3 className="rc-unified-title">The Signals Behind Every Rate</h3>
+                <p className="rc-unified-text">
+                  Freight pricing is influenced by fuel costs, port congestion, cargo capacity, global trade events and seasonal demand.
+                </p>
+                <p className="rc-unified-text">
+                  Freel tracks these signals continuously so teams can understand not just the price, but the reason behind it.
+                </p>
+                
+                <div className="rc-signal-chips">
+                  <span className="rc-signal-chip">Fuel Prices</span>
+                  <span className="rc-signal-chip">Port Congestion</span>
+                  <span className="rc-signal-chip">Air Capacity</span>
+                  <span className="rc-signal-chip">Seasonal Demand</span>
+                </div>
+              </div>
+
+              {/* Right Side (60%) */}
+              <div className="rc-unified-right">
+                {/* Premium Analytics / Command Center Image */}
+                <img src="https://images.unsplash.com/photo-1526628953301-3e589a6a8b74?auto=compress&cs=tinysrgb&w=1200" alt="Supply Chain Command Center" className="rc-unified-bg" />
+                
+                {/* Subtle vignette overlay instead of heavy dark overlay */}
+                <div className="rc-unified-overlay"></div>
+
+                {/* Central Hub */}
+                <div className="rc-intel-hub">
+                  <Brain size={24} className="rc-hub-icon" />
+                  <span>Market Intelligence</span>
+                  <div className="rc-hub-glow"></div>
+                </div>
+
+                {/* SVG Connections with animateMotion for moving dots */}
+                <svg className="rc-unified-routes" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {/* Paths */}
+                  <path id="path-1" className="rc-route-path" d="M 20 20 Q 40 20 50 50" />
+                  <path id="path-2" className="rc-route-path" d="M 80 25 Q 70 50 50 50" />
+                  <path id="path-3" className="rc-route-path" d="M 15 50 Q 30 70 50 50" />
+                  <path id="path-4" className="rc-route-path" d="M 85 60 Q 60 80 50 50" />
+                  <path id="path-5" className="rc-route-path" d="M 50 80 Q 30 65 50 50" />
+
+                  {/* Moving Dots */}
+                  <circle r="0.8" className="rc-route-dot">
+                    <animateMotion dur="2.5s" repeatCount="indefinite" path="M 20 20 Q 40 20 50 50" />
+                  </circle>
+                  <circle r="0.8" className="rc-route-dot">
+                    <animateMotion dur="3.2s" repeatCount="indefinite" path="M 80 25 Q 70 50 50 50" />
+                  </circle>
+                  <circle r="0.8" className="rc-route-dot">
+                    <animateMotion dur="2.8s" repeatCount="indefinite" path="M 15 50 Q 30 70 50 50" />
+                  </circle>
+                  <circle r="0.8" className="rc-route-dot">
+                    <animateMotion dur="3.5s" repeatCount="indefinite" path="M 85 60 Q 60 80 50 50" />
+                  </circle>
+                  <circle r="0.8" className="rc-route-dot">
+                    <animateMotion dur="2.2s" repeatCount="indefinite" path="M 50 80 Q 30 65 50 50" />
+                  </circle>
+                </svg>
+
+                {/* Floating Intelligence Cards positioned at exact SVG start points */}
+                <div className="rc-float-intel rc-intel-card-1">
+                  <div className="rc-intel-label">Fuel Index</div>
+                  <div className="rc-intel-val rc-val-green">▼ 1.8%</div>
+                </div>
+
+                <div className="rc-float-intel rc-intel-card-2">
+                  <div className="rc-intel-label">Port Congestion</div>
+                  <div className="rc-intel-val rc-val-red">High</div>
+                </div>
+
+                <div className="rc-float-intel rc-intel-card-3">
+                  <div className="rc-intel-label">Air Capacity</div>
+                  <div className="rc-intel-val rc-val-blue">82%</div>
+                </div>
+
+                <div className="rc-float-intel rc-intel-card-4">
+                  <div className="rc-intel-label">Market Demand</div>
+                  <div className="rc-intel-val rc-val-orange">Peak Season</div>
+                </div>
+
+                <div className="rc-float-intel rc-intel-card-5">
+                  <div className="rc-intel-label">Global Trade Impact</div>
+                  <div className="rc-intel-val rc-val-purple">Medium</div>
+                </div>
+
+              </div>
+            </div>
+            
+            {/* Bottom Strip inside the container */}
+            <div className="rc-unified-bottom">
+              <div className="rc-ub-metric">
+                <strong>384</strong>
+                <span>Global Trade Lanes</span>
+              </div>
+              <div className="rc-ub-metric">
+                <strong>200+</strong>
+                <span>Carrier Sources</span>
+              </div>
+              <div className="rc-ub-metric">
+                <strong>12,000+</strong>
+                <span>Rate Updates Daily</span>
+              </div>
+              <div className="rc-ub-metric">
+                <strong>98.7%</strong>
+                <span>Market Coverage</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─── SECTION: PLATFORM OVERVIEW ─── */}
+      <section className="rc-platform-overview">
+        <div className="rc-container">
+          
+          <div className="rc-platform-header">
+            <div className="rc-platform-label">PLATFORM OVERVIEW</div>
+            <h2 className="rc-platform-heading">
+              The Operating System<br />
+              For Freight Procurement.
+            </h2>
+            <p className="rc-platform-subheading">
+              Track rates, capacity, congestion, fuel movements and market shifts<br />
+              from a single intelligence platform.
+            </p>
+          </div>
+
+          <div className="rc-platform-visual">
+            
+            {/* SVG Connections for the network feel */}
+            <svg className="rc-platform-lines" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+              <path className="rc-pline" d="M 200 200 Q 600 150 600 400" />
+              <path className="rc-pline" d="M 1000 200 Q 600 150 600 400" />
+              <path className="rc-pline" d="M 150 600 Q 600 800 600 400" />
+              <path className="rc-pline" d="M 1050 600 Q 600 800 600 400" />
+              <path className="rc-pline" d="M 100 400 Q 600 400 600 400" />
+            </svg>
+
+            {/* Desktop Monitor Mockup */}
+            <div className="rc-monitor-mockup">
+              <div className="rc-monitor-frame">
+                <div className="rc-monitor-screen">
+                  <img src="/images/platform-dashboard.jpg" alt="Platform Dashboard Overview" />
+                </div>
+              </div>
+              <div className="rc-monitor-stand"></div>
+              <div className="rc-monitor-base"></div>
+            </div>
+
+            {/* Floating Insight Cards */}
+            <div className="rc-float-card rc-fc-1">
+              <MapPin size={16} className="rc-fc-icon" /> 384 Active Lanes
+            </div>
+            <div className="rc-float-card rc-fc-2">
+              <Ship size={16} className="rc-fc-icon" /> 200+ Carrier Sources
+            </div>
+            <div className="rc-float-card rc-fc-3">
+              <Activity size={16} className="rc-fc-icon" /> 12,000+ Daily Updates
+            </div>
+            <div className="rc-float-card rc-fc-4">
+              <Globe size={16} className="rc-fc-icon" /> 98.7% Market Coverage
+            </div>
+            
+            <div className="rc-float-card rc-fc-5">
+              <Fuel size={16} className="rc-fc-icon" /> Fuel Intelligence
+            </div>
+            <div className="rc-float-card rc-fc-6">
+              <Anchor size={16} className="rc-fc-icon" /> Port Visibility
+            </div>
+            <div className="rc-float-card rc-fc-7">
+              <Plane size={16} className="rc-fc-icon" /> Air Capacity Tracking
+            </div>
+            <div className="rc-float-card rc-fc-8">
+              <Truck size={16} className="rc-fc-icon" /> Road Market Trends
+            </div>
+            <div className="rc-float-card rc-fc-9">
+              <TrendingUp size={16} className="rc-fc-icon" /> Lane Benchmarking
+            </div>
+            <div className="rc-float-card rc-fc-10">
+              <BarChart2 size={16} className="rc-fc-icon" /> Global Trade Monitoring
+            </div>
+
+          </div>
+
+          <div className="rc-platform-footer">
+            Freight doesn't move in silos.<br />
+            Neither should your data.
+          </div>
+
+        </div>
+      </section>
+
+      {/* ─── IMMERSIVE LOGISTICS DASHBOARD CTA ─── */}
+      <section className="rc-immersive-cta">
+        <div className="rc-imm-container">
+          
+          {/* Text Content (Top Left constraint) */}
+          <div className="rc-imm-content">
+            <h2 className="rc-imm-heading">
+              See The Market Before<br />
+              You Buy From It.
+            </h2>
+            <p className="rc-imm-desc">
+              Track live freight movements, carrier pricing,<br />
+              fuel trends, and lane performance before<br />
+              making procurement decisions.
+            </p>
+            <button className="rc-btn-primary">Explore Live Market Data →</button>
+          </div>
+
+          {/* Massive Immersive Image Layer */}
+          <div className="rc-imm-visual">
+            <img src="https://images.pexels.com/photos/1095814/pexels-photo-1095814.jpeg?auto=compress&cs=tinysrgb&w=1600" alt="Global Logistics Network" />
+            
+            {/* Animated Curved Routes SVG */}
+            <svg className="rc-imm-routes" viewBox="0 0 1000 600" preserveAspectRatio="none">
+              <path className="rc-imm-path" d="M100,100 Q400,50 600,200 T900,150" />
+              <path className="rc-imm-path" d="M200,400 Q500,500 800,300" />
+              
+              {/* Route Labels */}
+              <text className="rc-route-label" x="400" y="80">Shanghai → Rotterdam</text>
+              <text className="rc-route-label" x="600" y="420">Mumbai → Singapore</text>
+            </svg>
+
+            {/* Floating Location Markers */}
+            <div className="rc-imm-marker rc-im-shanghai">📍 Shanghai</div>
+            <div className="rc-imm-marker rc-im-singapore">📍 Singapore</div>
+            <div className="rc-imm-marker rc-im-rotterdam">📍 Rotterdam</div>
+            <div className="rc-imm-marker rc-im-mumbai">📍 Mumbai</div>
+
+            {/* Market Intelligence Glass Cards */}
+            <div className="rc-imm-glass rc-ig-1">
+              <span className="rc-ig-icon"><TrendingUp size={24} /></span>
+              <strong>12,000+</strong>
+              Daily Market Updates
+            </div>
+            <div className="rc-imm-glass rc-ig-2">
+              <span className="rc-ig-icon"><Globe size={24} /></span>
+              <strong>384</strong>
+              Global Trade Lanes
+            </div>
+            <div className="rc-imm-glass rc-ig-3">
+              <span className="rc-ig-icon"><Ship size={24} /></span>
+              <strong>200+</strong>
+              Active Carriers
+            </div>
+            <div className="rc-imm-glass rc-ig-4">
+              <span className="rc-ig-icon"><BarChart2 size={24} /></span>
+              <strong>98.7%</strong>
+              Market Coverage
+            </div>
+
+            {/* Intelligence Signal Cards */}
+            <div className="rc-imm-glass rc-ig-signal-1">
+              <div className="rc-ig-title">Fuel Index</div>
+              <div className="rc-ig-trend rc-ig-down">▼ 1.8%</div>
+            </div>
+            <div className="rc-imm-glass rc-ig-signal-2">
+              <div className="rc-ig-title">Ocean Rates</div>
+              <div className="rc-ig-trend rc-ig-down">▼ 2.3%</div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
   );
 }

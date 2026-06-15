@@ -1,393 +1,738 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import '../../../styles/Solutions.css';
-import '../../../styles/ServiceDetail.css';
+import './RFQLanding.css';
 
-/* ─── Scroll Reveal ─── */
-function useReveal() {
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SCROLL REVEAL
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function useReveal(threshold = 0.1) {
   const ref = useRef(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const obs = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { el.classList.add('visible'); obs.unobserve(el); } },
-      { threshold: 0.15 }
+      ([e]) => { if (e.isIntersecting) { el.classList.add('r3-visible'); obs.unobserve(el); } },
+      { threshold }
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, []);
+  }, [threshold]);
   return ref;
 }
-function Reveal({ children, className = '', delay = '' }) {
+
+function R({ children, d = '', className = '' }) {
   const ref = useReveal();
-  return <div ref={ref} className={`reveal ${delay} ${className}`}>{children}</div>;
+  return <div ref={ref} className={`r3-reveal ${d} ${className}`}>{children}</div>;
 }
 
-/* ─── Page Data ─── */
-const steps = [
-  { n: '1', icon: '📤', title: 'Create & Send RFQ', desc: 'Enter shipment details (origin, destination, cargo, mode) and send to multiple vendors at once. Set deadline for responses.', bg: '#f0fdfa' },
-  { n: '2', icon: '📥', title: 'Vendors Respond', desc: 'Vendors upload their rates from their dashboard. Real-time response counter shows 4/6. Email/WhatsApp reminders active.', bg: '#eff6ff' },
-  { n: '3', icon: '⚖️', title: 'Compare & Select', desc: 'Side-by-side comparison cards with price, transit time, vendor rating. BEST badge on cheapest. Margin % auto-calculated.', bg: '#faf5ff' },
-  { n: '4', icon: '✅', title: 'Convert to Order', desc: 'Select best vendor → auto-create quotation for client → on approval, convert to booking order with one click.', bg: '#f0fdf4' },
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ANIMATED COUNTER
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+function Counter({ to, decimals = 0, prefix = '', suffix = '' }) {
+  const [v, setV] = useState(0);
+  const ref = useRef(null);
+  useEffect(() => {
+    let go = false;
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !go) {
+        go = true;
+        const t0 = performance.now();
+        const dur = 2000;
+        const tick = (now) => {
+          const p = Math.min((now - t0) / dur, 1);
+          const ease = 1 - Math.pow(1 - p, 4);
+          setV(ease * to);
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }, { threshold: 0.4 });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [to]);
+  return <span ref={ref}>{prefix}{v.toFixed(decimals)}{suffix}</span>;
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   LIVE AUCTION PANEL
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const SEED_BIDS = [
+  { id: 1, name: 'Vendor A', rate: 48500 },
+  { id: 2, name: 'Vendor B', rate: 47900 },
+  { id: 3, name: 'Vendor C', rate: 46200 },
 ];
 
-const features = [
-  { icon: '📊', title: 'Price Buckets', desc: 'Auto-categorize quotes into Budget (₹0-50K), Standard (₹50-100K), Premium (₹100K+) for lightning-fast decision making.' },
-  { icon: '💰', title: 'Margin Calculator', desc: 'See your projected profit margin on each vendor quote before selecting. Auto-calculates dynamically based on your client\'s budget.' },
-  { icon: '⭐', title: 'Vendor Rating', desc: 'View historical vendor performance metrics: on-time %, damage rate, response speed. Pick reliable carriers, not just cheap ones.' },
-  { icon: '📱', title: 'WhatsApp Notify', desc: 'Auto-send RFQs to vendors via WhatsApp. They get a secure link to upload rates directly from their phone — zero friction.' },
-  { icon: '📄', title: 'PDF Quotation', desc: 'Generate one-click, beautifully branded PDF quotation with your logo, custom terms, and the selected vendor rate with built-in margin.' },
-  { icon: '🔄', title: 'Re-Negotiate', desc: 'Counter-offer directly from the comparison view. Vendor gets notified instantly and can update their rate in real-time.' },
-];
-
-/* ═══════════════════════════════════════════ */
-/*             RFQ LANDING PAGE               */
-/* ═══════════════════════════════════════════ */
-export default function RFQLanding() {
-  const [bids, setBids] = useState([
-    { carrier: 'TCI Freight', rate: '₹48,500', time: '5 mins ago', active: false, rank: 2 },
-    { carrier: 'SafeExpress', rate: '₹46,200', time: 'Just now', active: true, rank: 1 },
-    { carrier: 'VRL Logistics', rate: '₹51,000', time: '12 mins ago', active: false, rank: 3 }
-  ]);
+function LivePanel() {
+  const [bids, setBids] = useState(SEED_BIDS.map(b => ({ ...b, flash: false, prevRate: b.rate })));
+  const [timer, setTimer] = useState({ m: 7, s: 22 });
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setBids(prevBids => {
-        const nextBids = [...prevBids];
-        const updateIndex = Math.floor(Math.random() * nextBids.length);
-        const currentRate = parseInt(nextBids[updateIndex].rate.replace('₹', '').replace(',', ''));
-        const delta = Math.floor(Math.random() * 400) + 100;
-        const newRateVal = Math.max(42000, currentRate - delta);
-        
-        nextBids[updateIndex] = {
-          ...nextBids[updateIndex],
-          rate: `₹${newRateVal.toLocaleString('en-IN')}`,
-          time: 'Just now',
-          active: true
-        };
+    const cd = setInterval(() => setTimer(p => p.s === 0 ? { m: Math.max(0, p.m - 1), s: 59 } : { ...p, s: p.s - 1 }), 1000);
+    return () => clearInterval(cd);
+  }, []);
 
-        nextBids.forEach((b, i) => {
-          if (i !== updateIndex) {
-            nextBids[i] = { ...b, active: false };
-          }
-        });
-
-        const sorted = [...nextBids].sort((a, b) => {
-          const rA = parseInt(a.rate.replace('₹', '').replace(',', ''));
-          const rB = parseInt(b.rate.replace('₹', '').replace(',', ''));
-          return rA - rB;
-        });
-
-        return nextBids.map(b => {
-          const rank = sorted.findIndex(s => s.carrier === b.carrier) + 1;
-          return { ...b, rank };
-        });
+  useEffect(() => {
+    const t = setInterval(() => {
+      setBids(prev => {
+        const i = Math.floor(Math.random() * prev.length);
+        const cur = prev[i].rate;
+        const delta = Math.floor(Math.random() * 500) + 100;
+        const next = Math.max(43000, cur - delta);
+        const updated = prev.map((b, idx) => idx === i
+          ? { ...b, prevRate: cur, rate: next, flash: true }
+          : { ...b, flash: false }
+        );
+        const sorted = [...updated].sort((a, b) => a.rate - b.rate);
+        return sorted;
       });
-    }, 4000);
+    }, 2800);
+    return () => clearInterval(t);
+  }, []);
 
-    return () => clearInterval(interval);
+  const best = bids[0]?.rate || 46200;
+  const worst = bids[bids.length - 1]?.rate || 48500;
+  const savings = (((worst - best) / worst) * 100).toFixed(1);
+
+  return (
+    <div className="r3-hero-panel">
+      {/* macOS chrome */}
+      <div className="r3-panel-chrome">
+        <div className="r3-chrome-dots">
+          <span style={{ background: '#ef4444' }} />
+          <span style={{ background: '#f59e0b' }} />
+          <span style={{ background: '#22c55e' }} />
+        </div>
+        <div className="r3-chrome-url">freel.io / rfq / #9921 / bids</div>
+        <div className="r3-panel-live-tag">
+          <span className="r3-panel-live-dot" />
+          Live
+        </div>
+      </div>
+
+      <div className="r3-panel-body">
+        {/* Route */}
+        <div className="r3-panel-route">
+          <div>
+            <div className="r3-panel-route-from">Mumbai → Chennai</div>
+            <div className="r3-panel-route-meta">
+              <span className="r3-panel-route-tag">FTL</span>
+              <span className="r3-panel-route-tag">22 Tons</span>
+              <span className="r3-panel-route-tag">Dry Cargo</span>
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--r3-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Auction</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--r3-blue-d)' }}>
+              {timer.m}m {String(timer.s).padStart(2, '0')}s
+            </div>
+          </div>
+        </div>
+
+        {/* Bids */}
+        <div className="r3-panel-bids-label">
+          <span>Live Quotes · {bids.length} vendors</span>
+          <span className="r3-panel-timer">Closes in {timer.m}m {String(timer.s).padStart(2, '0')}s</span>
+        </div>
+        <div className="r3-bid-list">
+          {bids.map((b, i) => (
+            <div
+              key={b.id}
+              className={`r3-bid-row ${i === 0 ? 'r3-bid-winner' : ''} ${b.flash ? 'r3-bid-flash' : ''}`}
+            >
+              <div>
+                <div className="r3-bid-vendor">{b.name}</div>
+                <div className="r3-bid-time">Rank #{i + 1}</div>
+              </div>
+              <div className="r3-bid-right">
+                <div className="r3-bid-price">₹{b.rate.toLocaleString('en-IN')}</div>
+                {i === 0 && <span className="r3-bid-badge r3-bid-best">Best Rate</span>}
+                {b.flash && i !== 0 && <span className="r3-bid-badge r3-bid-updated">Updated</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Savings */}
+        <div className="r3-panel-savings">
+          <div>
+            <div className="r3-panel-savings-label">Market savings on this shipment</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--r3-muted)', marginTop: '2px' }}>vs. first quote received</div>
+          </div>
+          <div className="r3-panel-savings-val">↓ {savings}%</div>
+        </div>
+      </div>
+
+      {/* Floating badges */}
+      <div className="r3-float-badge" style={{ bottom: -18, left: -24 }}>
+        <div className="r3-float-badge-icon" style={{ background: 'rgba(13,148,136,0.1)' }}>📉</div>
+        <div>
+          <div className="r3-float-badge-val">14.2% Saved</div>
+          <div className="r3-float-badge-sub">Avg. across all RFQs</div>
+        </div>
+      </div>
+      <div className="r3-float-badge" style={{ top: 60, right: -28 }}>
+        <div className="r3-float-badge-icon" style={{ background: 'rgba(14,165,233,0.1)' }}>⚡</div>
+        <div>
+          <div className="r3-float-badge-val">15 Min</div>
+          <div className="r3-float-badge-sub">Avg. response time</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   VENDOR RACE (WOW SECTION)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const RACE_INIT = [
+  { name: 'Gati KWE',      rate: 52000 },
+  { name: 'VRL Logistics', rate: 49500 },
+  { name: 'TCI Freight',   rate: 48000 },
+  { name: 'SafeExpress',   rate: 46200 },
+];
+
+function VendorRace() {
+  const [rates, setRates] = useState(RACE_INIT.map(r => r.rate));
+  const maxR = 52000;
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setRates(prev => prev.map((r, i) => {
+        if (Math.random() > 0.45) return r;
+        return Math.max(43000, r - Math.floor(Math.random() * 450 + 80));
+      }));
+    }, 2600);
+    return () => clearInterval(t);
+  }, []);
+
+  const pairs = RACE_INIT.map((v, i) => ({ ...v, rate: rates[i] }))
+    .sort((a, b) => a.rate - b.rate);
+
+  return (
+    <div className="r3-race">
+      {pairs.map((v, i) => {
+        const pct = Math.round((1 - (v.rate - 43000) / (maxR - 43000)) * 80 + 12);
+        return (
+          <div key={v.name} className={`r3-race-row ${i === 0 ? 'r3-race-winner' : ''}`}>
+            <div className="r3-race-bar" style={{ width: `${pct}%` }} />
+            <span className="r3-race-name">{v.name}</span>
+            <span className="r3-race-price">₹{v.rate.toLocaleString('en-IN')}</span>
+            {i === 0 && <span className="r3-race-win-badge">Best Rate</span>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HOW IT WORKS STEPS (WITH IMAGES)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const STEPS = [
+  { img: 'https://images.unsplash.com/photo-1499951360447-b19be8fe80f5?auto=format&fit=crop&w=600&q=80', n: 'Step 01', title: 'Create RFQ', desc: 'Enter shipment details in seconds.' },
+  { img: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80', n: 'Step 02', title: 'Invite Vendors', desc: 'Thousands notified instantly.' },
+  { img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80', n: 'Step 03', title: 'Compare Quotes', desc: 'Price, time, and ratings — live.' },
+  { img: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=600&q=80', n: 'Step 04', title: 'Award Shipment', desc: 'Done in minutes. Not days.' },
+];
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   AUTOMATION STEPS
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const AUTO_STEPS = [
+  { icon: '📋', title: 'RFQ Created', sub: 'You fill in shipment details. That\'s it.' },
+  { icon: '📧', title: 'Emails Sent', sub: 'Platform notifies all selected vendors.' },
+  { icon: '💬', title: 'WhatsApp Sent', sub: 'Vendors receive mobile-friendly bid links.' },
+  { icon: '🔔', title: 'Reminders Sent', sub: 'Auto follow-ups to non-responding vendors.' },
+  { icon: '📥', title: 'Quotes Collected', sub: 'All responses organized in one dashboard.' },
+];
+
+
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MAIN PAGE
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+export default function RFQLanding() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setActiveStep(s => (s + 1) % STEPS.length), 2800);
+    return () => clearInterval(t);
   }, []);
 
   return (
-    <>
-      {/* ═══ HERO ═══ */}
-      <section className="rfq-split-hero" style={{ position: 'relative', overflow: 'hidden', padding: '120px 16px 80px' }} id="rfq-hero">
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '48px', alignItems: 'center' }} className="rfq-hero-grid">
-          {/* Left Column: Premium Content */}
-          <Reveal>
-            <div style={{ zIndex: 1 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 18px', borderRadius: '999px', background: 'rgba(0,191,165,0.08)', border: '1px solid rgba(0,191,165,0.2)', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-brand-teal)', marginBottom: '24px' }}>
-                <span className="live-pulse"></span> AUTO-RFQ DISPATCH ENGINE
+    <div className="r3">
+
+      {/* ═══════════════════════════════════════
+          § 1 — HERO
+          ═══════════════════════════════════════ */}
+      <section className="r3-hero" id="rfq-hero">
+        <div className="r3-wrap">
+          <div className="r3-hero-grid">
+
+            {/* Left */}
+            <R>
+              <div className="r3-eyebrow">
+                <span className="r3-eyebrow-dot" />
+                Freight Procurement
               </div>
-              <h1 style={{ fontSize: 'clamp(2.5rem, 5.5vw, 4rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', color: 'var(--color-brand-navy)', marginBottom: '20px' }}>
-                Procure Freight <br />
-                <span className="text-gradient bg-gradient-to-r from-brand-teal via-cyan-500 to-brand-indigo">
-                  At 14.2% Lower Cost
-                </span>
+              <h1 className="r3-hero-h1">
+                Stop Chasing<br />
+                <span className="r3-grad">Transporters.</span>
               </h1>
-              <p style={{ fontSize: '1.15rem', color: 'var(--color-ui-gray)', lineHeight: 1.7, maxWidth: '580px', marginBottom: '36px', fontWeight: 300 }}>
-                Stop wasting hours chasing transporters on email and spreadsheets. Automate your procurement, gather quotes in real-time, and compare bids side-by-side with direct margin protection.
+              <p className="r3-hero-sub">
+                <span><strong>Create one RFQ.</strong> Reach thousands of verified carriers.</span>
+                <span><strong>Compare rates instantly.</strong> Award freight in minutes.</span>
               </p>
-              
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-                <Link to="/contact" className="solutions-cta-btn" style={{ fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Start Auto-RFQ →
+              <div className="r3-ctas">
+                <Link to="/contact" className="r3-btn r3-btn-primary">
+                  Start RFQ →
                 </Link>
-                <a href="#how-it-works" className="solutions-cta-btn" style={{ background: 'white', color: 'var(--color-brand-navy)', border: '1px solid var(--color-ui-border)', boxShadow: 'none', fontSize: '1.05rem', padding: '16px 36px' }}>
-                  Explore Steps ↓
+                <a href="#rfq-wow" className="r3-btn r3-btn-ghost">
+                  Watch Live Procurement ↓
                 </a>
               </div>
-              
-              {/* Telemetry Micro-Stat Row */}
-              <div className="rfq-hero-stats" style={{ display: 'flex', gap: '32px', marginTop: '48px', borderTop: '1px solid var(--color-ui-border)', paddingTop: '24px' }}>
-                <div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>15 mins</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-ui-gray)', textTransform: 'uppercase', marginTop: '2px' }}>Avg. Response Time</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>10,000+</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-ui-gray)', textTransform: 'uppercase', marginTop: '2px' }}>Carrier Network</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>₹1.2 Cr</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-ui-gray)', textTransform: 'uppercase', marginTop: '2px' }}>Monthly Saved</div>
+            </R>
+
+            {/* Right — Live Auction Panel */}
+            <R d="r3-d2">
+              <div style={{ position: 'relative', paddingTop: '20px', paddingBottom: '24px', paddingRight: '36px' }}>
+                <LivePanel />
+              </div>
+            </R>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          § 2 — OLD WAY VS NEW WAY
+          ═══════════════════════════════════════ */}
+      <section className="r3-compare" id="rfq-compare">
+        <div className="r3-wrap">
+          <R>
+            <span className="r3-section-kicker">Why Freel</span>
+            <h2 className="r3-compare-headline">
+              Why Manage Vendors Manually<br />When Vendors Can Compete For You?
+            </h2>
+            <p className="r3-compare-sub">Let the market find your best rate.</p>
+          </R>
+
+          <div className="r3-compare-grid">
+            {/* Old Way (Stylized) */}
+            <R d="r3-d1" className="r3-compare-side r3-compare-old r3-styled-old">
+              <div className="r3-styled-old-header">
+                <span className="r3-compare-tag old" style={{ marginBottom: 0 }}>The Old Way</span>
+                <div className="r3-styled-old-time">
+                  <span>Average Time</span>
+                  <strong>72+ Hours</strong>
                 </div>
               </div>
-            </div>
-          </Reveal>
-
-          {/* Right Column: Animated perspective Bidding showcase */}
-          <Reveal delay="reveal-delay-2">
-            <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-              {/* Background gradient shadow */}
-              <div style={{
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                background: 'radial-gradient(circle at center, rgba(90,79,207,0.12) 0%, transparent 70%)',
-                filter: 'blur(40px)',
-                zIndex: -1
-              }}></div>
-
-              {/* 3D Styled Rotating Dashboard mock */}
-              <div className="rfq-perspective-dashboard" style={{
-                width: '100%',
-                maxWidth: '460px',
-                background: 'rgba(255, 255, 255, 0.75)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(226, 232, 240, 0.8)',
-                borderRadius: '24px',
-                padding: '24px',
-                boxShadow: '0 30px 60px -15px rgba(15,23,42,0.12), 0 0 0 1px rgba(0,0,0,0.02)',
-                transition: 'all 0.5s cubic-bezier(0.16,1,0.3,1)',
-                position: 'relative'
-              }}>
-                {/* Dashboard Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(226, 232, 240, 0.6)', paddingBottom: '12px' }}>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#EF4444' }}></span>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#F59E0B' }}></span>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10B981' }}></span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-brand-indigo)', background: 'rgba(90,79,207,0.08)', padding: '4px 10px', borderRadius: '99px' }}>
-                    LIVE AUCTION
-                  </div>
-                </div>
-
-                {/* Cargo Details */}
-                <div style={{ background: 'var(--color-brand-navy)', borderRadius: '16px', padding: '16px', color: 'white', marginBottom: '20px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }}></div>
-                  <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700, letterSpacing: '0.05em' }}>Shipment #RFQ-9921</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    JNPT Port <span style={{ color: 'var(--color-brand-teal)' }}>→</span> Rotterdam Port
-                  </div>
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '12px', fontSize: '0.75rem', color: '#CBD5E1' }}>
-                    <div>🚢 FCL 40ft</div>
-                    <div>⚖️ 22,000 kg</div>
-                    <div>🛡️ Class 3 (HAZ)</div>
-                  </div>
-                </div>
-
-                {/* Bidding Telemetry Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-brand-navy)' }}>Transporter Responses</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-ui-gray)' }}>
-                    ⏳ Ends in <span style={{ fontWeight: 700, color: '#EF4444', fontFamily: 'monospace' }}>12m 45s</span>
-                  </div>
-                </div>
-
-                {/* Bids List Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} className="rfq-bids-list">
-                  {bids.map((b, idx) => (
-                    <div key={idx} className={`rfq-bid-card ${b.active ? 'active' : ''}`} style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      background: b.active ? 'rgba(0,191,165,0.06)' : 'white',
-                      border: b.active ? '1px solid rgba(0,191,165,0.3)' : '1px solid rgba(226, 232, 240, 0.8)',
-                      borderRadius: '12px',
-                      padding: '12px 16px',
-                      boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
-                      transition: 'all 0.4s cubic-bezier(0.16,1,0.3,1)'
-                    }}>
-                      <div>
-                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-brand-navy)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          {b.carrier}
-                          {b.active && <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--color-brand-teal)', display: 'inline-block' }}></span>}
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--color-ui-gray)', marginTop: '2px' }}>
-                          Rank #{b.rank} • {b.time}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 800, color: b.rank === 1 ? 'var(--color-brand-teal)' : 'var(--color-brand-navy)' }}>{b.rate}</div>
-                        {b.rank === 1 && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--color-brand-teal)', background: 'rgba(0,191,165,0.1)', padding: '2px 6px', borderRadius: '4px' }}>BEST RATE</span>}
+              
+              <div className="r3-styled-old-body">
+                <p className="r3-styled-old-desc">Manual procurement creates endless friction, data silos, and missed savings.</p>
+                
+                <div className="r3-styled-old-list">
+                  {[
+                    { icon: '📧', val: '43', label: 'Emails sent per RFQ', color: 'r3-c-amber' },
+                    { icon: '📞', val: '27', label: 'Phone calls made', color: 'r3-c-red' },
+                    { icon: '📊', val: '12', label: 'Spreadsheets managed', color: 'r3-c-gray' },
+                    { icon: '🤦', val: '∞', label: 'Manual follow-ups', color: 'r3-c-red' },
+                  ].map((item, i) => (
+                    <div key={i} className="r3-styled-old-item">
+                      <div className={`r3-styled-old-icon ${item.color}`}>{item.icon}</div>
+                      <div className="r3-styled-old-text">
+                        <strong>{item.val}</strong> {item.label}
                       </div>
                     </div>
                   ))}
                 </div>
-
-                {/* Instant Margin Calculator Floating Badge */}
-                <div className="rfq-margin-badge" style={{
-                  position: 'absolute',
-                  bottom: '-20px',
-                  right: '-20px',
-                  background: 'white',
-                  border: '1px solid rgba(226, 232, 240, 0.8)',
-                  borderRadius: '16px',
-                  padding: '12px 18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-                  zIndex: 2
-                }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(0,191,165,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: 'var(--color-brand-teal)' }}>
-                    📈
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.65rem', color: 'var(--color-ui-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Protected Margin</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--color-brand-navy)' }}>+18.4% (₹8,920)</div>
-                  </div>
+              </div>
+              
+              <div className="r3-styled-old-footer">
+                <div className="r3-styled-old-error">
+                  <span className="r3-error-dot"></span> High risk of manual error
                 </div>
               </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+            </R>
 
-      {/* ═══ HOW RFQ WORKS ═══ */}
-      <section className="solution-module" id="how-it-works">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">How RFQ Works</h2>
-            <p className="solution-module-desc">
-              Client sends requirements → You create RFQ → Vendors quote → You compare → Client gets best rate
-            </p>
-          </div>
-        </Reveal>
+            {/* VS divider */}
+            <div className="r3-compare-vs">VS</div>
 
-        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', borderRadius: '24px', overflow: 'hidden', border: '1px solid var(--color-ui-border)', background: 'var(--color-ui-surface)' }}>
-          {steps.map((s, i) => (
-            <Reveal key={i} delay={`reveal-delay-${i + 1}`} className="flex-1">
-              <div className="rfq-step-card" style={{
-                background: s.bg,
-                borderRight: i < 3 ? '1px solid rgba(226,232,240,0.5)' : 'none',
+            {/* New Way */}
+            <R d="r3-d2" className="r3-compare-side r3-compare-new">
+              <span className="r3-compare-tag new">Freel RFQ</span>
+              <div className="r3-new-flow">
+                {[
+                  { icon: '📋', text: 'One RFQ', sub: 'Enter shipment details once' },
+                  { icon: '⚡', text: '500+ Quotes', sub: 'Vendors compete automatically' },
+                  { icon: '⚖️', text: 'Compare', sub: 'Live side-by-side dashboard' },
+                  { icon: '✅', text: 'Award', sub: 'Click. Done. Ship.' },
+                ].map((item, i) => (
+                  <div key={i} className="r3-new-flow-item">
+                    <div className="r3-new-flow-icon">{item.icon}</div>
+                    <div>
+                      <div className="r3-new-flow-text">{item.text}</div>
+                      <div className="r3-new-flow-sub">{item.sub}</div>
+                    </div>
+                    <div className="r3-new-flow-check">✓</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{
+                marginTop: '28px', padding: '16px 20px',
+                background: 'rgba(20,184,166,0.12)', border: '1px solid rgba(20,184,166,0.25)',
+                borderRadius: 'var(--r3-radius)', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '50%',
-                  background: `linear-gradient(135deg, var(--color-brand-teal), var(--color-brand-indigo))`,
-                  color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '1.2rem', marginBottom: '20px',
-                  boxShadow: '0 4px 12px rgba(0,191,165,0.25)'
-                }}>{s.n}</div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--color-brand-navy)', marginBottom: '10px' }}>
-                  {s.icon} {s.title}
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--color-ui-gray)', lineHeight: 1.6 }}>{s.desc}</p>
+                <div>
+                  <div style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(20,184,166,0.8)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Time saved per shipment</div>
+                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#5eead4', letterSpacing: '-0.04em' }}>3 days → 15 min</div>
+                </div>
+                <div style={{ fontSize: '2rem' }}>🏆</div>
               </div>
-            </Reveal>
-          ))}
+            </R>
+          </div>
         </div>
       </section>
 
-      {/* ═══ TWO DASHBOARDS ═══ */}
-      <section className="solution-module solution-module-alt">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">Two Dashboards, One Flow</h2>
-            <p className="solution-module-desc">
-              RFQ works seamlessly between your client-facing and transporter-facing dashboards, keeping everyone synced.
-            </p>
+      {/* ═══════════════════════════════════════
+          § 3 — HOW IT WORKS (WITH IMAGES)
+          ═══════════════════════════════════════ */}
+      <section className="r3-steps" id="rfq-steps">
+        <div className="r3-wrap">
+          <R className="r3-steps-header">
+            <span className="r3-section-kicker">How It Works</span>
+            <h2 className="r3-section-title">One RFQ. Four Simple Steps.</h2>
+            <p className="r3-section-sub">From shipment details to carrier awarded — in under 15 minutes.</p>
+          </R>
+          <div className="r3-steps-track">
+            {STEPS.map((s, i) => (
+              <R key={i} d={`r3-d${i + 1}`}>
+                <div
+                  className={`r3-step ${i === activeStep ? 'r3-step-active' : ''}`}
+                  onClick={() => setActiveStep(i)}
+                >
+                  <div className="r3-step-image-card">
+                    <img src={s.img} alt={s.title} />
+                  </div>
+                  <div className="r3-step-number">{s.n}</div>
+                  <div className="r3-step-title">{s.title}</div>
+                  <div className="r3-step-desc">{s.desc}</div>
+                </div>
+              </R>
+            ))}
           </div>
-        </Reveal>
+        </div>
+      </section>
 
-        <div className="dashboard-split">
-          <Reveal delay="reveal-delay-1">
-            <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div className="dashboard-card-header">
-                <div className="dashboard-card-icon">🏢</div>
-                <div>
-                  <div className="dashboard-card-title">Client Dashboard</div>
-                  <div className="dashboard-card-sub">For the shipper / end-customer</div>
+      {/* ═══════════════════════════════════════
+          § 4 — LIVE SAVINGS DEMO (WOW)
+          ═══════════════════════════════════════ */}
+      <section className="r3-wow" id="rfq-wow">
+        <div className="r3-wow-glow" />
+        <div className="r3-wrap" style={{ position: 'relative', zIndex: 1 }}>
+          <R>
+            <span className="r3-section-kicker" style={{ color: 'rgba(14,165,233,0.8)', justifyContent: 'center', display: 'flex' }}>Live Savings</span>
+            <h2 className="r3-wow-headline">Watch Costs Drop<br />In Real Time.</h2>
+            <p className="r3-wow-sub">When you post an RFQ, the market responds. Prices drop as carriers compete for your shipment.</p>
+          </R>
+
+          {/* Cinematic Freight Banner */}
+          <R d="r3-d1">
+            <div className="r3-wow-banner">
+              <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&w=2400&q=80" alt="Freight Trucks Highway" />
+              <div className="r3-wow-banner-overlay" />
+            </div>
+          </R>
+
+          {/* Price cascade */}
+          <R d="r3-d2">
+            <div className="r3-cascade">
+              {[
+                { price: '₹52,000', label: 'Opening', old: true },
+                { arrow: '→' },
+                { price: '₹49,500', label: 'Counter', old: true },
+                { arrow: '→' },
+                { price: '₹48,000', label: 'Third Offer', old: true },
+                { arrow: '→' },
+                { price: '₹46,200', label: 'Best Rate ✓', winner: true },
+              ].map((item, i) => item.arrow ? (
+                <span key={i} className="r3-cascade-arrow">{item.arrow}</span>
+              ) : (
+                <div key={i} className="r3-cascade-item">
+                  <div className={`r3-cascade-price ${item.old ? 'r3-old' : ''} ${item.winner ? 'r3-winner' : ''}`}>
+                    {item.price}
+                  </div>
+                  <div className={`r3-cascade-label ${item.winner ? 'r3-winner-label' : ''}`}>{item.label}</div>
+                </div>
+              ))}
+            </div>
+          </R>
+
+          {/* Live race */}
+          <R d="r3-d3">
+            <VendorRace />
+          </R>
+
+          {/* Savings callout */}
+          <R d="r3-d4">
+            <div className="r3-savings-callout">
+              <div>
+                <div className="r3-savings-meta-title">Average market savings achieved</div>
+                <div className="r3-savings-meta-sub">Across all Freel RFQ shipments in FY2024</div>
+              </div>
+              <div className="r3-savings-main">
+                <Counter to={14.2} decimals={1} suffix="%" />
+              </div>
+            </div>
+          </R>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          § 5 — PRODUCT EXPERIENCE
+          ═══════════════════════════════════════ */}
+      <section className="r3-product" id="rfq-product">
+        <div className="r3-wrap">
+          <R className="r3-product-header">
+            <span className="r3-section-kicker">The Platform</span>
+            <h2 className="r3-section-title">Everything In One Place.</h2>
+            <div className="r3-product-pills">
+              {['RFQs', 'Live Quotes', 'Margin Calculator', 'Approvals', 'Tracking', 'Analytics'].map((p, i) => (
+                <span key={i} className="r3-product-pill">{p}</span>
+              ))}
+            </div>
+          </R>
+
+          <R d="r3-d1">
+            <div className="r3-dashboard-mock-wrapper">
+              {/* Floating Real-world Images */}
+              <div className="r3-dash-float r3-float-1">
+                <img src="https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=400&q=80" alt="Live Shipment" />
+                <div className="r3-float-tag">Live Tracking</div>
+              </div>
+              <div className="r3-dash-float r3-float-2">
+                <img src="https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=400&q=80" alt="Carrier Confirmed" />
+                <div className="r3-float-tag">Carrier Ready</div>
+              </div>
+              <div className="r3-dash-float r3-float-3">
+                <img src="https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=400&q=80" alt="Delivery Completed" />
+                <div className="r3-float-tag">Delivered</div>
+              </div>
+
+              <div className="r3-dashboard-mock">
+                {/* Top bar */}
+                <div className="r3-dash-topbar">
+                  <div className="r3-dash-topbar-dots">
+                    <span style={{ background: '#ef4444' }} />
+                    <span style={{ background: '#f59e0b' }} />
+                    <span style={{ background: '#22c55e' }} />
+                  </div>
+                  <div className="r3-dash-topbar-title">Freel — RFQ Management</div>
+                  <div className="r3-dash-topbar-badge">3 Live RFQs</div>
+                </div>
+
+                {/* Body */}
+                <div className="r3-dash-body">
+                  {/* Sidebar */}
+                  <div className="r3-dash-sidebar">
+                    {[
+                      { icon: '📋', label: 'My RFQs', badge: '3', active: true },
+                      { icon: '📥', label: 'Quotes', badge: '12', active: false },
+                      { icon: '⚖️', label: 'Compare', badge: null, active: false },
+                      { icon: '✅', label: 'Awarded', badge: null, active: false },
+                      { icon: '📡', label: 'Tracking', badge: null, active: false },
+                      { icon: '📊', label: 'Analytics', badge: null, active: false },
+                    ].map((item, i) => (
+                      <div key={i} className={`r3-dash-nav-item ${item.active ? 'active' : ''}`}>
+                        <span className="r3-dash-nav-icon">{item.icon}</span>
+                        {item.label}
+                        {item.badge && <span className="r3-dash-nav-badge">{item.badge}</span>}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Main */}
+                  <div className="r3-dash-main">
+                    <div className="r3-dash-main-title">
+                      <span>Active RFQs</span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--r3-blue-d)', cursor: 'pointer' }}>+ New RFQ</span>
+                    </div>
+                    <div className="r3-dash-stats-row">
+                      {[
+                        { val: '₹1.2Cr', label: 'Savings This Month' },
+                        { val: '98%', label: 'Quote Response Rate' },
+                        { val: '12 min', label: 'Avg. Procurement Time' },
+                      ].map((s, i) => (
+                        <div key={i} className="r3-dash-stat">
+                          <div className="r3-dash-stat-val">{s.val}</div>
+                          <div className="r3-dash-stat-label">{s.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="r3-dash-rfq-list">
+                      {[
+                        { id: '#RFQ-9924', route: 'Mumbai → Pune', meta: 'FTL · 18T', status: 'r3-status-live', label: 'Live · 8 quotes' },
+                        { id: '#RFQ-9923', route: 'Delhi → Surat', meta: 'LTL · 4T', status: 'r3-status-pending', label: 'Awaiting · 3/8' },
+                        { id: '#RFQ-9921', route: 'Mumbai → Chennai', meta: 'FTL · 22T', status: 'r3-status-done', label: 'Awarded ✓' },
+                      ].map((r, i) => (
+                        <div key={i} className="r3-dash-rfq-row">
+                          <div className="r3-dash-rfq-id">{r.id}</div>
+                          <div>
+                            <div className="r3-dash-rfq-route">{r.route}</div>
+                            <div className="r3-dash-rfq-meta">{r.meta}</div>
+                          </div>
+                          <div className={`r3-dash-rfq-status ${r.status}`}>{r.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Right panel */}
+                  <div className="r3-dash-panel">
+                    <div className="r3-dash-panel-title">Quote Comparison · #RFQ-9921</div>
+                    <div className="r3-dash-bid-preview">
+                      {[
+                        { v: 'SafeExpress', p: '₹46,200', best: true },
+                        { v: 'TCI Freight', p: '₹47,800', best: false },
+                        { v: 'VRL Logistics', p: '₹49,500', best: false },
+                      ].map((b, i) => (
+                        <div key={i} className={`r3-dash-bid-preview-row ${b.best ? 'best' : ''}`}>
+                          <span className="r3-dash-bid-v">{b.v}</span>
+                          <span className="r3-dash-bid-p">{b.p}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="r3-dash-margin">
+                      <div className="r3-dash-margin-title">Your Margin</div>
+                      <div className="r3-dash-margin-bar">
+                        <div className="r3-dash-margin-fill" style={{ width: '28%' }} />
+                      </div>
+                      <div className="r3-dash-margin-label">
+                        <span>Vendor Cost</span>
+                        <span style={{ color: 'var(--r3-teal)', fontWeight: 700 }}>+18.4%</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <ul className="check-list" style={{ marginBottom: '24px', flexGrow: 1 }}>
-                <li>Requests quote directly from you (Freel user platform).</li>
-                <li>Sees branded, professional quotation PDF you send them.</li>
-                <li>Approves or rejects quotation with one click.</li>
-                <li>Gets instant WhatsApp & Email notifications on updates.</li>
-                <li>Tracks shipment live after booking is confirmed.</li>
-              </ul>
-              <div style={{ marginTop: 'auto', overflow: 'hidden', borderRadius: '12px', border: '1px solid var(--color-ui-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                <img src="/assets/digital_platform_dashboard.png" alt="Client Dashboard" style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} className="hover-scale-img" />
-              </div>
             </div>
-          </Reveal>
+          </R>
+        </div>
+      </section>
 
-          <Reveal delay="reveal-delay-2">
-            <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div className="dashboard-card-header">
-                <div className="dashboard-card-icon">🚚</div>
-                <div>
-                  <div className="dashboard-card-title">Transporter Dashboard</div>
-                  <div className="dashboard-card-sub">For vendors & carriers</div>
+      {/* ═══════════════════════════════════════
+          § 6 — KEY BENEFITS (STATS WITH LOGISTICS BG)
+          ═══════════════════════════════════════ */}
+      <section 
+        className="r3-stats" 
+        id="rfq-stats"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1501523460185-2aa5d2a0f981?auto=format&fit=crop&w=2400&q=80)' }}
+      >
+        <div className="r3-stats-overlay" />
+        <div className="r3-wrap" style={{ position: 'relative', zIndex: 1 }}>
+          <R>
+            <div className="r3-stats-grid">
+              {[
+                { val: 10000, suffix: '+', label: 'Carrier Network', color: 'r3-c-navy', decimals: 0 },
+                { val: 15, suffix: ' Min', label: 'Average Response Time', color: 'r3-c-blue', decimals: 0 },
+                { val: 14.2, suffix: '%', label: 'Average Savings', color: 'r3-c-teal', decimals: 1 },
+                { val: 98, suffix: '%', label: 'RFQ Visibility', color: 'r3-c-indigo', decimals: 0 },
+              ].map((s, i) => (
+                <div key={i} className="r3-stat-cell">
+                  <div className={`r3-stat-number ${s.color}`}>
+                    <Counter to={s.val} decimals={s.decimals} suffix={s.suffix} />
+                  </div>
+                  <div className="r3-stat-label">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </R>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════
+          § 7 — AUTOMATION
+          ═══════════════════════════════════════ */}
+      <section className="r3-auto" id="rfq-auto">
+        <div className="r3-wrap">
+          <div className="r3-auto-grid">
+            
+            {/* Left — Real logistics image */}
+            <R d="r3-d1">
+              <div className="r3-auto-image-side">
+                <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&w=1200&q=80" alt="Logistics Command Center" />
+                <div className="r3-auto-image-badge">
+                  <span className="r3-auto-badge-icon">🤖</span>
+                  <span className="r3-auto-badge-text">Automated<br/>Dispatch Operations</span>
                 </div>
               </div>
-              <ul className="check-list" style={{ marginBottom: '24px', flexGrow: 1 }}>
-                <li>Receives RFQ with full cargo & routing details.</li>
-                <li>Uploads quote securely with granular rate breakdown.</li>
-                <li>Sees confirmed order when selected (with full details).</li>
-                <li>Views Container type, weight, volume, HAZ info clearly.</li>
-                <li>Accesses POD/POL, vessel dates, and MSDS docs in one place.</li>
-              </ul>
-              <div style={{ marginTop: 'auto', overflow: 'hidden', borderRadius: '12px', border: '1px solid var(--color-ui-border)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-                <img src="/assets/smart_routing.png" alt="Transporter Dashboard" style={{ width: '100%', height: '220px', objectFit: 'cover', display: 'block' }} className="hover-scale-img" />
+            </R>
+
+            {/* Right — Flow & Copy */}
+            <R d="r3-d2">
+              <span className="r3-section-kicker">Automation</span>
+              <h2 className="r3-auto-headline">
+                Your Team Should Focus<br />On Growth.<br />Not Follow-Ups.
+              </h2>
+              <p className="r3-auto-sub">
+                Every step from vendor notification to quote collection happens automatically. Your operations team goes from chasing transporters to reviewing the best rates.
+              </p>
+              
+              <div className="r3-auto-flow" style={{ marginTop: '32px' }}>
+                {AUTO_STEPS.slice(0, 3).map((s, i) => (
+                  <div key={i} className="r3-auto-step">
+                    {i < 2 && <div className="r3-auto-step-line" />}
+                    <div className="r3-auto-icon">{s.icon}</div>
+                    <div>
+                      <div className="r3-auto-text-title">{s.title}</div>
+                      <div className="r3-auto-text-sub">{s.sub}</div>
+                    </div>
+                    <div className="r3-auto-auto-badge">Auto</div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </Reveal>
+            </R>
+          </div>
         </div>
       </section>
 
-      {/* ═══ RFQ FEATURES ═══ */}
-      <section className="solution-module">
-        <Reveal>
-          <div className="solution-module-header">
-            <h2 className="solution-module-title">Powerful RFQ Features</h2>
-            <p className="solution-module-desc">
-              Built to save you time, increase margins, and provide a premium experience.
+
+
+      {/* ═══════════════════════════════════════
+          § 9 — FINAL CTA (CINEMATIC)
+          ═══════════════════════════════════════ */}
+      <section 
+        className="r3-cta" 
+        id="rfq-cta"
+        style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1616423640778-28d1b53229bd?auto=format&fit=crop&w=2400&q=80)' }}
+      >
+        <div className="r3-cta-overlay" />
+        <div className="r3-wrap-sm">
+          <R>
+            <h2 className="r3-cta-headline">
+              Let Vendors Compete.<br />
+              <span className="r3-cta-accent">You Keep The Savings.</span>
+            </h2>
+            <p className="r3-cta-sub">
+              Create your first RFQ in minutes and discover better freight rates instantly. Join a nationwide logistics network.
             </p>
-          </div>
-        </Reveal>
-        <div className="feature-grid-3">
-          {features.map((f, i) => (
-            <Reveal key={i} delay={`reveal-delay-${(i % 3) + 1}`}>
-              <div className="feature-card">
-                <div className="feature-card-icon">{f.icon}</div>
-                <h3 className="feature-card-title">{f.title}</h3>
-                <p className="feature-card-desc">{f.desc}</p>
-              </div>
-            </Reveal>
-          ))}
+            <div className="r3-cta-buttons">
+              <Link to="/contact" className="r3-btn-cta-primary">
+                Start Your First RFQ →
+              </Link>
+              <Link to="/contact" className="r3-btn-cta-ghost">
+                Book Demo
+              </Link>
+            </div>
+            <div className="r3-cta-trust">
+              {['No setup fees', 'No lengthy onboarding', 'Results from day one'].map((t, i) => (
+                <span key={i} className="r3-cta-trust-item">{t}</span>
+              ))}
+            </div>
+          </R>
         </div>
       </section>
 
-      {/* ═══ CTA ═══ */}
-      <section className="solution-module solution-module-alt" style={{ paddingBottom: '80px' }}>
-        <Reveal>
-          <div className="solutions-cta-card">
-            <h2>Start Collecting Vendor Quotes</h2>
-            <p>Send your first RFQ to multiple vendors in under 2 minutes and streamline your procurement process today.</p>
-            <Link to="/contact" className="solutions-cta-btn">
-              Try RFQ System →
-            </Link>
-            <div style={{ marginTop: '24px', fontSize: '0.85rem', color: 'var(--color-ui-gray)' }}>
-              No credit card required. 14-day free trial.
-            </div>
-          </div>
-        </Reveal>
-      </section>
-    </>
+    </div>
   );
 }

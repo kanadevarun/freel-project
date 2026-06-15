@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import LazyVideo from '../../../components/LazyVideo';
 import './CinematicShipmentJourney.css';
 
 function useChapterInView(threshold = 0.4) {
@@ -58,7 +59,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 1: MANUFACTURED */}
       <section ref={ref1} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act1 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/Fulfillment_warehouse_conveyor_b…_202606052252.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/Fulfillment_warehouse_conveyor_b…_202606052252.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-black/20" />
         </div>
         
@@ -82,7 +83,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 2: LOADED */}
       <section ref={ref2} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act2 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/road-freight/Container_cranes_loading_cargo_t…_202606071648.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/road-freight/Container_cranes_loading_cargo_t…_202606071648.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-black/20" />
         </div>
         
@@ -102,7 +103,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 3: ON THE ROAD */}
       <section ref={ref3} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act3 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/road-freight/Convoy_of_trucks_moving_highway_202606071649.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/road-freight/Convoy_of_trucks_moving_highway_202606071649.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-black/20" />
           <div className="csj-highway-lines" />
         </div>
@@ -122,7 +123,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 4: CONNECTED NETWORK */}
       <section ref={ref4} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act4 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/Earth_at_night_global_network_202606052255.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/Earth_at_night_global_network_202606052255.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-brand-navy/30 mix-blend-multiply" />
         </div>
         
@@ -158,7 +159,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 5: LIVE VISIBILITY */}
       <section ref={ref5} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act5 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/Packages_moving_through_logistic…_202606052239.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/Packages_moving_through_logistic…_202606052239.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-black/20" />
         </div>
         
@@ -189,7 +190,7 @@ export default function CinematicShipmentJourney() {
       {/* CHAPTER 6: DELIVERED */}
       <section ref={ref6} className={`csj-chapter relative h-screen overflow-hidden flex items-center justify-center ${act6 ? 'is-active' : ''}`}>
         <div className="csj-video-wrapper">
-          <video className="w-full h-full object-cover" autoPlay muted loop playsInline src="/videos/road-freight/Freight_traffic_flowing_across_city_202606071652.mp4" />
+          <LazyVideo className="w-full h-full object-cover" src="/videos/road-freight/Freight_traffic_flowing_across_city_202606071652.mp4" rootMargin="200px" />
           <div className="absolute inset-0 bg-black/20" />
         </div>
         

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import LazyVideo from '../../../components/LazyVideo';
 import './AirFreight.css';
 
 /* ═══════════════════════════════════════════════════════════
@@ -83,37 +84,6 @@ const CountUp = ({ end, duration = 2000, decimals = 0 }) => {
 /*             AIR FREIGHT PAGE                              */
 /* ═══════════════════════════════════════════════════════════ */
 
-const LazyVideo = ({ src, className }) => {
-  const [isIntersecting, setIsIntersecting] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsIntersecting(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '400px' }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <video
-      ref={ref}
-      className={className}
-      autoPlay={isIntersecting}
-      muted
-      loop
-      playsInline
-    >
-      {isIntersecting && <source src={src} type="video/mp4" />}
-    </video>
-  );
-};
 
 export default function AirFreight() {
 
@@ -144,6 +114,7 @@ export default function AirFreight() {
           muted
           loop
           playsInline
+          preload="metadata"
           poster="/images/air-freight/Figure_on_platform_overlooking_a…_202606071514.jpeg"
         >
           <source

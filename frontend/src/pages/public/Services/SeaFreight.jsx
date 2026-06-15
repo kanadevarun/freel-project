@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import LazyVideo from '../../../components/LazyVideo';
 import './SeaFreight.css';
 
 /* ─── Scroll Reveal ─── */
@@ -108,6 +109,7 @@ export default function SeaFreight() {
           muted
           loop
           playsInline
+          preload="metadata"
         >
           <source
             src="/videos/sea-freight/Container_ship_moving_through_ocean_202606071558.mp4"
@@ -694,18 +696,11 @@ export default function SeaFreight() {
       {/* ═══ THE GRAND FINALE ═══ */}
       <section className="sf-grand-finale">
         <div className="sf-grand-finale__video-wrapper">
-          <video
+          <LazyVideo
             className="sf-grand-finale__video"
-            autoPlay
-            muted
-            loop
-            playsInline
-          >
-            <source
-              src="/videos/sea-freight/Robot_observing_global_shipping_…_202606071603.mp4"
-              type="video/mp4"
-            />
-          </video>
+            src="/videos/sea-freight/Robot_observing_global_shipping_…_202606071603.mp4"
+            rootMargin="400px"
+          />
           <div className="sf-grand-finale__overlay"></div>
         </div>
 
