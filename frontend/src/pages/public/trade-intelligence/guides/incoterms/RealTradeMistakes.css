@@ -1,0 +1,372 @@
+/* ══════════════════════════════════════════════════════
+   REAL TRADE MISTAKES SECTION
+══════════════════════════════════════════════════════ */
+.rtm-section {
+  background: #FAFBFC;
+  padding: 40px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.rtm-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── Header ── */
+.rtm-header {
+  text-align: center;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.rtm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rtm-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.2rem);
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.rtm-subtitle {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #475569;
+  max-width: 700px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Section 1: Shipment Scenario ── */
+.rtm-scenario-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.rtm-card {
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.06);
+  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+
+/* Left Card: Overview */
+.rtm-scenario-card-left {
+  background: linear-gradient(to right, #ffffff, #f8fafc);
+}
+
+.rtm-scenario-img {
+  width: 45%;
+  position: relative;
+  border-right: 1px solid #e2e8f0;
+}
+
+.rtm-scenario-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rtm-img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(15,23,42,0.1) 0%, rgba(15,23,42,0) 100%);
+  pointer-events: none;
+}
+
+.rtm-scenario-content {
+  width: 55%;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.rtm-sc-pill {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #3b82f6;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rtm-sc-route {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.rtm-sc-loc {
+  display: flex;
+  flex-direction: column;
+}
+
+.rtm-sc-city { font-size: 1.5rem; font-weight: 900; color: #0f172a; }
+.rtm-sc-country { font-size: 0.8rem; color: #64748b; }
+
+.rtm-sc-arrow {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex; align-items: center; justify-content: center;
+  color: #94a3b8;
+}
+
+.rtm-sc-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.rtm-meta-box {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 12px;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 4px;
+}
+
+.rtm-meta-icon { color: #3b82f6; }
+.rtm-meta-label { font-size: 0.65rem; font-weight: 800; color: #64748b; text-transform: uppercase; }
+.rtm-meta-val { font-size: 1rem; font-weight: 900; color: #0f172a; }
+.rtm-meta-val.red { color: #ef4444; }
+
+/* Right Card: Unexpected Charges */
+.rtm-alert-card {
+  background: #fffafa; /* Very light red tint */
+  border: 1px solid #fee2e2;
+  flex-direction: column;
+  padding: 20px 24px;
+}
+
+.rtm-ac-header {
+  display: flex; align-items: center; gap: 8px;
+  color: #ef4444; font-weight: 900; font-size: 1.1rem;
+  text-transform: uppercase; margin-bottom: 16px;
+}
+
+.rtm-ac-layout {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+}
+
+.rtm-ac-list {
+  flex: 1;
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.rtm-ac-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.9rem; font-weight: 600; color: #334155;
+  border-bottom: 1px dashed #fca5a5; padding-bottom: 6px;
+}
+.rtm-ac-item-icon { color: #ef4444; display: flex; align-items: center; gap: 8px; }
+.rtm-ac-item-val { font-weight: 800; color: #0f172a; }
+
+.rtm-ac-total {
+  margin-top: auto;
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 16px;
+}
+.rtm-ac-total-label { font-weight: 900; color: #ef4444; text-transform: uppercase; font-size: 0.85rem;}
+.rtm-ac-total-val { font-size: 2.2rem; font-weight: 900; color: #b91c1c; line-height: 1; }
+
+.rtm-ac-graphic {
+  width: 180px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative;
+}
+.rtm-ac-graphic img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ── Section 2: 4 Mistake Cards ── */
+.rtm-mistakes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.rtm-m-card {
+  background: white;
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+  display: flex; flex-direction: column;
+  position: relative; overflow: hidden;
+}
+
+.rtm-mc-head {
+  display: flex; align-items: center; gap: 6px;
+  font-weight: 900; text-transform: uppercase; font-size: 0.75rem;
+  margin-bottom: 12px;
+}
+
+/* Colors */
+.rtm-m-card.red .rtm-mc-head { color: #ef4444; }
+.rtm-m-card.green .rtm-mc-head { color: #10b981; }
+.rtm-m-card.orange .rtm-mc-head { color: #f59e0b; }
+.rtm-m-card.yellow .rtm-mc-head { color: #eab308; }
+
+.rtm-m-card.red { border-left: 4px solid #ef4444; }
+.rtm-m-card.green { border-left: 4px solid #10b981; }
+.rtm-m-card.orange { border-left: 4px solid #f59e0b; }
+.rtm-m-card.yellow { border-left: 4px solid #eab308; }
+
+.rtm-mc-title { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; max-width: 52%; position: relative; z-index: 2; }
+.rtm-mc-term { font-weight: 800; margin-bottom: 8px; font-size: 0.85rem; max-width: 52%; position: relative; z-index: 2; }
+.rtm-m-card.red .rtm-mc-term { color: #ef4444; }
+.rtm-m-card.green .rtm-mc-term { color: #10b981; }
+.rtm-mc-desc { font-size: 0.8rem; color: #475569; line-height: 1.4; margin: 0 0 10px 0; max-width: 52%; position: relative; z-index: 2; }
+.rtm-mc-reality { font-size: 0.75rem; font-weight: 600; color: #334155; margin-bottom: 12px; max-width: 52%; position: relative; z-index: 2; }
+
+.rtm-mc-costbox {
+  background: #fffafa; border: 1px solid #fee2e2; border-radius: 8px; padding: 10px;
+  display: inline-flex; flex-direction: column; gap: 4px; margin-top: auto; align-self: flex-start;
+  position: relative; z-index: 2;
+}
+.rtm-mc-costbox.green { background: #f0fdf4; border-color: #bbf7d0; }
+.rtm-mc-c-label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; color: #ef4444; }
+.rtm-mc-costbox.green .rtm-mc-c-label { color: #10b981; }
+.rtm-mc-c-val { font-size: 1.1rem; font-weight: 900; color: #b91c1c; }
+.rtm-mc-costbox.green .rtm-mc-c-val { color: #059669; }
+
+.rtm-mc-graphic {
+  position: absolute;
+  bottom: 0px; right: 0px;
+  width: 48%; height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+.rtm-mc-graphic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom right;
+}
+
+/* ── Section 3: Risk Checker ── */
+.rtm-risk-checker {
+  background: white;
+  border-radius: 28px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+  display: flex;
+  overflow: hidden;
+}
+
+.rtm-rc-form {
+  flex: 1; padding: 24px;
+}
+
+.rtm-rc-header { margin-bottom: 20px; }
+.rtm-rc-title { font-size: 1.1rem; font-weight: 900; display: flex; align-items: center; gap: 8px; color: #0f172a; margin: 0 0 4px 0;}
+.rtm-rc-sub { font-size: 0.85rem; color: #64748b; margin: 0;}
+
+.rtm-rc-steps {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+
+.rtm-rc-step { display: flex; flex-direction: column; gap: 8px; }
+.rtm-rc-step-label { font-size: 0.75rem; font-weight: 800; color: #334155; }
+.rtm-rc-options { display: flex; gap: 6px; }
+
+.rtm-opt-btn {
+  background: white; border: 1px solid #e2e8f0; border-radius: 10px;
+  padding: 8px 12px; font-size: 0.8rem; font-weight: 700; color: #475569;
+  cursor: pointer; transition: all 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.rtm-opt-btn:hover { border-color: #94a3b8; }
+.rtm-opt-btn.active { background: #2563eb; color: white; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
+
+.rtm-rc-arrow { color: #cbd5e1; margin-top: 18px; }
+
+/* Result Panel */
+.rtm-rc-result {
+  width: 300px;
+  background: #f8fafc;
+  border-left: 1px solid #e2e8f0;
+  padding: 24px;
+  display: flex; flex-direction: column; justify-content: center;
+  position: relative;
+}
+
+.rtm-res-title {
+  font-size: 0.75rem; font-weight: 900; color: #3b82f6; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 16px 0;
+}
+
+.rtm-res-list { display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 2; max-width: 65%; }
+.rtm-res-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 600; color: #0f172a; }
+.rtm-res-icon { color: #3b82f6; flex-shrink: 0; }
+
+.rtm-res-graphic {
+  position: absolute; right: -10px; bottom: -10px;
+  width: 140px; height: 140px; z-index: 1;
+  pointer-events: none;
+}
+.rtm-res-graphic img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.rtm-pro-tip {
+  display: flex; align-items: center; gap: 8px;
+  background: #f0f9ff; padding: 12px 16px; border-radius: 12px;
+  border: 1px solid #e0f2fe; margin-top: 16px;
+  font-size: 0.8rem; color: #0369a1; font-weight: 600;
+}
+.rtm-pt-icon { color: #0284c7; }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .rtm-scenario-grid { grid-template-columns: 1fr; }
+  .rtm-scenario-img { display: none; }
+  .rtm-scenario-content { width: 100%; }
+  .rtm-mistakes-grid { grid-template-columns: repeat(2, 1fr); }
+  .rtm-risk-checker { flex-direction: column; }
+  .rtm-rc-result { width: 100%; border-left: none; border-top: 1px solid #e2e8f0; }
+}
+@media (max-width: 768px) {
+  .rtm-mistakes-grid { grid-template-columns: 1fr; }
+  .rtm-sc-meta { grid-template-columns: 1fr; }
+  .rtm-ac-layout { flex-direction: column; }
+  .rtm-ac-total { flex-direction: column; align-items: flex-start; gap: 8px; }
+}

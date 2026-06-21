@@ -11,6 +11,15 @@ import RFQLanding from './pages/public/Solutions/RFQLanding';
 import RateComparison from './pages/public/Solutions/RateComparison';
 import ShipmentTracking from './pages/public/Solutions/ShipmentTracking';
 import Compliance from './pages/public/Solutions/Compliance';
+
+// Trade Intelligence - Guides
+import IncotermsPage from './pages/public/trade-intelligence/guides/incoterms/Page';
+import AirFreightPage from './pages/public/trade-intelligence/guides/air-freight/Page';
+// Other Trade Intelligence routes map directly to ComingSoonPage with props.
+
+// Trade Intelligence - Coming Soon
+import ComingSoonPage from './pages/public/trade-intelligence/coming-soon/ComingSoonPage';
+
 import BlogIndex from './pages/public/Blog/BlogIndex';
 import EngineeringBlog from './pages/public/Blog/EngineeringBlog';
 import DesignBlog from './pages/public/Blog/DesignBlog';
@@ -88,6 +97,11 @@ export default function App() {
           <Route path="/services/sea-freight" element={<SeaFreight />} />
           <Route path="/services/road-transport" element={<RoadTransport />} />
           <Route path="/services/customs" element={<CustomsBrokerage />} />
+          <Route path="/services/rail-freight" element={<ComingSoonPage title="Rail Freight" icon="🚆" category="Services" />} />
+          <Route path="/services/trade-finance" element={<ComingSoonPage title="Trade Finance" icon="🏦" category="Services" />} />
+          <Route path="/services/insurance" element={<ComingSoonPage title="Insurance" icon="🛡️" category="Services" />} />
+          <Route path="/services/documentation" element={<ComingSoonPage title="Documentation" icon="📄" category="Services" />} />
+          <Route path="/coverage" element={<ComingSoonPage title="Coverage Map" icon="🌍" category="Resources" />} />
 
           {/* Solutions */}
           <Route path="/solutions" element={<Solutions />} />
@@ -95,6 +109,14 @@ export default function App() {
           <Route path="/solutions/rate-comparison" element={<RateComparison />} />
           <Route path="/solutions/tracking" element={<ShipmentTracking />} />
           <Route path="/solutions/compliance" element={<Compliance />} />
+          <Route path="/solutions/procurement" element={<ComingSoonPage title="Procurement" icon="🛒" category="Solutions" />} />
+          <Route path="/solutions/route" element={<ComingSoonPage title="Route Optimization" icon="🛣️" category="Solutions" />} />
+          <Route path="/solutions/analytics" element={<ComingSoonPage title="Analytics" icon="📊" category="Solutions" />} />
+          <Route path="/solutions/reporting" element={<ComingSoonPage title="Reporting" icon="📑" category="Solutions" />} />
+          <Route path="/solutions/api" element={<ComingSoonPage title="API Access" icon="🔗" category="Integrations" />} />
+          <Route path="/solutions/erp" element={<ComingSoonPage title="ERP Integration" icon="🔄" category="Integrations" />} />
+          <Route path="/solutions/webhooks" element={<ComingSoonPage title="Webhooks" icon="📡" category="Integrations" />} />
+          <Route path="/solutions/edi" element={<ComingSoonPage title="EDI Support" icon="🧩" category="Integrations" />} />
 
           {/* Blog */}
           <Route path="/blog" element={<BlogIndex />} />
@@ -117,6 +139,42 @@ export default function App() {
           <Route path="/resources" element={<PlaceholderPage title="Resources" emoji="📚" note="Help center, API docs, and weight calculators are coming soon." />} />
           <Route path="/track" element={<PlaceholderPage title="Track Order" emoji="🔍" note="Live shipment tracking is available on the dashboard after signing up." />} />
 
+          {/* Trade Intelligence - Guides */}
+          <Route path="/knowledge" element={<ComingSoonPage title="Trade Intelligence Hub" icon="🧠" category="Knowledge Base" />} />
+          <Route path="/knowledge/incoterms" element={<IncotermsPage />} />
+          <Route path="/knowledge/air-freight" element={<AirFreightPage />} />
+          <Route path="/knowledge/sea-freight" element={<ComingSoonPage title="Sea Freight Guide" icon="🚢" category="Guides" />} />
+          <Route path="/knowledge/customs" element={<ComingSoonPage title="Customs Clearance Guide" icon="🛡️" category="Guides" />} />
+          <Route path="/knowledge/documentation" element={<ComingSoonPage title="Documentation Guide" icon="📄" category="Guides" />} />
+          <Route path="/knowledge/import-export" element={<ComingSoonPage title="Import & Export Basics" icon="🌐" category="Guides" />} />
+
+          {/* Trade Intelligence - Calculators */}
+          <Route path="/tools/cbm-calculator" element={<ComingSoonPage title="CBM Calculator" icon="📦" category="Calculators" />} />
+          <Route path="/tools/volumetric-weight" element={<ComingSoonPage title="Volumetric Weight" icon="⚖️" category="Calculators" />} />
+          <Route path="/tools/duty-calculator" element={<ComingSoonPage title="Duty Calculator" icon="🧮" category="Calculators" />} />
+          <Route path="/tools/transit-time" element={<ComingSoonPage title="Transit Time Estimator" icon="⏱️" category="Calculators" />} />
+          <Route path="/tools/freight-cost" element={<ComingSoonPage title="Freight Cost Calculator" icon="💰" category="Calculators" />} />
+          <Route path="/tools/container-load" element={<ComingSoonPage title="Container Load Planner" icon="🏗️" category="Calculators" />} />
+
+          {/* Trade Intelligence - References */}
+          <Route path="/reference/container-sizes" element={<ComingSoonPage title="Container Sizes Guide" icon="📐" category="References" />} />
+          <Route path="/reference/ports" element={<ComingSoonPage title="Port Directory" icon="⚓" category="References" />} />
+          <Route path="/reference/airports" element={<ComingSoonPage title="Airport Directory" icon="🛫" category="References" />} />
+          <Route path="/reference/hsn-codes" element={<ComingSoonPage title="HSN / HS Codes" icon="🔢" category="References" />} />
+          <Route path="/reference/dangerous-goods" element={<ComingSoonPage title="Dangerous Goods Guide" icon="⚠️" category="References" />} />
+          <Route path="/reference/trade-profiles" element={<ComingSoonPage title="Country Trade Profiles" icon="🗺️" category="References" />} />
+
+          {/* Trade Intelligence - Insights */}
+          <Route path="/insights/trends" element={<ComingSoonPage title="Logistics Trends" icon="📈" category="Insights" />} />
+          <Route path="/insights/market-updates" element={<ComingSoonPage title="Market Updates" icon="📰" category="Insights" />} />
+          <Route path="/insights/news" element={<ComingSoonPage title="Trade News" icon="🗞️" category="Insights" />} />
+          <Route path="/insights/reports" element={<ComingSoonPage title="Industry Reports" icon="📋" category="Insights" />} />
+          <Route path="/insights/benchmarks" element={<ComingSoonPage title="Logistics Benchmarks" icon="🏆" category="Insights" />} />
+          <Route path="/insights/cases" element={<ComingSoonPage title="Case Studies" icon="🤝" category="Insights" />} />
+
+          {/* Trade Intelligence - Coming Soon Fallback */}
+          <Route path="/trade-intelligence/coming-soon" element={<ComingSoonPage />} />
+
           {/* 404 fallback */}
           <Route path="*" element={<NotFoundPage />} />
         </Route>
@@ -124,4 +182,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-

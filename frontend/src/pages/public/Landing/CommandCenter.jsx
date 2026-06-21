@@ -87,55 +87,6 @@ export default function CommandCenter() {
                 <circle cx="900" cy="400" r="4" className="cc-node" />
               </svg>
 
-              {/* Floating Data Cards (Glassmorphism) */}
-              
-              {/* Card 1: Status */}
-              <div className="cc-glass-card card-status float-1">
-                <div className="cc-card-header">Shipment Status</div>
-                <div className="cc-card-value status-active">
-                  <span className="status-dot"></span> In Transit
-                </div>
-              </div>
-
-              {/* Card 2: Carrier */}
-              <div className="cc-glass-card card-carrier float-2">
-                <div className="cc-card-header">Carrier Perf.</div>
-                <div className="cc-card-value text-green">98.2%</div>
-              </div>
-
-              {/* Card 3: Ports */}
-              <div className="cc-glass-card card-ports float-3">
-                <div className="cc-card-header">Port Activity</div>
-                <div className="cc-card-value">147 <span className="cc-text-sm">Active</span></div>
-              </div>
-
-              {/* Card 4: Air */}
-              <div className="cc-glass-card card-air float-4">
-                <div className="cc-card-icon">✈️</div>
-                <div>
-                  <div className="cc-card-header">Air Freight</div>
-                  <div className="cc-card-value-sm">24 Shipments</div>
-                </div>
-              </div>
-
-              {/* Card 5: Ocean */}
-              <div className="cc-glass-card card-ocean float-5">
-                <div className="cc-card-icon">🚢</div>
-                <div>
-                  <div className="cc-card-header">Ocean Freight</div>
-                  <div className="cc-card-value-sm">68 Containers</div>
-                </div>
-              </div>
-
-              {/* Card 6: Road */}
-              <div className="cc-glass-card card-road float-6">
-                <div className="cc-card-icon">🚚</div>
-                <div>
-                  <div className="cc-card-header">Road Freight</div>
-                  <div className="cc-card-value-sm">112 Deliveries</div>
-                </div>
-              </div>
-
             </div>
           </div>
 

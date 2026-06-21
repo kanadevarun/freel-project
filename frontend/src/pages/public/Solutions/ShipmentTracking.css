@@ -1,0 +1,428 @@
+/* ShipmentTracking.css - Custom Enterprise Animations & Effects */
+
+/* ─── Hero Base & Overlays ─── */
+.tracking-hero-section {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000;
+  margin-top: -64px;
+}
+
+.tracking-video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Layer 1: Dark gradient overlay */
+.tracking-overlay-dark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.65) 0%,
+    rgba(0, 0, 0, 0.40) 50%,
+    rgba(0, 0, 0, 0.70) 100%
+  );
+}
+
+/* Layer 2: Subtle blue logistics glow */
+.tracking-overlay-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(14, 165, 233, 0.08) 0%,
+    rgba(56, 189, 248, 0.03) 40%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+/* Layer 3: Moving route lines container */
+.tracking-route-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.4;
+}
+
+.tracking-route-path {
+  fill: none;
+  stroke: rgba(56, 189, 248, 0.6);
+  stroke-width: 1.5;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: dashRoute 20s linear infinite;
+  filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.8));
+}
+
+.tracking-route-path:nth-child(2) {
+  stroke-width: 1;
+  animation-duration: 25s;
+  animation-delay: -5s;
+}
+
+.tracking-route-path:nth-child(3) {
+  stroke-width: 2;
+  stroke: rgba(14, 165, 233, 0.5);
+  animation-duration: 30s;
+  animation-delay: -10s;
+}
+
+@keyframes dashRoute {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: -1000; }
+}
+
+/* ─── Main Content Container ─── */
+.tracking-content {
+  position: relative;
+  z-index: 10;
+  max-width: 1000px;
+  width: 100%;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 4rem;
+}
+
+/* ─── Typography & Elements ─── */
+.tracking-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 9999px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+  opacity: 0;
+  animation: fadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards;
+}
+
+.tracking-headline {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.15;
+  margin-bottom: 2rem;
+  opacity: 0;
+  animation: slideUpFade 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards;
+}
+
+.tracking-headline-l1 {
+  display: block;
+}
+.tracking-headline-l2 {
+  display: block;
+  background: linear-gradient(to right, #ffffff, rgba(255,255,255,0.7));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.tracking-subheadline {
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.80);
+  max-width: 700px;
+  margin: 0 auto 3rem auto;
+  opacity: 0;
+  animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
+}
+
+/* ─── Buttons ─── */
+.tracking-cta-container {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 4rem;
+  opacity: 0;
+  animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.8s forwards;
+}
+
+.tracking-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 36px;
+  background: linear-gradient(135deg, #0EA5E9 0%, #2563EB 100%);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3), inset 0 1px 1px rgba(255,255,255,0.2);
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.tracking-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.5), inset 0 1px 1px rgba(255,255,255,0.3);
+}
+
+.tracking-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56px;
+  padding: 0 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.tracking-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: scale(1.02);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ─── Trust Strip ─── */
+.tracking-trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  opacity: 0;
+  animation: fadeInUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) 1.0s forwards;
+}
+
+.tracking-trust-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.875rem;
+  font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.tracking-trust-pill:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.tracking-trust-icon {
+  margin-right: 8px;
+  font-size: 1.1em;
+  opacity: 0.9;
+}
+
+/* ─── Floating Panels ─── */
+.tracking-panel {
+  position: absolute;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255,255,255,0.05);
+  z-index: 5;
+  text-align: left;
+  opacity: 0;
+}
+
+.tracking-panel-label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.tracking-panel-value {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.tracking-panel-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: rgba(56, 189, 248, 0.9);
+}
+
+.panel-1 {
+  top: 15%;
+  left: 4%;
+  animation: floatPanel 6s ease-in-out infinite, fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.2s forwards;
+}
+
+.panel-2 {
+  top: 60%;
+  right: 4%;
+  animation: floatPanel 7s ease-in-out infinite reverse, fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.4s forwards;
+}
+
+.panel-3 {
+  bottom: 15%;
+  left: 10%;
+  animation: floatPanel 5.5s ease-in-out infinite 1s, fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.6s forwards;
+}
+
+.panel-4 {
+  top: 18%;
+  right: 12%;
+  animation: floatPanel 8s ease-in-out infinite 0.5s, fadeIn 1s cubic-bezier(0.16, 1, 0.3, 1) 1.8s forwards;
+}
+
+@keyframes floatPanel {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+/* ─── Scroll Cue ─── */
+.tracking-scroll-cue {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0;
+  animation: fadeIn 1s ease 2s forwards;
+}
+
+.scroll-line {
+  width: 2px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  background: #fff;
+  animation: scrollDrop 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+@keyframes scrollDrop {
+  0% { transform: translateY(-100%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+/* ─── Animations ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ─── Responsive Adjustments ─── */
+@media (min-width: 1024px) {
+  .tracking-headline { font-size: clamp(36px, 4vw, 56px); }
+  .tracking-subheadline { font-size: clamp(16px, 1.2vw, 20px); }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .tracking-headline { font-size: clamp(32px, 4.5vw, 44px); }
+  .tracking-subheadline { font-size: 1.125rem; }
+  .panel-1, .panel-2, .panel-3, .panel-4 {
+    transform: scale(0.9);
+  }
+}
+
+@media (max-width: 767px) {
+  .tracking-headline { font-size: clamp(32px, 8vw, 40px); }
+  .tracking-subheadline { font-size: 1rem; padding: 0 10px; }
+  
+  .tracking-cta-container {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  .tracking-btn-primary, .tracking-btn-secondary {
+    width: 100%;
+    max-width: 320px;
+  }
+  
+  /* Hide some panels on very small screens to avoid clutter, or reposition them */
+  .panel-1 { top: 15%; left: 4%; transform: scale(0.8); }
+  .panel-2 { top: auto; bottom: 15%; right: 4%; transform: scale(0.8); }
+  .panel-3 { display: none; }
+  .panel-4 { display: none; }
+  
+  .tracking-trust-strip {
+    gap: 0.5rem;
+  }
+  .tracking-trust-pill {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}

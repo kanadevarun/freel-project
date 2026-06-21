@@ -1,0 +1,592 @@
+/* ══════════════════════════════════════════════════════
+   REAL SHIPMENT SIMULATOR
+══════════════════════════════════════════════════════ */
+.rss-section {
+  background: #FAF7F2;
+  position: relative;
+  overflow: hidden;
+  padding: 40px 0;
+}
+
+.rss-container {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 40px;
+  position: relative;
+  z-index: 10;
+}
+
+/* ── Header ── */
+.rss-header {
+  text-align: center;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.rss-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(255, 255, 255, 0.8);
+  color: #1e40af;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rss-pill-icon {
+  color: #3b82f6;
+}
+
+.rss-title {
+  font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+  font-weight: 900;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.rss-subtitle {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #475569;
+  max-width: 650px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Tabs ── */
+.rss-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.rss-tab {
+  padding: 10px 32px;
+  border-radius: 100px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.rss-tab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.rss-tab.active {
+  background: linear-gradient(135deg, #14b8a6, #2563eb);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.25);
+}
+
+/* ── Layout ── */
+.rss-layout {
+  display: flex;
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* ── Main Left Panel ── */
+.rss-main {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Shipment Header */
+.rss-shipment-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 20px;
+}
+
+.rss-sh-icon {
+  width: 48px;
+  height: 48px;
+  background: #eff6ff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b82f6;
+  flex-shrink: 0;
+}
+
+.rss-sh-details {
+  flex: 1;
+}
+
+.rss-sh-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.rss-sh-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rss-sh-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Journey Visualization ── */
+.rss-journey {
+  position: relative;
+  margin-bottom: 24px;
+  padding-top: 16px;
+}
+
+.rss-journey-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.rss-jl-item {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.rss-jl-seller { color: #3b82f6; }
+.rss-jl-buyer  { color: #10b981; }
+
+.rss-journey-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  padding: 0 20px; /* offset for outer nodes */
+}
+
+.rss-track-bg {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  right: 20px;
+  height: 4px;
+  background: #f1f5f9;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.rss-track-fill {
+  position: absolute;
+  top: 50%;
+  left: 20px;
+  height: 4px;
+  transform: translateY(-50%);
+  background: #3b82f6;
+  z-index: 2;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rss-track-fill-buyer {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  height: 4px;
+  transform: translateY(-50%);
+  background: #10b981;
+  z-index: 2;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rss-j-node {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 70px; /* Fixed width for alignment */
+}
+
+.rss-j-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s;
+}
+
+.rss-j-icon-wrap svg {
+  width: 40px;
+  height: 40px;
+}
+
+.rss-j-node.seller .rss-j-icon-wrap {
+  background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.12);
+  border: 1px solid #bfdbfe;
+}
+
+.rss-j-node.buyer .rss-j-icon-wrap {
+  background: linear-gradient(135deg, #f0fdf4, #d1fae5);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+  border: 1px solid #a7f3d0;
+}
+
+.rss-j-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #475569;
+  text-align: center;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+/* Risk Transfer Marker */
+.rss-risk-marker {
+  position: absolute;
+  top: 90px; /* Adjusted for taller nodes */
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  padding: 8px 16px;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+  transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translateX(-50%);
+}
+
+.rss-risk-marker::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: white;
+  border-left: 1px solid rgba(255, 255, 255, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.rss-rm-icon {
+  color: #f59e0b;
+}
+
+.rss-rm-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.rss-rm-title {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rss-rm-desc {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Vertical connecting line for risk marker */
+.rss-risk-line {
+  position: absolute;
+  top: 40px;
+  width: 2px;
+  height: 50px;
+  background: dashed 2px #fcd34d;
+  z-index: 1;
+  transform: translateX(-50%);
+  transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+
+/* ── Responsibility Cards ── */
+.rss-resp-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 32px; /* extra space for risk marker */
+}
+
+.rss-rc {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+.rss-rc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.rss-rc-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rss-rc.seller .rss-rc-icon { background: #eff6ff; color: #3b82f6; }
+.rss-rc.buyer .rss-rc-icon  { background: #ecfdf5; color: #10b981; }
+
+.rss-rc-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.rss-rc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  z-index: 2;
+}
+
+.rss-rc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.rss-rc.seller .rss-rc-check { color: #3b82f6; }
+.rss-rc.buyer .rss-rc-check  { color: #10b981; }
+
+.rss-rc-watermark {
+  position: absolute;
+  right: -20px;
+  bottom: -20px;
+  opacity: 0.05;
+  color: #0f172a;
+  z-index: 1;
+}
+
+/* ── Sidebar: Cost Breakdown ── */
+.rss-sidebar {
+  flex: 0 0 280px;
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+  border: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+}
+
+.rss-sb-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0f172a;
+  margin: 0 0 16px 0;
+}
+
+.rss-cost-card {
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.rss-cost-card.seller {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.rss-cost-card.buyer {
+  background: #f0fdf4;
+  border: 1px solid #d1fae5;
+}
+
+.rss-cc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.rss-cc-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.rss-cc-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rss-cost-card.seller .rss-cc-label { color: #1e40af; }
+.rss-cost-card.buyer .rss-cc-label  { color: #065f46; }
+
+.rss-cc-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.rss-cc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rss-cc-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.rss-cost-card.seller .rss-cc-check { color: #3b82f6; }
+.rss-cost-card.buyer .rss-cc-check  { color: #10b981; }
+
+.rss-sb-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.rss-sb-footer-icon {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* ── Bottom Insight Strip ── */
+.rss-insight {
+  margin-top: 16px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  border: 1px solid #f1f5f9;
+}
+
+.rss-in-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex: 1;
+}
+
+.rss-in-icon {
+  width: 40px;
+  height: 40px;
+  background: #eff6ff;
+  color: #3b82f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rss-in-text h4 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+}
+
+.rss-in-text p {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0;
+  max-width: 800px;
+}
+
+.rss-in-graphic {
+  width: 200px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .rss-layout {
+    flex-direction: column;
+  }
+  .rss-sidebar {
+    flex: none;
+    width: 100%;
+  }
+}
