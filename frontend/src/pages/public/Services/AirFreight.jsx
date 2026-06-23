@@ -496,7 +496,7 @@ export default function AirFreight() {
           </p>
 
           <div className="af-takeoff__actions af-reveal">
-            <Link to="/signup" className="af-takeoff__btn af-takeoff__btn--primary">Start Free</Link>
+            <Link to="/signup" className="af-takeoff__btn af-takeoff__btn--primary">Get Started</Link>
             <Link to="/demo" className="af-takeoff__btn af-takeoff__btn--secondary">Book Demo</Link>
           </div>
 

@@ -1589,7 +1589,7 @@ export default function About() {
               className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full mb-12"
             >
               <Link to="/contact" className="h-[64px] px-[36px] rounded-full flex items-center justify-center text-white font-bold text-lg transition-transform hover:scale-105 duration-300" style={{ background: 'linear-gradient(135deg, #14B8A6, #2563EB)' }}>
-                Start Free Trial
+                Join Freel
               </Link>
               <Link to="/contact" className="h-[64px] px-[36px] rounded-full flex items-center justify-center text-white font-bold text-lg transition-colors hover:bg-white/10 duration-300" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.2)' }}>
                 Book Demo

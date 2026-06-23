@@ -1424,7 +1424,7 @@ export default function AirFreightPage() {
               <h2>Ready To Move Cargo Smarter?</h2>
               <p>Join thousands of businesses using modern logistics intelligence to reduce costs, avoid delays and make better shipping decisions.</p>
               <div className="af-hub-final-btns">
-                <Link to="/register" className="af-hub-final-btn primary"><Rocket size={20} /> Start Free</Link>
+                <Link to="/register" className="af-hub-final-btn primary"><Rocket size={20} /> Get Started</Link>
                 <Link to="/contact" className="af-hub-final-btn secondary"><CalendarDays size={20} /> Request Demo</Link>
               </div>
             </div>

@@ -139,7 +139,7 @@ export default function Platform() {
                     to="/signup"
                     className="px-8 py-4 bg-brand-teal hover:bg-teal-400 text-white font-bold rounded-full transition-colors shadow-[0_0_20px_rgba(0,191,165,0.4)]"
                   >
-                    Start Free Platform Trial
+                    Explore Platform
                   </Link>
                   <a
                     href="#platform-pillars-demo"

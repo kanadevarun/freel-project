@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════════
+   VerifyEmailPage.css
+   ═══════════════════════════════════════════════════════════ */
+
+.verify-page {
+  text-align: center;
+}
+
+.verify-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+
+.auth-form-header p strong {
+  color: #1E293B;
+}
+
+/* ── OTP Code Inputs ── */
+.verify-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.verify-code-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.verify-input {
+  width: 48px;
+  height: 56px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  color: #1E293B;
+  background: white;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.verify-input:focus {
+  border-color: #00BFA5;
+  box-shadow: 0 0 0 3px rgba(0, 191, 165, 0.12);
+  transform: translateY(-2px);
+}
+
+.verify-input.error {
+  border-color: #EF4444;
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+/* ── Footer / Resend ── */
+.verify-footer {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.88rem;
+  color: #64748B;
+}
+
+.verify-countdown {
+  color: #94A3B8;
+  font-weight: 600;
+}
+
+.verify-resend-btn {
+  background: none;
+  border: none;
+  color: #00BFA5;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.88rem;
+}
+
+.verify-resend-btn:hover {
+  text-decoration: underline;
+}
+
+.verify-change-email {
+  background: none;
+  border: none;
+  color: #64748B;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.88rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.verify-change-email:hover {
+  color: #1E293B;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .verify-code-inputs {
+    gap: 8px;
+  }
+  
+  .verify-input {
+    width: 42px;
+    height: 50px;
+    font-size: 1.25rem;
+    border-radius: 8px;
+  }
+}

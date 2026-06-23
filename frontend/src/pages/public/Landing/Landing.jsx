@@ -364,9 +364,9 @@ export default function Landing() {
         <div className="container-sm text-center relative z-10">
           <Reveal>
             <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to modernize your logistics?</h2>
-            <p className="max-w-lg mx-auto mb-8">Join 500+ fleet owners and freight forwarders who switched to Freel. Start free — no credit card required.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <MagneticBtn><Link to="/signup" className="btn-primary">Start Free Trial →</Link></MagneticBtn>
+            <p className="max-w-lg mx-auto mb-8">Join 500+ fleet owners and freight forwarders who switched to Freel. Create your account today.</p>
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
+              <MagneticBtn><Link to="/signup" className="btn-primary">Get Started →</Link></MagneticBtn>
               <MagneticBtn><Link to="/contact" className="btn-secondary" style={{ borderColor: '#94A3B8', color: '#94A3B8' }}>Talk to Sales</Link></MagneticBtn>
             </div>
           </Reveal>

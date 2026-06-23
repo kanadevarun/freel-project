@@ -66,7 +66,7 @@ export default function TrackingCTA() {
           transition={{ duration: 0.6, delay: 0.4 }}
         >
           <a href="/signup" className="tcta-btn-primary">
-            Start Free <ArrowRight size={18} className="tcta-btn-icon" />
+            Get Started <ArrowRight size={18} className="tcta-btn-icon" />
           </a>
           <a href="/demo" className="tcta-btn-secondary">
             Book A Demo

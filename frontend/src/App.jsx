@@ -29,6 +29,15 @@ import Contact from './pages/public/Contact/Contact';
 import Platform from './pages/public/Platform/Platform';
 import ScrollToTop from './components/ScrollToTop';
 import { Link } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import AuthLayout from './layouts/AuthLayout/AuthLayout';
+import SignupPage from './pages/auth/Signup/SignupPage';
+import VerifyEmailPage from './pages/auth/VerifyEmail/VerifyEmailPage';
+import LoginPage from './pages/auth/Login/LoginPage';
+import ForgotPasswordPage from './pages/auth/ForgotPassword/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPassword/ResetPasswordPage';
+import OnboardingPage from './pages/auth/Onboarding/OnboardingPage';
+import PrivateRoute from './components/PrivateRoute/PrivateRoute';
 import './App.css';
 
 
@@ -84,11 +93,51 @@ function NotFoundPage() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <Routes>
-        {/* All public pages wrapped in PublicLayout (Navbar + Footer) */}
-        <Route element={<PublicLayout />}>
+    <AuthProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <Routes>
+          {/* ── AUTH ROUTES (Split Panel Layout) ── */}
+          <Route element={<AuthLayout />}>
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/verify-email" element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+          </Route>
+
+          {/* Standalone Auth Routes */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* ── PRIVATE PROTECTED ROUTES ── */}
+          <Route element={<PrivateRoute />}>
+            <Route path="/onboarding" element={<OnboardingPage />} />
+            <Route path="/dashboard" element={
+              <div style={{ padding: '80px 40px', background: '#F8FAFC', minHeight: '100vh', fontFamily: 'Outfit, sans-serif' }}>
+                <div style={{ maxWidth: '800px', margin: '0 auto', background: 'white', borderRadius: '16px', padding: '40px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+                  <h1 style={{fontSize: '2rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px'}}>Welcome to Freel</h1>
+                  <p style={{color: '#64748B', marginBottom: '32px', fontSize: '1.1rem'}}>Your workspace is ready.</p>
+                  
+                  <div style={{ background: '#F1F5F9', padding: '24px', borderRadius: '12px', marginBottom: '40px' }}>
+                    <div style={{ marginBottom: '12px' }}><strong style={{ color: '#334155'}}>Workspace:</strong> <span style={{ color: '#0F172A', fontWeight: 600 }}>Your Organization</span></div>
+                    <div><strong style={{ color: '#334155'}}>Role:</strong> <span style={{ color: '#0F172A', fontWeight: 600 }}>Owner</span></div>
+                  </div>
+
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#1E293B', marginBottom: '16px' }}>Coming Soon:</h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', color: '#475569', fontWeight: 500 }}>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>📦 Shipments</li>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>📋 RFQs</li>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>💰 Freight Rates</li>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>📍 Tracking</li>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>📄 Documents</li>
+                    <li style={{ background: '#F8FAFC', padding: '16px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>📊 Trade Intelligence</li>
+                  </ul>
+                </div>
+              </div>
+            } />
+          </Route>
+
+          {/* All public pages wrapped in PublicLayout (Navbar + Footer) */}
+          <Route element={<PublicLayout />}>
           <Route path="/" element={<Landing />} />
 
           {/* Services */}
@@ -129,9 +178,7 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/platform" element={<Platform />} />
 
-          {/* Phase 2 placeholders — redirect auth routes to contact for now */}
-          <Route path="/login" element={<Navigate to="/contact" replace />} />
-          <Route path="/signup" element={<Navigate to="/contact" replace />} />
+          {/* Phase 2 auth routes removed from here (handled above) */}
 
           {/* Phase 3 placeholders */}
           <Route path="/products" element={<PlaceholderPage title="Products" emoji="📦" note="Our full product suite page is coming soon. In the meantime, explore our Services." />} />
@@ -180,5 +227,6 @@ export default function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+  </AuthProvider>
   );
 }

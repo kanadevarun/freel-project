@@ -280,7 +280,7 @@ export default function Solutions() {
             <h2>See It All In Action</h2>
             <p>Create your free account to unlock the full platform experience.</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
-              <Link to="/signup" className="solutions-cta-btn">Start Free Trial →</Link>
+              <Link to="/signup" className="solutions-cta-btn">Get Started →</Link>
               <Link to="/contact" className="solutions-cta-btn" style={{ background: 'white', color: 'var(--color-brand-navy)', border: '2px solid var(--color-ui-border)', boxShadow: 'none' }}>
                 Schedule Demo
               </Link>

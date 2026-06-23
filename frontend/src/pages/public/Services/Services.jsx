@@ -230,7 +230,7 @@ export default function Services() {
             <h2>Start Shipping Smarter Today</h2>
             <p>Get instant access to all services with your free Freel account.</p>
             <Link to="/signup" className="services-cta-banner-btn">
-              Start Free Trial →
+              Get Started →
             </Link>
           </div>
         </Reveal>

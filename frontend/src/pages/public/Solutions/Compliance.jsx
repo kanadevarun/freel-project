@@ -104,7 +104,7 @@ export default function Compliance() {
               
               <div className="flex flex-wrap items-center gap-4 mb-10">
                 <Link to="/signup" className="px-8 py-4 text-white font-semibold text-lg bg-gradient-to-r from-teal-400 to-blue-600 rounded-full shadow-lg shadow-teal-500/30 hover:shadow-teal-500/50 transition-all flex items-center justify-center hover:-translate-y-0.5">
-                  Start Free <span className="ml-2">→</span>
+                  Get Started <span className="ml-2">→</span>
                 </Link>
                 <button className="px-8 py-4 text-brand-navy font-semibold text-lg bg-white border border-slate-300 rounded-full hover:bg-slate-50 transition-all flex items-center justify-center hover:-translate-y-0.5">
                   <span className="mr-2 text-brand-indigo">▶</span> See Compliance In Action
@@ -1395,7 +1395,7 @@ export default function Compliance() {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mb-16">
             <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-teal-500 to-blue-600 text-white text-lg font-bold rounded-full shadow-[0_10px_30px_rgba(20,184,166,0.3)] hover:shadow-[0_15px_40px_rgba(20,184,166,0.5)] transition-all hover:-translate-y-1 text-center">
-              Start Free →
+              Get Started →
             </Link>
             <Link to="/contact" className="w-full sm:w-auto px-8 py-4 bg-white/5 backdrop-blur-sm border border-white/20 text-white text-lg font-bold rounded-full hover:bg-white/10 transition-all text-center">
               Talk To Compliance Expert
