@@ -100,66 +100,68 @@
 .onboarding-options-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 40px;
   padding: 0 32px 24px;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 640px) {
   .onboarding-options-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 .onboarding-option-btn {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  padding: 20px 24px;
   background: white;
   border: 1.5px solid #E2E8F0;
-  padding: 12px 16px;
-  border-radius: 12px;
-  text-align: left;
-  font-size: 0.95rem;
-  font-family: 'Outfit', sans-serif;
-  font-weight: 600;
+  border-radius: 16px;
   color: #334155;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  font-weight: 600;
+  font-size: 1.05rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  cursor: pointer;
 }
 
 .onboarding-option-btn:hover {
-  border-color: #CBD5E1;
-  background: #F8FAFC;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.04);
+  border-color: #A5B4FC;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 8px 10px -6px rgba(79, 70, 229, 0.1);
 }
 
 .onboarding-option-btn.selected {
-  border-color: #14B8A6;
-  background: #F0FDFA;
-  color: #0F172A;
-  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.12);
+  background: #F5F3FF;
+  border-color: #4F46E5;
+  color: #4338CA;
+  box-shadow: 0 0 0 1px #4F46E5, 0 10px 25px -5px rgba(79, 70, 229, 0.15);
 }
 
-/* Custom Checkbox inside option */
 .onboarding-option-checkbox {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  border: 1.5px solid #CBD5E1;
+  border: 2px solid #CBD5E1;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
-  transition: all 0.2s ease;
   background: white;
   position: relative;
 }
 
+.onboarding-option-checkbox.is-radio {
+  border-radius: 50%;
+}
+
 .onboarding-option-btn.selected .onboarding-option-checkbox {
-  background: #14B8A6 !important;
-  border-color: #14B8A6 !important;
+  background: #4F46E5;
+  border-color: #4F46E5;
 }
 
 .onboarding-option-btn.selected .onboarding-option-checkbox::after {

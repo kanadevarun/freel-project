@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { onboardingStorage } from '../../utils/onboardingStorage';
 
 /**
  * PrivateRoute — wrapper for authenticated pages.
@@ -23,9 +24,17 @@ export default function PrivateRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Check onboarding state
+  const isComplete = onboardingStorage.isOnboardingCompleted();
+
   // Force onboarding if not completed (unless they are already on the onboarding page)
-  if (org && !org.onboardingCompleted && location.pathname !== '/onboarding') {
+  if (!isComplete && location.pathname !== '/onboarding') {
     return <Navigate to="/onboarding" replace />;
+  }
+
+  // Prevent completed users from manually revisiting onboarding
+  if (isComplete && location.pathname === '/onboarding') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

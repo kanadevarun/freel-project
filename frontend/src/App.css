@@ -51,3 +51,11 @@
   0% { transform: translateX(-100vw) rotate(-12deg); }
   100% { transform: translateX(100vw) rotate(-12deg); }
 }
+
+.boot-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #F8FAFC;
+}

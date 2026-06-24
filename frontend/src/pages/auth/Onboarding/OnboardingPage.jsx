@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { saveOnboardingStep, completeOnboarding, skipOnboarding } from '../../../services/authService';
+import { saveOnboardingStep, completeOnboarding as backendCompleteOnboarding, skipOnboarding } from '../../../services/authService';
 import { Check } from 'lucide-react';
 import './OnboardingPage.css';
 
@@ -10,77 +10,98 @@ const QUESTIONS = {
   SHIPPER: [
     {
       step: 1,
-      key: 'commodity_types',
-      title: 'What do you typically ship?',
-      type: 'multi',
-      options: ['Electronics', 'Auto Parts', 'Apparel', 'Pharmaceuticals', 'Machinery', 'FMCG', 'Other'],
+      key: 'primary_transport',
+      title: 'How do you primarily move goods?',
+      type: 'single',
+      options: ['Air Freight', 'Ocean Freight', 'Road Freight', 'Multi-Modal'],
     },
     {
       step: 2,
       key: 'monthly_volume',
-      title: 'How many shipments per month?',
+      title: 'What is your average shipment volume?',
       type: 'single',
-      options: ['1 - 10', '11 - 50', '51 - 200', '200+'],
+      options: ['1–10 Shipments / Month', '11–50 Shipments / Month', '51–200 Shipments / Month', '200+ Shipments / Month'],
     },
     {
       step: 3,
-      key: 'transport_modes',
-      title: 'Preferred transport modes?',
+      key: 'trade_regions',
+      title: 'Which regions do you trade with most frequently?',
       type: 'multi',
-      options: ['Road Transport', 'Air Freight', 'Sea Freight', 'Rail Freight'],
+      options: ['India', 'Middle East', 'Europe', 'North America', 'Southeast Asia', 'Australia'],
+    },
+    {
+      step: 4,
+      key: 'primary_goal',
+      title: 'What are you looking for from Freel?',
+      type: 'multi',
+      options: ['Better Freight Rates', 'Shipment Tracking', 'Carrier Discovery', 'RFQ Management', 'Trade Intelligence'],
     },
   ],
   CARRIER: [
     {
       step: 1,
-      key: 'vehicle_types',
-      title: 'What vehicle types do you operate?',
+      key: 'transport_modes',
+      title: 'What transport modes do you operate?',
       type: 'multi',
-      options: ['LCV (< 3.5T)', 'HCV (> 3.5T)', 'Trailer', 'Reefer', 'Container'],
+      options: ['Full Truckload (FTL)', 'Less Than Truckload (LTL)', 'Container Transport', 'Air Cargo', 'Ocean Freight', 'Multi-Modal'],
     },
     {
       step: 2,
-      key: 'fleet_size',
-      title: 'How many vehicles in your fleet?',
-      type: 'single',
-      options: ['1 - 5', '6 - 20', '21 - 50', '50+'],
+      key: 'primary_regions',
+      title: 'Which regions do you primarily serve?',
+      type: 'multi',
+      options: ['India Domestic', 'Middle East', 'Asia Pacific', 'Europe', 'North America', 'Global'],
     },
     {
       step: 3,
-      key: 'primary_corridors',
-      title: 'Primary operating regions?',
+      key: 'fleet_size',
+      title: 'How large is your fleet or logistics network?',
+      type: 'single',
+      options: ['1–10 Vehicles', '11–50 Vehicles', '51–200 Vehicles', '200+ Vehicles', 'Asset-Light / Partner Network'],
+    },
+    {
+      step: 4,
+      key: 'cargo_types',
+      title: 'What cargo types do you handle?',
       type: 'multi',
-      options: ['North India', 'South India', 'West India', 'East India', 'Pan India'],
+      options: ['General Cargo', 'Perishables', 'Pharmaceuticals', 'Hazardous Goods', 'E-commerce', 'Automotive', 'Oversized Cargo'],
     },
   ],
   FREIGHT_FORWARDER: [
     {
       step: 1,
-      key: 'specializations',
-      title: 'What are your specializations?',
+      key: 'provided_services',
+      title: 'Which services do you provide?',
       type: 'multi',
-      options: ['Air Freight', 'Sea Freight', 'Customs Clearance', 'Project Cargo', 'Cold Chain'],
+      options: ['Air Freight', 'Ocean Freight', 'Customs Clearance', 'Warehousing', 'Road Transport', 'Project Cargo'],
     },
     {
       step: 2,
-      key: 'trade_lanes',
-      title: 'Which trade lanes do you focus on?',
-      type: 'multi',
-      options: ['India - Middle East', 'India - USA', 'India - Europe', 'India - Southeast Asia', 'Global'],
+      key: 'monthly_shipments',
+      title: 'How many shipments do you manage monthly?',
+      type: 'single',
+      options: ['1–50', '51–200', '201–1000', '1000+'],
     },
     {
       step: 3,
-      key: 'memberships',
-      title: 'Do you have any memberships?',
+      key: 'operating_markets',
+      title: 'Which markets do you operate in?',
+      type: 'multi',
+      options: ['India', 'Middle East', 'Europe', 'North America', 'Asia Pacific', 'Global'],
+    },
+    {
+      step: 4,
+      key: 'biggest_challenge',
+      title: 'What is your biggest challenge today?',
       type: 'single',
-      options: ['FIATA Member', 'IATA Agent', 'Both', 'None currently'],
+      options: ['Finding Shippers', 'Managing RFQs', 'Shipment Visibility', 'Documentation', 'Carrier Management'],
     },
   ],
 };
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const { org, updateOrg } = useAuth();
+  const { org, updateOrg, completeOnboarding: contextCompleteOnboarding } = useAuth();
   
   // Default to SHIPPER if org isn't loaded yet
   const roleType = org?.orgType || 'SHIPPER';
@@ -121,6 +142,7 @@ export default function OnboardingPage() {
     setLoadingStep(5);
     await new Promise(r => setTimeout(r, 1200));
     
+    await contextCompleteOnboarding(answers);
     navigate('/dashboard');
   };
 
@@ -141,7 +163,9 @@ export default function OnboardingPage() {
       });
 
       if (isLastStep) {
-        await completeOnboarding();
+        if (typeof backendCompleteOnboarding === 'function') {
+           await backendCompleteOnboarding();
+        }
         updateOrg({ onboardingCompleted: true });
         runCreationSequence();
       } else {
@@ -202,7 +226,9 @@ export default function OnboardingPage() {
                   className={`onboarding-option-btn ${isSelected ? 'selected' : ''}`}
                   onClick={() => handleToggleOption(option)}
                 >
-                  <div className="onboarding-option-checkbox" />
+                  <div className={`onboarding-option-checkbox ${currentQ.type === 'single' ? 'is-radio' : ''}`}>
+                    {isSelected && <Check size={14} color="white" />}
+                  </div>
                   <span>{option}</span>
                 </button>
               );
@@ -245,7 +271,7 @@ export default function OnboardingPage() {
                   </li>
                   <li className={loadingStep >= 3 ? 'done' : ''}>
                     <div className="status-icon">{loadingStep >= 3 ? <Check size={14}/> : (loadingStep > 2 ? <div className="spinner-small"/> : <div className="dot"/>)}</div>
-                    Configuring Trade Workspace
+                    Configuring Logistics Profile
                   </li>
                   <li className={loadingStep >= 4 ? 'done' : ''}>
                     <div className="status-icon">{loadingStep >= 4 ? <Check size={14}/> : (loadingStep > 3 ? <div className="spinner-small"/> : <div className="dot"/>)}</div>

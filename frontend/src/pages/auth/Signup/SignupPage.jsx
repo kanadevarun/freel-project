@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Truck, Factory, Globe2, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
-import { register } from '../../../services/authService';
+import { signup } from '../../../services/authService';
+import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
+import { COUNTRIES, getFlagEmoji } from '../../../utils/countries';
 import './SignupPage.css';
 
 const ROLES = [
@@ -25,6 +27,8 @@ const ROLES = [
   },
 ];
 
+
+
 export default function SignupPage() {
   const navigate = useNavigate();
   
@@ -41,12 +45,19 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[3]); // Default to India (+91)
+
 
   // Handle inputs
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) setError('');
+    if (error) setError(null);
+    if (formErrors[e.target.name]) {
+      setFormErrors((prev) => ({ ...prev, [e.target.name]: null }));
+    }
   };
 
   // Password Validation Logic
@@ -74,31 +85,68 @@ export default function SignupPage() {
     strengthLabel = '';
   }
 
+  // Validation
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!selectedRole) {
+      errors.role = 'Please choose your role to continue.';
+    }
+    
+    if (!formData.companyName.trim()) {
+      errors.companyName = 'Company name is required.';
+    }
+    
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Full name is required.';
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = 'Business email is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+    
+    if (!formData.password) {
+      errors.password = 'Password is required.';
+    } else if (strengthScore < 4) {
+      errors.password = 'Password must meet the required strength criteria.';
+    }
+    
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password.';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match.';
+    }
+    
+    if (formData.phone && formData.phone.trim()) {
+      const phoneDigits = formData.phone.replace(/\D/g, '');
+      if (phoneDigits.length < 6 || phoneDigits.length > 15) {
+        errors.phone = 'Please enter a valid phone number.';
+      }
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   // Handle submit
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedRole) {
-      setError('Please select your role first.');
+    
+    if (!validateForm()) {
       window.scrollTo(0, 0);
-      return;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    if (strengthScore < 4) {
-      setError('Please meet all password requirements.');
       return;
     }
 
     setIsLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      await register({
-        orgType: selectedRole,
-        fullName: formData.fullName,
-        companyName: formData.companyName,
+      await signup({
+        role: selectedRole.toLowerCase(),
+        full_name: formData.fullName,
+        company_name: formData.companyName,
         email: formData.email,
         password: formData.password,
       });
@@ -111,7 +159,7 @@ export default function SignupPage() {
         } 
       });
     } catch (err) {
-      setError(err.message || 'Something went wrong. Please try again.');
+      setError(err.message ? err : { message: 'Something went wrong. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -124,14 +172,20 @@ export default function SignupPage() {
         <p>Start managing freight in minutes.</p>
       </div>
 
-      {error && (
-        <div className="auth-error-banner">
-          <span>⚠️</span>
-          {error}
+      <AuthMessage 
+        type="error" 
+        message={error?.message} 
+        actionLink={error?.action === 'LOGIN' ? '/login' : null}
+        actionText={error?.action === 'LOGIN' ? 'Sign In Instead' : null}
+      />
+
+      {Object.keys(formErrors).length > 0 && !error && (
+        <div className="form-summary-error">
+          Please fix the highlighted fields before continuing.
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="signup-form-container">
+      <form onSubmit={handleSubmit} className="signup-form-container" noValidate>
         
         {/* ── STEP 1: CHOOSE ROLE ── */}
         <div className="signup-step-section">
@@ -140,10 +194,11 @@ export default function SignupPage() {
             {ROLES.map((role) => (
               <div
                 key={role.id}
-                className={`signup-role-card ${selectedRole === role.id ? 'selected' : ''}`}
+                className={`signup-role-card ${selectedRole === role.id ? 'selected' : ''} ${formErrors.role && !selectedRole ? 'role-error' : ''}`}
                 onClick={() => {
                   setSelectedRole(role.id);
-                  setError('');
+                  setError(null);
+                  setFormErrors((prev) => ({ ...prev, role: null }));
                 }}
               >
                 {selectedRole === role.id && (
@@ -159,6 +214,7 @@ export default function SignupPage() {
               </div>
             ))}
           </div>
+          {formErrors.role && <span className="field-error-text role-error-text">{formErrors.role}</span>}
         </div>
 
         {/* ── STEP 2: DETAILS ── */}
@@ -172,12 +228,12 @@ export default function SignupPage() {
                 id="companyName"
                 name="companyName"
                 type="text"
-                className="auth-input"
+                className={`auth-input ${formErrors.companyName ? 'input-error' : ''}`}
                 placeholder="Enter your company name"
                 value={formData.companyName}
                 onChange={handleChange}
-                required
               />
+              {formErrors.companyName && <span className="field-error-text">{formErrors.companyName}</span>}
             </div>
 
             <div className="auth-field">
@@ -186,12 +242,12 @@ export default function SignupPage() {
                 id="fullName"
                 name="fullName"
                 type="text"
-                className="auth-input"
+                className={`auth-input ${formErrors.fullName ? 'input-error' : ''}`}
                 placeholder="Enter your full name"
                 value={formData.fullName}
                 onChange={handleChange}
-                required
               />
+              {formErrors.fullName && <span className="field-error-text">{formErrors.fullName}</span>}
             </div>
 
             <div className="auth-field">
@@ -200,31 +256,60 @@ export default function SignupPage() {
                 id="email"
                 name="email"
                 type="email"
-                className="auth-input"
+                className={`auth-input ${formErrors.email ? 'input-error' : ''}`}
                 placeholder="name@company.com"
                 value={formData.email}
                 onChange={handleChange}
-                required
               />
+              {formErrors.email && <span className="field-error-text">{formErrors.email}</span>}
             </div>
 
             <div className="auth-field">
               <label htmlFor="phone">Phone Number <span className="optional">(Optional)</span></label>
-              <div className="phone-input-wrapper">
-                <div className="phone-country-code">
-                  <span>🇮🇳</span>
-                  <span>+91</span>
+              <div className={`auth-input phone-picker-wrapper ${formErrors.phone ? 'input-error' : ''}`}>
+                <div 
+                  className="custom-country-selector"
+                  onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                >
+                  <span className="country-flag">{getFlagEmoji(selectedCountry.iso)}</span>
+                  <span className="country-dial-code">{selectedCountry.code}</span>
+                  <svg className="country-dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
                 </div>
+                
+                {isCountryDropdownOpen && (
+                  <>
+                    <div className="custom-country-dropdown-backdrop" onClick={() => setIsCountryDropdownOpen(false)} />
+                    <div className="custom-country-dropdown-menu">
+                      {COUNTRIES.map(country => (
+                        <div 
+                          key={country.iso} 
+                          className={`custom-country-option ${selectedCountry.iso === country.iso ? 'selected' : ''}`}
+                          onClick={() => {
+                            setSelectedCountry(country);
+                            setIsCountryDropdownOpen(false);
+                          }}
+                        >
+                          <span className="country-flag">{getFlagEmoji(country.iso)}</span>
+                          <span className="country-name">{country.label}</span>
+                          <span className="country-code-list">{country.code}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                
                 <input
                   id="phone"
                   name="phone"
                   type="tel"
-                  className="auth-input phone-input"
+                  className="custom-phone-input"
                   placeholder="Enter phone number"
                   value={formData.phone}
                   onChange={handleChange}
+                  onFocus={() => setIsCountryDropdownOpen(false)}
                 />
               </div>
+              {formErrors.phone && <span className="field-error-text">{formErrors.phone}</span>}
             </div>
 
             <div className="auth-field">
@@ -234,11 +319,10 @@ export default function SignupPage() {
                   id="password"
                   name="password"
                   type={showPassword ? 'text' : 'password'}
-                  className="auth-input"
+                  className={`auth-input ${formErrors.password ? 'input-error' : ''}`}
                   placeholder="Create a strong password"
                   value={formData.password}
                   onChange={handleChange}
-                  required
                 />
                 <button
                   type="button"
@@ -248,6 +332,7 @@ export default function SignupPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {formErrors.password && <span className="field-error-text">{formErrors.password}</span>}
             </div>
 
             <div className="auth-field">
@@ -257,11 +342,10 @@ export default function SignupPage() {
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  className="auth-input"
+                  className={`auth-input ${formErrors.confirmPassword ? 'input-error' : ''}`}
                   placeholder="Confirm your password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  required
                 />
                 <button
                   type="button"
@@ -271,6 +355,7 @@ export default function SignupPage() {
                   {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              {formErrors.confirmPassword && <span className="field-error-text">{formErrors.confirmPassword}</span>}
             </div>
           </div>
 

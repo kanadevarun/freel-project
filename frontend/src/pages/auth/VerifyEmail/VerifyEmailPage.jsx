@@ -1,20 +1,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { confirmEmail, resendCode } from '../../../services/authService';
+import { verifyEmail, resendCode } from '../../../services/authService';
 import { useAuth } from '../../../context/AuthContext';
+import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
 import './VerifyEmailPage.css';
 
 export default function VerifyEmailPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { login } = useAuth();
   
   const email = location.state?.email || '';
 
   // State
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [countdown, setCountdown] = useState(60);
 
   // Refs for auto-focusing next input
@@ -43,7 +44,7 @@ export default function VerifyEmailPage() {
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
-    setError('');
+    if (error) setError(null);
 
     // Auto-advance to next input
     if (value && index < 5) {
@@ -74,9 +75,9 @@ export default function VerifyEmailPage() {
     try {
       await resendCode({ email });
       setCountdown(60);
-      setError('');
+      setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to resend code.');
+      setError(err.message ? err : { message: 'Failed to resend code.' });
     }
   };
 
@@ -89,25 +90,23 @@ export default function VerifyEmailPage() {
     }
 
     setIsLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      // Confirm OTP and pass the context data to the mock backend
-      const { user, org, memberRole } = await confirmEmail({ 
+      // Confirm OTP via backend
+      await verifyEmail({ 
         email, 
         code: fullCode,
-        fullName: location.state?.fullName,
-        companyName: location.state?.companyName,
-        orgType: location.state?.orgType
       });
       
-      // Log user in globally
-      await login(user, org, memberRole);
+      setIsSuccess(true);
       
-      // Go to onboarding
-      navigate('/onboarding');
+      // Delay navigation so user sees the success state
+      setTimeout(() => {
+        navigate('/login', { state: { email, verified: true } });
+      }, 2500);
     } catch (err) {
-      setError(err.message || 'Verification failed. Please try again.');
+      setError(err.message ? err : { message: 'Verification failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -124,14 +123,20 @@ export default function VerifyEmailPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="auth-error-banner">
-          <span>⚠️</span>
-          {error}
-        </div>
-      )}
+      <AuthMessage 
+        type="error" 
+        message={error?.message} 
+        actionLink={error?.action === 'SIGNUP' ? '/signup' : null}
+        actionText={error?.action === 'SIGNUP' ? 'Sign Up Instead' : null}
+      />
 
-      <form onSubmit={handleSubmit} className="verify-form">
+      {isSuccess ? (
+        <div className="auth-error-banner" style={{ backgroundColor: '#DCFCE7', borderColor: '#86EFAC', color: '#166534', margin: '20px 0' }}>
+          <span>✅</span>
+          Email verified successfully! Redirecting to login...
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="verify-form">
         <div className="verify-code-inputs">
           {code.map((digit, idx) => (
             <input
@@ -171,6 +176,7 @@ export default function VerifyEmailPage() {
           </p>
         </div>
       </form>
+      )}
     </div>
   );
 }

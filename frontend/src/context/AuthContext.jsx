@@ -1,17 +1,19 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { authStorage } from '../utils/authStorage';
+import { onboardingStorage } from '../utils/onboardingStorage';
 
 /**
  * AuthContext — Global authentication state for the entire Freel app.
  *
- * Phase 2A: Uses mock data + localStorage.
- * Phase 2B: Swap authService.js for real API calls — this file stays the same.
+ * Phase 2B: Uses real backend API integration and authStorage.
  *
  * Provides:
  *   user        — the logged-in person (name, email)
  *   org         — the company they belong to (name, org_type, plan)
  *   memberRole  — their permission level (OWNER, ADMIN, FINANCE, etc.)
  *   isAuthenticated — boolean
- *   isLoading   — true on initial page load while checking localStorage
+ *   isBooting   — true on initial page load while checking localStorage
+ *   onboardingCompleted - boolean indicating if user has finished setup
  */
 
 const AuthContext = createContext(null);
@@ -20,66 +22,122 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [org, setOrg] = useState(null);
   const [memberRole, setMemberRole] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isBooting, setIsBooting] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // On mount: check if user was already logged in (from localStorage)
-  useEffect(() => {
+  // Cross-tab sync and initial boot
+  const checkSession = () => {
     try {
-      const savedSession = localStorage.getItem('freel_session');
-      if (savedSession) {
-        const { user, org, memberRole } = JSON.parse(savedSession);
-        setUser(user);
-        setOrg(org);
-        setMemberRole(memberRole);
+      const sessionUser = authStorage.getSessionUser();
+      if (sessionUser && sessionUser.user && sessionUser.user.email) {
+        setUser(sessionUser.user);
+        setOrg(sessionUser.org);
+        setMemberRole(sessionUser.memberRole);
+        
+        // Check onboarding status tied to this email
+        const obState = onboardingStorage.getOnboardingState(sessionUser.user.email);
+        setOnboardingCompleted(!!(obState && obState.completed));
+      } else {
+        // No valid session
+        setUser(null);
+        setOrg(null);
+        setMemberRole(null);
+        setOnboardingCompleted(false);
       }
     } catch {
-      localStorage.removeItem('freel_session');
+      setUser(null);
+      setOrg(null);
+      setMemberRole(null);
+      setOnboardingCompleted(false);
     } finally {
-      setIsLoading(false);
+      setIsBooting(false);
     }
+  };
+
+  useEffect(() => {
+    // 1. Initial boot check
+    checkSession();
+
+    // 2. Listen for cross-tab storage changes
+    const handleStorageChange = (e) => {
+      // Re-evaluate session if relevant keys change in other tabs
+      if (
+        e.key === 'freel_session_user' || 
+        e.key === 'freel_access_token' || 
+        e.key === 'freel_onboarding_state'
+      ) {
+        checkSession();
+      }
+      // If storage was completely cleared (e.key === null)
+      if (e.key === null) {
+        checkSession();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   /**
-   * saveSession — persists auth state in localStorage so refresh doesn't log user out.
-   * In Phase 2B this becomes httpOnly cookies managed by the Go backend.
+   * login — called after successful auth.
    */
-  function saveSession(userData, orgData, role) {
-    setUser(userData);
-    setOrg(orgData);
-    setMemberRole(role);
-    localStorage.setItem('freel_session', JSON.stringify({
-      user: userData,
-      org: orgData,
-      memberRole: role,
-    }));
+  async function login(tokenData, userData, orgData, role) {
+    // Save tokens in localStorage
+    authStorage.saveTokens({
+      access_token: tokenData.access_token,
+      id_token: tokenData.id_token,
+      refresh_token: tokenData.refresh_token,
+    });
+
+    const savedUser = userData || { email: tokenData.email || 'user' };
+    const savedOrg = orgData || { name: 'Organization', orgType: 'SHIPPER' }; // Ensure orgType is present
+    const savedRole = role || 'OWNER';
+
+    const sessionData = {
+      user: savedUser,
+      org: savedOrg,
+      memberRole: savedRole,
+    };
+
+    setUser(savedUser);
+    setOrg(savedOrg);
+    setMemberRole(savedRole);
+    authStorage.saveSessionUser(sessionData);
+
+    // Check if onboarding is already completed for this newly logged-in user
+    const obState = onboardingStorage.getOnboardingState(savedUser.email);
+    setOnboardingCompleted(!!(obState && obState.completed));
   }
 
   /**
-   * login — called after successful email+password auth.
-   * In Phase 2B: calls authService.login() which hits Go backend → Cognito.
-   */
-  async function login(userData, orgData, role) {
-    saveSession(userData, orgData, role);
-  }
-
-  /**
-   * logout — clears all auth state.
+   * logout — clears all auth state and tokens.
    */
   async function logout() {
     setUser(null);
     setOrg(null);
     setMemberRole(null);
-    localStorage.removeItem('freel_session');
+    setOnboardingCompleted(false);
+    authStorage.clearAll();
   }
 
   /**
-   * updateOrg — called after onboarding completes.
+   * completeOnboarding — called when onboarding finishes successfully
+   */
+  async function completeOnboarding(answers = {}) {
+    if (!user || !user.email) return;
+    onboardingStorage.saveOnboardingState(user.email, answers);
+    setOnboardingCompleted(true);
+  }
+
+  /**
+   * updateOrg — called after onboarding completes or when org profile updates
    */
   function updateOrg(updates) {
     const updated = { ...org, ...updates };
     setOrg(updated);
-    const session = JSON.parse(localStorage.getItem('freel_session') || '{}');
-    localStorage.setItem('freel_session', JSON.stringify({ ...session, org: updated }));
+    
+    const sessionUser = authStorage.getSessionUser() || {};
+    authStorage.saveSessionUser({ ...sessionUser, org: updated });
   }
 
   const isAuthenticated = !!user;
@@ -90,10 +148,12 @@ export function AuthProvider({ children }) {
       org,
       memberRole,
       isAuthenticated,
-      isLoading,
+      isBooting,
+      onboardingCompleted,
       login,
       logout,
       updateOrg,
+      completeOnboarding,
     }}>
       {children}
     </AuthContext.Provider>

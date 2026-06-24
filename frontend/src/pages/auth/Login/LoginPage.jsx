@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { login as apiLogin } from '../../../services/authService';
 import { useAuth } from '../../../context/AuthContext';
+import { onboardingStorage } from '../../../utils/onboardingStorage';
+import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -12,39 +14,33 @@ export default function LoginPage() {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
   const [rememberMe, setRememberMe] = useState(false);
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    if (error) setError('');
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError(null);
 
     try {
-      // Call mock auth service
-      const { user, org, memberRole } = await apiLogin(formData);
+      // Call real auth service
+      const response = await apiLogin(formData);
       
-      // Update global context (localStorage)
-      await setGlobalAuth(user, org, memberRole);
+      // Update global context (localStorage) via helper
+      await setGlobalAuth(response.data);
 
-      // Route based on onboarding status
-      if (!org.onboardingCompleted) {
-        navigate('/onboarding');
+      if (onboardingStorage.isOnboardingCompleted()) {
+        navigate('/dashboard');
       } else {
-        navigate('/dashboard'); // Mock destination
+        navigate('/onboarding');
       }
     } catch (err) {
-      if (err.code === 'EMAIL_NOT_VERIFIED') {
-        // Automatically route to verification if they aren't verified
-        navigate('/verify-email', { state: { email: formData.email } });
-      } else {
-        setError(err.message || 'Incorrect email or password.');
-      }
+      setError(err.message ? err : { message: 'Incorrect email or password.' });
     } finally {
       setIsLoading(false);
     }
@@ -120,12 +116,18 @@ export default function LoginPage() {
             <p>Sign in to access your freight workspace.</p>
           </div>
 
-          {error && (
-            <div className="login-error-banner">
-              <span>⚠️</span>
-              {error}
-            </div>
-          )}
+          <AuthMessage 
+            type="error" 
+            message={error?.message} 
+            actionLink={
+              error?.action === 'VERIFY' ? { pathname: '/verify-email', state: { email: formData.email } } 
+              : error?.action === 'SIGNUP' ? '/signup' : null
+            }
+            actionText={
+              error?.action === 'VERIFY' ? 'Verify Email' 
+              : error?.action === 'SIGNUP' ? 'Sign Up Instead' : null
+            }
+          />
 
           {/* Form */}
           <form className="login-form" onSubmit={handleSubmit}>

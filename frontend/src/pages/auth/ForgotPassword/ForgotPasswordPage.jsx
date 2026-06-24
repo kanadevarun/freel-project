@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { forgotPassword } from '../../../services/authService';
+import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+
+  const handleChange = (e) => {
+    setEmail(e.target.value);
+    if (error) setError(null);
+    if (formErrors.email) setFormErrors({});
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
       await forgotPassword({ email });
@@ -18,10 +28,9 @@ export default function ForgotPasswordPage() {
       // Wait a moment before redirecting to reset page
       setTimeout(() => {
         navigate('/reset-password', { state: { email } });
-      }, 2500);
+      }, 4000);
     } catch (err) {
-      // For security, forgotPassword rarely throws unless it's a network error
-      console.error('Network error during forgot password:', err);
+      setError(err.message ? err : { message: 'An error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -34,10 +43,15 @@ export default function ForgotPasswordPage() {
         <p>Enter your work email address and we'll send you a 6-digit code to reset your password.</p>
       </div>
 
+      <AuthMessage 
+        type="error" 
+        message={error?.message} 
+      />
+
       {isSuccess ? (
         <div className="auth-error-banner" style={{ backgroundColor: '#DCFCE7', borderColor: '#86EFAC', color: '#166534' }}>
           <span>✅</span>
-          Reset code sent! Redirecting you to enter it...
+          If an account exists for this email, we’ve sent a 6-digit reset code. Please check your inbox and spam folder.
         </div>
       ) : (
         <form onSubmit={handleSubmit}>
@@ -46,12 +60,12 @@ export default function ForgotPasswordPage() {
             <input
               id="email"
               type="email"
-              className="auth-input"
+              className={`auth-input ${formErrors.email ? 'input-error' : ''}`}
               placeholder="name@company.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
+              onChange={handleChange}
             />
+            {formErrors.email && <span className="field-error-text">{formErrors.email}</span>}
           </div>
 
           <button type="submit" className="auth-submit-btn" disabled={isLoading || !email}>

@@ -105,26 +105,113 @@
   position: relative;
 }
 
-.phone-country-code {
-  position: absolute;
-  left: 1px;
-  top: 1px;
-  bottom: 1px;
+.phone-picker-wrapper {
+  padding: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  background: #F1F5F9;
-  border-right: 1.5px solid #E2E8F0;
-  border-radius: 8px 0 0 8px;
-  font-size: 0.9rem;
-  color: #334155;
-  font-weight: 500;
-  transition: background 0.2s ease;
+  position: relative;
 }
 
-.phone-input {
-  padding-left: 80px !important;
+.custom-country-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 46px;
+  border-right: 1.5px solid #E2E8F0;
+  cursor: pointer;
+  background: #F8FAFC;
+  border-radius: 8px 0 0 8px;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.custom-country-selector:hover {
+  background: #F1F5F9;
+}
+
+.country-flag {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.country-dial-code {
+  font-size: 0.95rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.country-dropdown-icon {
+  color: #64748B;
+}
+
+.custom-country-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.custom-country-dropdown-menu {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  width: 320px;
+  max-height: 250px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  padding: 6px 0;
+}
+
+.custom-country-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.custom-country-option:hover {
+  background: #F8FAFC;
+}
+
+.custom-country-option.selected {
+  background: #F0FDFA;
+}
+
+.country-name {
+  flex: 1;
+  margin-left: 10px;
+  font-size: 0.9rem;
+  color: #1E293B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.country-code-list {
+  font-size: 0.85rem;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.custom-phone-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  padding: 0 16px;
+  font-size: 0.95rem;
+  color: #1E293B;
+  height: 46px;
+  width: 100%;
+}
+
+.custom-phone-input::placeholder {
+  color: #94A3B8;
 }
 
 /* ── Password Validation Section ── */
@@ -223,4 +310,46 @@
     flex-direction: column;
     gap: 6px;
   }
+}
+
+/* ── Validation Styles ── */
+.input-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2 !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.field-error-text {
+  color: #EF4444;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  display: block;
+}
+
+.role-error {
+  border-color: #EF4444 !important;
+  background-color: #FEF2F2;
+}
+
+.role-error-text {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.form-summary-error {
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: fade-in-down 0.3s ease-out forwards;
 }
