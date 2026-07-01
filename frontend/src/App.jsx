@@ -15,6 +15,7 @@ import Compliance from './pages/public/Solutions/Compliance';
 // Trade Intelligence - Guides
 import IncotermsPage from './pages/public/trade-intelligence/guides/incoterms/Page';
 import AirFreightPage from './pages/public/trade-intelligence/guides/air-freight/Page';
+import ImportExportBasicsPage from './pages/public/trade-intelligence/guides/import-export-basics/Page';
 // Other Trade Intelligence routes map directly to ComingSoonPage with props.
 
 // Trade Intelligence - Coming Soon
@@ -131,6 +132,9 @@ export default function App() {
             <Route path="/auth/callback" element={<CallbackPage />} />
           </Route>
 
+          {/* ── DEMO ROUTE ── */}
+          <Route path="/demo-onboarding" element={<OnboardingPage />} />
+
           {/* ── PRIVATE PROTECTED ROUTES ── */}
           <Route element={<ProtectedRoute />}>
             <Route path="/onboarding" element={<OnboardingPage />} />
@@ -196,7 +200,7 @@ export default function App() {
           <Route path="/knowledge/sea-freight" element={<ComingSoonPage title="Sea Freight Guide" icon="🚢" category="Guides" />} />
           <Route path="/knowledge/customs" element={<ComingSoonPage title="Customs Clearance Guide" icon="🛡️" category="Guides" />} />
           <Route path="/knowledge/documentation" element={<ComingSoonPage title="Documentation Guide" icon="📄" category="Guides" />} />
-          <Route path="/knowledge/import-export" element={<ComingSoonPage title="Import & Export Basics" icon="🌐" category="Guides" />} />
+          <Route path="/knowledge/import-export" element={<ImportExportBasicsPage />} />
 
           {/* Trade Intelligence - Calculators */}
           <Route path="/tools/cbm-calculator" element={<ComingSoonPage title="CBM Calculator" icon="📦" category="Calculators" />} />
