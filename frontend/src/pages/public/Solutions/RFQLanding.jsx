@@ -102,7 +102,7 @@ function LivePanel() {
           <span style={{ background: '#f59e0b' }} />
           <span style={{ background: '#22c55e' }} />
         </div>
-        <div className="r3-chrome-url">freel.io / rfq / #9921 / bids</div>
+        <div className="r3-chrome-url">logisticshq.in / rfq / #9921 / bids</div>
         <div className="r3-panel-live-tag">
           <span className="r3-panel-live-dot" />
           Live

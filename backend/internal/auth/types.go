@@ -28,11 +28,18 @@ type ResetPasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
+type RoleResponse struct {
+	Name        string   `json:"name"`
+	DisplayName string   `json:"display_name"`
+	Permissions []string `json:"permissions"`
+}
+
 type LoginResponseData struct {
-	AccessToken  string `json:"access_token"`
-	IDToken      string `json:"id_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int32  `json:"expires_in"`
+	AccessToken  string       `json:"access_token"`
+	IDToken      string       `json:"id_token"`
+	RefreshToken string       `json:"refresh_token"`
+	ExpiresIn    int32        `json:"expires_in"`
+	Role         RoleResponse `json:"role"`
 }
 
 type CurrentUserResponseData struct {

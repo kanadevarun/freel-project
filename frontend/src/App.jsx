@@ -16,6 +16,7 @@ import Compliance from './pages/public/Solutions/Compliance';
 import IncotermsPage from './pages/public/trade-intelligence/guides/incoterms/Page';
 import AirFreightPage from './pages/public/trade-intelligence/guides/air-freight/Page';
 import ImportExportBasicsPage from './pages/public/trade-intelligence/guides/import-export-basics/Page';
+import DocumentationGuidePage from './pages/public/trade-intelligence/guides/documentation-guide/Page';
 // Other Trade Intelligence routes map directly to ComingSoonPage with props.
 
 // Trade Intelligence - Coming Soon
@@ -31,6 +32,7 @@ import Platform from './pages/public/Platform/Platform';
 import ScrollToTop from './components/ScrollToTop';
 import { Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { RBACProvider } from './context/RBACContext';
 import AuthLayout from './layouts/AuthLayout/AuthLayout';
 import SignupPage from './pages/auth/Signup/SignupPage';
 import VerifyEmailPage from './pages/auth/VerifyEmail/VerifyEmailPage';
@@ -39,10 +41,17 @@ import ForgotPasswordPage from './pages/auth/ForgotPassword/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPassword/ResetPasswordPage';
 import CallbackPage from './pages/auth/Callback/CallbackPage';
 import OnboardingPage from './pages/auth/Onboarding/OnboardingPage';
+import AcceptInvitePage from './pages/auth/AcceptInvite/AcceptInvitePage';
 import PublicOnlyRoute from './routes/PublicOnlyRoute';
 import ProtectedRoute from './routes/ProtectedRoute';
 import AppShell from './layouts/AppShell/AppShell';
-import DashboardPage from './pages/dashboard/DashboardPage';
+import DashboardHome from './pages/dashboard/Home/DashboardHome';
+import ReportsPage from './pages/dashboard/Reports/ReportsPage';
+import UsersPage from './pages/dashboard/Settings/UsersPage';
+import RolesPage from './pages/dashboard/Settings/RolesPage';
+import LeadsPage from './pages/dashboard/Leads/LeadsPage';
+import OutreachPage from './pages/dashboard/Outreach/OutreachPage';
+import RFQPage from './pages/dashboard/RFQ/RFQPage';
 import './App.css';
 
 /**
@@ -67,7 +76,7 @@ function RootRedirect() {
  * All public pages are wrapped in PublicLayout (Navbar + Footer).
  * Each Route maps a URL path to a page component.
  *
- * Phase 2 note: /login and /signup redirect to /contact until auth is built.
+ * Phase 2 note: RBAC is now provided via RBACProvider (inside AuthProvider).
  */
 
 
@@ -114,126 +123,172 @@ function NotFoundPage() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <ScrollToTop />
-        <Routes>
+      <RBACProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <Routes>
 
-          {/* ── AUTH ROUTES (Split Panel Layout) ── */}
-          <Route element={<PublicOnlyRoute />}>
-            <Route element={<AuthLayout />}>
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/verify-email" element={<VerifyEmailPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+            {/* ── AUTH ROUTES (Split Panel Layout) ── */}
+            <Route element={<PublicOnlyRoute />}>
+              <Route element={<AuthLayout />}>
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/verify-email" element={<VerifyEmailPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/accept-invite" element={<AcceptInvitePage />} />
+              </Route>
+
+              {/* Standalone Auth Routes */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/callback" element={<CallbackPage />} />
             </Route>
 
-            {/* Standalone Auth Routes */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auth/callback" element={<CallbackPage />} />
-          </Route>
+            {/* ── DEMO ROUTE ── */}
+            <Route path="/demo-onboarding" element={<OnboardingPage />} />
 
-          {/* ── DEMO ROUTE ── */}
-          <Route path="/demo-onboarding" element={<OnboardingPage />} />
+            {/* ── PRIVATE PROTECTED ROUTES ── */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/onboarding" element={<OnboardingPage />} />
+              <Route element={<AppShell />}>
+                <Route path="/dashboard" element={<DashboardHome />} />
+                
+                {/* ── REPORTS ── */}
+                <Route element={<ProtectedRoute requiredModule="DASHBOARD" requiredAction="READ" />}>
+                  <Route path="/dashboard/reports" element={<ReportsPage />} />
+                </Route>
+                
+                {/* ── SALES ── */}
+                <Route element={<ProtectedRoute requiredModule="LEADS" requiredAction="READ" />}>
+                  <Route path="/dashboard/leads" element={<LeadsPage />} />
+                </Route>
+                <Route element={<ProtectedRoute requiredModule="RFQS" requiredAction="READ" />}>
+                  <Route path="/dashboard/rfqs" element={<RFQPage />} />
+                </Route>
+                <Route element={<ProtectedRoute requiredModule="OUTREACH" requiredAction="READ" />}>
+                  <Route path="/dashboard/outreach" element={<OutreachPage />} />
+                </Route>
+                <Route element={<ProtectedRoute requiredModule="COMPANIES" requiredAction="READ" />}>
+                  <Route path="/dashboard/companies" element={<PlaceholderPage title="Company Directory" emoji="🏢" note="Global directory of freight forwarders and shippers." />} />
+                </Route>
 
-          {/* ── PRIVATE PROTECTED ROUTES ── */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/onboarding" element={<OnboardingPage />} />
-            <Route element={<AppShell />}>
-              <Route path="/dashboard" element={<DashboardPage />} />
+                {/* ── INTELLIGENCE ── */}
+                <Route path="/dashboard/market-insights" element={<PlaceholderPage title="Market Insights" emoji="📊" note="Global freight rate trends and analytics." />} />
+                <Route element={<ProtectedRoute requiredModule="ROUTES" requiredAction="READ" />}>
+                  <Route path="/dashboard/routes" element={<PlaceholderPage title="Route Optimization" emoji="🗺️" note="AI-driven shipment routing." />} />
+                </Route>
+
+                {/* ── TOOLS ── */}
+                <Route path="/dashboard/calculators" element={<PlaceholderPage title="Calculators" emoji="🧮" note="CBM, Volumetric Weight, and Duty calculators." />} />
+                <Route path="/dashboard/documents" element={<PlaceholderPage title="Document Generator" emoji="📄" note="Automated generation of HBL, Commercial Invoice, etc." />} />
+
+                {/* ── ADMIN (Super Admin Only fallback) ── */}
+                {/* Since we don't have dedicated 'SETTINGS' module, we can restrict by role if needed, or by a generic admin module. 
+                    For now, we'll use role="SUPER_ADMIN" via ProtectedRoute if it supported it. 
+                    Wait, ProtectedRoute currently only checks module/action. 
+                    We'll just map them to USERS/SETTINGS modules. 
+                */}
+                <Route element={<ProtectedRoute requiredModule="USERS" requiredAction="READ" />}>
+                  <Route path="/dashboard/users" element={<UsersPage />} />
+                  <Route path="/dashboard/settings" element={<RolesPage />} />
+                </Route>
+
+                {/* Unauthorized Fallback */}
+                <Route path="/dashboard/unauthorized" element={<PlaceholderPage title="Unauthorized" emoji="🚫" note="You do not have permission to view this module." />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* All public pages wrapped in PublicLayout (Navbar + Footer) */}
-          <Route element={<PublicLayout />}>
-          <Route path="/" element={<RootRedirect />} />
+            {/* All public pages wrapped in PublicLayout (Navbar + Footer) */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<RootRedirect />} />
 
-          {/* Services */}
-          <Route path="/services" element={<Services />} />
-          <Route path="/services/air-freight" element={<AirFreight />} />
-          <Route path="/services/sea-freight" element={<SeaFreight />} />
-          <Route path="/services/road-transport" element={<RoadTransport />} />
-          <Route path="/services/customs" element={<CustomsBrokerage />} />
-          <Route path="/services/rail-freight" element={<ComingSoonPage title="Rail Freight" icon="🚆" category="Services" />} />
-          <Route path="/services/trade-finance" element={<ComingSoonPage title="Trade Finance" icon="🏦" category="Services" />} />
-          <Route path="/services/insurance" element={<ComingSoonPage title="Insurance" icon="🛡️" category="Services" />} />
-          <Route path="/services/documentation" element={<ComingSoonPage title="Documentation" icon="📄" category="Services" />} />
-          <Route path="/coverage" element={<ComingSoonPage title="Coverage Map" icon="🌍" category="Resources" />} />
+              {/* Services */}
+              <Route path="/services" element={<Services />} />
+              <Route path="/services/air-freight" element={<AirFreight />} />
+              <Route path="/services/sea-freight" element={<SeaFreight />} />
+              <Route path="/services/road-transport" element={<RoadTransport />} />
+              <Route path="/services/customs" element={<CustomsBrokerage />} />
+              <Route path="/services/rail-freight" element={<ComingSoonPage title="Rail Freight" icon="🚆" category="Services" />} />
+              <Route path="/services/trade-finance" element={<ComingSoonPage title="Trade Finance" icon="🏦" category="Services" />} />
+              <Route path="/services/insurance" element={<ComingSoonPage title="Insurance" icon="🛡️" category="Services" />} />
+              <Route path="/services/documentation" element={<ComingSoonPage title="Documentation" icon="📄" category="Services" />} />
+              <Route path="/coverage" element={<ComingSoonPage title="Coverage Map" icon="🌍" category="Resources" />} />
 
-          {/* Solutions */}
-          <Route path="/solutions" element={<Solutions />} />
-          <Route path="/solutions/rfq" element={<RFQLanding />} />
-          <Route path="/solutions/rate-comparison" element={<RateComparison />} />
-          <Route path="/solutions/tracking" element={<ShipmentTracking />} />
-          <Route path="/solutions/compliance" element={<Compliance />} />
-          <Route path="/solutions/procurement" element={<ComingSoonPage title="Procurement" icon="🛒" category="Solutions" />} />
-          <Route path="/solutions/route" element={<ComingSoonPage title="Route Optimization" icon="🛣️" category="Solutions" />} />
-          <Route path="/solutions/analytics" element={<ComingSoonPage title="Analytics" icon="📊" category="Solutions" />} />
-          <Route path="/solutions/reporting" element={<ComingSoonPage title="Reporting" icon="📑" category="Solutions" />} />
-          <Route path="/solutions/api" element={<ComingSoonPage title="API Access" icon="🔗" category="Integrations" />} />
-          <Route path="/solutions/erp" element={<ComingSoonPage title="ERP Integration" icon="🔄" category="Integrations" />} />
-          <Route path="/solutions/webhooks" element={<ComingSoonPage title="Webhooks" icon="📡" category="Integrations" />} />
-          <Route path="/solutions/edi" element={<ComingSoonPage title="EDI Support" icon="🧩" category="Integrations" />} />
+              {/* Solutions */}
+              <Route path="/solutions" element={<Solutions />} />
+              <Route path="/solutions/rfq" element={<RFQLanding />} />
+              <Route path="/solutions/rate-comparison" element={<RateComparison />} />
+              <Route path="/solutions/tracking" element={<ShipmentTracking />} />
+              <Route path="/solutions/compliance" element={<Compliance />} />
+              <Route path="/solutions/procurement" element={<ComingSoonPage title="Procurement" icon="🛒" category="Solutions" />} />
+              <Route path="/solutions/route" element={<ComingSoonPage title="Route Optimization" icon="🛣️" category="Solutions" />} />
+              <Route path="/solutions/analytics" element={<ComingSoonPage title="Analytics" icon="📊" category="Solutions" />} />
+              <Route path="/solutions/reporting" element={<ComingSoonPage title="Reporting" icon="📑" category="Solutions" />} />
+              <Route path="/solutions/api" element={<ComingSoonPage title="API Access" icon="🔗" category="Integrations" />} />
+              <Route path="/solutions/erp" element={<ComingSoonPage title="ERP Integration" icon="🔄" category="Integrations" />} />
+              <Route path="/solutions/webhooks" element={<ComingSoonPage title="Webhooks" icon="📡" category="Integrations" />} />
+              <Route path="/solutions/edi" element={<ComingSoonPage title="EDI Support" icon="🧩" category="Integrations" />} />
 
-          {/* Blog */}
-          <Route path="/blog" element={<BlogIndex />} />
-          <Route path="/blog/engineering" element={<EngineeringBlog />} />
-          <Route path="/blog/design" element={<DesignBlog />} />
-          <Route path="/blog/industry" element={<IndustryBlog />} />
+              {/* Blog */}
+              <Route path="/blog" element={<BlogIndex />} />
+              <Route path="/blog/engineering" element={<EngineeringBlog />} />
+              <Route path="/blog/design" element={<DesignBlog />} />
+              <Route path="/blog/industry" element={<IndustryBlog />} />
 
-          {/* Company */}
-          <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/platform" element={<Platform />} />
+              {/* Company */}
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/platform" element={<Platform />} />
 
-          {/* Phase 2 auth routes removed from here (handled above) */}
+              {/* Phase 2 auth routes removed from here (handled above) */}
 
-          {/* Phase 3 placeholders */}
-          <Route path="/products" element={<PlaceholderPage title="Products" emoji="📦" note="Our full product suite page is coming soon. In the meantime, explore our Services." />} />
-          <Route path="/partners" element={<PlaceholderPage title="Partners" emoji="🤝" note="Our partner program is launching soon. Contact us to express interest." />} />
-          <Route path="/resources" element={<PlaceholderPage title="Resources" emoji="📚" note="Help center, API docs, and weight calculators are coming soon." />} />
-          <Route path="/track" element={<PlaceholderPage title="Track Order" emoji="🔍" note="Live shipment tracking is available on the dashboard after signing up." />} />
+              {/* Phase 3 placeholders */}
+              <Route path="/products" element={<PlaceholderPage title="Products" emoji="📦" note="Our full product suite page is coming soon. In the meantime, explore our Services." />} />
+              <Route path="/partners" element={<PlaceholderPage title="Partners" emoji="🤝" note="Our partner program is launching soon. Contact us to express interest." />} />
+              <Route path="/resources" element={<PlaceholderPage title="Resources" emoji="📚" note="Help center, API docs, and weight calculators are coming soon." />} />
+              <Route path="/track" element={<PlaceholderPage title="Track Order" emoji="🔍" note="Live shipment tracking is available on the dashboard after signing up." />} />
 
-          {/* Trade Intelligence - Guides */}
-          <Route path="/knowledge" element={<ComingSoonPage title="Trade Intelligence Hub" icon="🧠" category="Knowledge Base" />} />
-          <Route path="/knowledge/incoterms" element={<IncotermsPage />} />
-          <Route path="/knowledge/air-freight" element={<AirFreightPage />} />
-          <Route path="/knowledge/sea-freight" element={<ComingSoonPage title="Sea Freight Guide" icon="🚢" category="Guides" />} />
-          <Route path="/knowledge/customs" element={<ComingSoonPage title="Customs Clearance Guide" icon="🛡️" category="Guides" />} />
-          <Route path="/knowledge/documentation" element={<ComingSoonPage title="Documentation Guide" icon="📄" category="Guides" />} />
-          <Route path="/knowledge/import-export" element={<ImportExportBasicsPage />} />
+              {/* Trade Intelligence - Guides */}
+              <Route path="/knowledge" element={<ComingSoonPage title="Trade Intelligence Hub" icon="🧠" category="Knowledge Base" />} />
+              <Route path="/knowledge/incoterms" element={<IncotermsPage />} />
+              <Route path="/knowledge/air-freight" element={<AirFreightPage />} />
+              <Route path="/knowledge/sea-freight" element={<ComingSoonPage title="Sea Freight Guide" icon="🚢" category="Guides" />} />
+              <Route path="/knowledge/customs" element={<ComingSoonPage title="Customs Clearance Guide" icon="🛡️" category="Guides" />} />
+              <Route path="/knowledge/documentation" element={<DocumentationGuidePage />} />
+              <Route path="/knowledge/import-export" element={<ImportExportBasicsPage />} />
 
-          {/* Trade Intelligence - Calculators */}
-          <Route path="/tools/cbm-calculator" element={<ComingSoonPage title="CBM Calculator" icon="📦" category="Calculators" />} />
-          <Route path="/tools/volumetric-weight" element={<ComingSoonPage title="Volumetric Weight" icon="⚖️" category="Calculators" />} />
-          <Route path="/tools/duty-calculator" element={<ComingSoonPage title="Duty Calculator" icon="🧮" category="Calculators" />} />
-          <Route path="/tools/transit-time" element={<ComingSoonPage title="Transit Time Estimator" icon="⏱️" category="Calculators" />} />
-          <Route path="/tools/freight-cost" element={<ComingSoonPage title="Freight Cost Calculator" icon="💰" category="Calculators" />} />
-          <Route path="/tools/container-load" element={<ComingSoonPage title="Container Load Planner" icon="🏗️" category="Calculators" />} />
+              {/* Trade Intelligence - Calculators */}
+              <Route path="/tools/cbm-calculator" element={<ComingSoonPage title="CBM Calculator" icon="📦" category="Calculators" />} />
+              <Route path="/tools/volumetric-weight" element={<ComingSoonPage title="Volumetric Weight" icon="⚖️" category="Calculators" />} />
+              <Route path="/tools/duty-calculator" element={<ComingSoonPage title="Duty Calculator" icon="🧮" category="Calculators" />} />
+              <Route path="/tools/transit-time" element={<ComingSoonPage title="Transit Time Estimator" icon="⏱️" category="Calculators" />} />
+              <Route path="/tools/freight-cost" element={<ComingSoonPage title="Freight Cost Calculator" icon="💰" category="Calculators" />} />
+              <Route path="/tools/container-load" element={<ComingSoonPage title="Container Load Planner" icon="🏗️" category="Calculators" />} />
 
-          {/* Trade Intelligence - References */}
-          <Route path="/reference/container-sizes" element={<ComingSoonPage title="Container Sizes Guide" icon="📐" category="References" />} />
-          <Route path="/reference/ports" element={<ComingSoonPage title="Port Directory" icon="⚓" category="References" />} />
-          <Route path="/reference/airports" element={<ComingSoonPage title="Airport Directory" icon="🛫" category="References" />} />
-          <Route path="/reference/hsn-codes" element={<ComingSoonPage title="HSN / HS Codes" icon="🔢" category="References" />} />
-          <Route path="/reference/dangerous-goods" element={<ComingSoonPage title="Dangerous Goods Guide" icon="⚠️" category="References" />} />
-          <Route path="/reference/trade-profiles" element={<ComingSoonPage title="Country Trade Profiles" icon="🗺️" category="References" />} />
+              {/* Trade Intelligence - References */}
+              <Route path="/reference/container-sizes" element={<ComingSoonPage title="Container Sizes Guide" icon="📐" category="References" />} />
+              <Route path="/reference/ports" element={<ComingSoonPage title="Port Directory" icon="⚓" category="References" />} />
+              <Route path="/reference/airports" element={<ComingSoonPage title="Airport Directory" icon="🛫" category="References" />} />
+              <Route path="/reference/hsn-codes" element={<ComingSoonPage title="HSN / HS Codes" icon="🔢" category="References" />} />
+              <Route path="/reference/dangerous-goods" element={<ComingSoonPage title="Dangerous Goods Guide" icon="⚠️" category="References" />} />
+              <Route path="/reference/trade-profiles" element={<ComingSoonPage title="Country Trade Profiles" icon="🗺️" category="References" />} />
 
-          {/* Trade Intelligence - Insights */}
-          <Route path="/insights/trends" element={<ComingSoonPage title="Logistics Trends" icon="📈" category="Insights" />} />
-          <Route path="/insights/market-updates" element={<ComingSoonPage title="Market Updates" icon="📰" category="Insights" />} />
-          <Route path="/insights/news" element={<ComingSoonPage title="Trade News" icon="🗞️" category="Insights" />} />
-          <Route path="/insights/reports" element={<ComingSoonPage title="Industry Reports" icon="📋" category="Insights" />} />
-          <Route path="/insights/benchmarks" element={<ComingSoonPage title="Logistics Benchmarks" icon="🏆" category="Insights" />} />
-          <Route path="/insights/cases" element={<ComingSoonPage title="Case Studies" icon="🤝" category="Insights" />} />
+              {/* Trade Intelligence - Insights */}
+              <Route path="/insights/trends" element={<ComingSoonPage title="Logistics Trends" icon="📈" category="Insights" />} />
+              <Route path="/insights/market-updates" element={<ComingSoonPage title="Market Updates" icon="📰" category="Insights" />} />
+              <Route path="/insights/news" element={<ComingSoonPage title="Trade News" icon="🗞️" category="Insights" />} />
+              <Route path="/insights/reports" element={<ComingSoonPage title="Industry Reports" icon="📋" category="Insights" />} />
+              <Route path="/insights/benchmarks" element={<ComingSoonPage title="Logistics Benchmarks" icon="🏆" category="Insights" />} />
+              <Route path="/insights/cases" element={<ComingSoonPage title="Case Studies" icon="🤝" category="Insights" />} />
 
-          {/* Trade Intelligence - Coming Soon Fallback */}
-          <Route path="/trade-intelligence/coming-soon" element={<ComingSoonPage />} />
+              {/* Trade Intelligence - Coming Soon Fallback */}
+              <Route path="/trade-intelligence/coming-soon" element={<ComingSoonPage />} />
 
-          {/* 404 fallback */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  </AuthProvider>
+              {/* 404 fallback */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </RBACProvider>
+    </AuthProvider>
   );
 }

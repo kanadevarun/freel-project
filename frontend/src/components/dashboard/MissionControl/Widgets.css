@@ -1,0 +1,235 @@
+.mc-widget {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.widget-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.badge {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fbbf24;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 32px 0;
+  text-align: center;
+}
+
+.empty-state .icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+/* Stat Card */
+.stat-card {
+  gap: 8px;
+}
+
+.stat-title {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.stat-trend {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.stat-trend.positive { color: #10b981; }
+.stat-trend.negative { color: #ef4444; }
+
+/* Approval Queue */
+.queue-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.queue-item:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: var(--primary-color);
+}
+
+.task-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+}
+
+.task-details {
+  flex: 1;
+}
+
+.task-details h4 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.task-details p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Global Timeline */
+.timeline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+}
+
+.timeline-list::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  background: var(--border-color);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16px;
+  position: relative;
+  padding-left: 24px;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.timeline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.timeline-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* AI Workforce */
+.ai-workforce-widget {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ai-icon {
+  font-size: 24px;
+}
+
+.ai-title {
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.ai-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-stat-item .label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.ai-stat-item .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.text-green {
+  color: #10b981 !important;
+}

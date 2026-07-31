@@ -96,6 +96,25 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Password reset successfully. Please log in.", nil)
 }
 
+// AcceptInvite processes the POST /auth/invite/accept HTTP request.
+// It decodes the token and user details from the JSON body, and delegates
+// the business logic to the Auth Service.
+func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
+	var req AcceptInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid request payload", "INVALID_PAYLOAD")
+		return
+	}
+
+	err := h.service.AcceptInvite(r.Context(), req)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error(), "ACCEPT_INVITE_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Invitation accepted successfully. You can now log in.", nil)
+}
+
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	// MVP: For now, we will simply extract the basic user information from a passed token.
 	// In Phase 2, we will implement full JWT validation via middleware.

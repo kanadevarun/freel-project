@@ -1,0 +1,715 @@
+/* ════════════════════════════════════════════════════════════════
+   SECTION 8: PAYMENT & FINANCE
+   Prefix: pay-
+════════════════════════════════════════════════════════════════ */
+.pay-section {
+  padding: 80px 5%;
+  background: #f8fafc;
+  font-family: 'Outfit', sans-serif;
+  color: #0f172a;
+}
+.pay-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Hero ── */
+.pay-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  gap: 40px;
+  background: #ffffff;
+  padding: 60px;
+  border-radius: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+.pay-hero-left {
+  flex: 1;
+  max-width: 500px;
+}
+.pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  padding: 6px 20px;
+  border-radius: 99px;
+  margin-bottom: 24px;
+}
+.pay-badge-num {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #ffffff;
+  background: #2563eb;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.pay-badge-text {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  letter-spacing: 1px;
+}
+.pay-hero-left h2 {
+  font-size: clamp(2.5rem, 4vw, 3.8rem);
+  font-weight: 900;
+  line-height: 1.1;
+  color: #0f172a;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+.pay-hero-left h2 span {
+  color: #2563eb;
+}
+.pay-hero-left p {
+  font-size: 1.15rem;
+  color: #475569;
+  line-height: 1.6;
+  margin-bottom: 0;
+}
+.pay-hero-right {
+  flex: 1.5;
+  position: relative;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pay-hero-diagram {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+.pay-hd-item {
+  position: absolute;
+  height: 80px;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+.pay-hd-label {
+  position: absolute;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  transform: translate(-50%, 0);
+  text-align: center;
+  background: rgba(255,255,255,0.8);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.pay-hd-swift {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #1e3a8a;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 12px;
+  border-radius: 50%;
+  border: 4px solid #bfdbfe;
+}
+
+/* ── Section Structure ── */
+.pay-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 24px;
+}
+.pay-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.01);
+  display: flex;
+  flex-direction: column;
+}
+.pay-card-wide {
+  /* It automatically takes 2fr because of the grid */
+}
+.pay-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+.pay-st-num {
+  width: 24px;
+  height: 24px;
+  background: #e0e7ff;
+  color: #2563eb;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+
+/* ── 01 Why Payments Matter ── */
+.pay-wm-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+.pay-wm-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+}
+.pay-wm-item img {
+  height: 40px;
+}
+.pay-money-icon {
+  width: 40px;
+  height: 40px;
+  background: #22c55e;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+.pay-wm-question {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #f0fdf4;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #bbf7d0;
+}
+.pay-wm-qicon {
+  width: 32px;
+  height: 32px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+}
+.pay-wm-qtext {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.pay-wm-qtext strong {
+  font-size: 0.8rem;
+  color: #1e293b;
+}
+.pay-wm-qtext span {
+  font-size: 0.85rem;
+  color: #475569;
+}
+.pay-wm-qrisk {
+  display: flex;
+  gap: 12px;
+  font-size: 0.65rem;
+  color: #64748b;
+  text-align: center;
+}
+
+/* ── 02 Payment Methods Overview ── */
+.pay-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  flex: 1;
+}
+.pay-method-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.pay-method-item img {
+  height: 48px;
+  margin-bottom: 12px;
+}
+.pay-method-item strong {
+  font-size: 0.85rem;
+  color: #1e293b;
+  margin-bottom: 8px;
+  height: 34px;
+}
+.pay-method-item p {
+  font-size: 0.7rem;
+  color: #64748b;
+  line-height: 1.4;
+  margin-bottom: 16px;
+  flex: 1;
+}
+.pay-risk-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+}
+.pay-risk-low { color: #166534; background: #dcfce7; }
+.pay-risk-low-medium { color: #854d0e; background: #fef08a; }
+.pay-risk-medium { color: #9a3412; background: #ffedd5; }
+.pay-risk-high { color: #991b1b; background: #fee2e2; }
+
+.pay-risk-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+}
+.pay-rl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+/* ── 03 Risk Matrix ── */
+.pay-matrix {
+  flex: 1;
+  position: relative;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.pay-mx-y {
+  position: absolute;
+  left: 10px;
+  top: 20px;
+  bottom: 40px;
+  width: 20px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  text-align: center;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  display: flex;
+  justify-content: space-between;
+}
+.pay-mx-x {
+  position: absolute;
+  bottom: 10px;
+  left: 40px;
+  right: 20px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pay-mx-content {
+  margin-left: 30px;
+  margin-bottom: 20px;
+  flex: 1;
+  position: relative;
+  border-left: 2px solid #cbd5e1;
+  border-bottom: 2px solid #cbd5e1;
+}
+.pay-mx-point {
+  position: absolute;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  white-space: nowrap;
+}
+/* Colors for matrix points */
+.pay-mx-point:nth-child(1) { border-color: #22c55e; color: #166534; }
+.pay-mx-point:nth-child(2) { border-color: #eab308; color: #854d0e; }
+.pay-mx-point:nth-child(3) { border-color: #f97316; color: #9a3412; }
+.pay-mx-point:nth-child(4) { border-color: #ef4444; color: #991b1b; }
+.pay-mx-point:nth-child(5) { border-color: #ef4444; color: #991b1b; }
+
+/* ── 04 LC Explained ── */
+.pay-lc-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+.pay-lc-line {
+  position: absolute;
+  top: 24px;
+  left: 20px;
+  right: 20px;
+  height: 2px;
+  background: #cbd5e1;
+  z-index: 0;
+}
+.pay-lc-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+  width: 80px;
+  text-align: center;
+}
+.pay-lc-num {
+  width: 24px;
+  height: 24px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border: 2px solid #fff;
+}
+.pay-lc-step img {
+  height: 40px;
+  margin-bottom: 8px;
+}
+.pay-lc-step span {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+.pay-lc-footer {
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+/* ── 05 Ecosystem ── */
+.pay-eco-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.pay-eco-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.pay-eco-item img {
+  height: 48px;
+  margin-bottom: 8px;
+}
+.pay-eco-item span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+.pay-eco-footer {
+  margin-top: auto;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* ── 06 Payment Timeline ── */
+.pay-pt-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding-left: 140px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+.pay-pt-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+  text-align: center;
+}
+.pay-pt-icon {
+  width: 16px;
+  height: 16px;
+  background: #94a3b8;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.pay-pt-node span {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #475569;
+}
+.pay-pt-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pay-pt-row {
+  display: flex;
+  align-items: center;
+}
+.pay-pt-label {
+  width: 140px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+.pay-pt-bar-wrap {
+  flex: 1;
+  position: relative;
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+.pay-pt-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 4px;
+}
+
+/* ── 07 Currency ── */
+.pay-curr-inner {
+  display: flex;
+  gap: 20px;
+}
+.pay-curr-left, .pay-curr-right {
+  flex: 1;
+}
+.pay-curr-title {
+  font-size: 0.75rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+  color: #1e293b;
+}
+.pay-curr-icons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pay-curr-ic {
+  width: 40px;
+  height: 40px;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.pay-curr-ic span {
+  font-size: 0.5rem;
+}
+.pay-curr-right ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.75rem;
+  color: #475569;
+}
+.pay-curr-right li {
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pay-curr-right li::before {
+  content: '✓';
+  color: #2563eb;
+  font-weight: 900;
+}
+
+/* ── 08 Common Mistakes ── */
+.pay-mistakes-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.pay-mistake-item {
+  background: #fffaf5;
+  border: 1px solid #ffedd5;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+}
+.pay-mistake-warn {
+  position: absolute;
+  top: -8px;
+  left: 12px;
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pay-mistake-item p {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #7f1d1d;
+  margin-top: 16px;
+  line-height: 1.4;
+}
+
+/* ── 09 Real World Example ── */
+.pay-rw-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  padding: 24px;
+  border-radius: 12px;
+}
+.pay-rw-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-align: center;
+  max-width: 70px;
+}
+.pay-rw-step img {
+  height: 40px;
+}
+.pay-rw-dollar {
+  background: #22c55e;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+/* ── 10 By The Numbers ── */
+.pay-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex: 1;
+}
+.pay-stat-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.pay-stat-val {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #1e40af;
+  margin-bottom: 4px;
+}
+.pay-stat-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+/* ── Final CTA ── */
+.pay-final-cta {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 16px;
+  padding: 32px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pay-fc-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.pay-fc-icon {
+  width: 64px;
+  height: 64px;
+  background: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  box-shadow: 0 4px 10px rgba(37,99,235,0.1);
+}
+.pay-fc-text h3 {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #1e3a8a;
+  margin-bottom: 8px;
+}
+.pay-fc-text p {
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+}
+.pay-fc-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.2s;
+}
+.pay-fc-btn:hover {
+  background: #1d4ed8;
+}

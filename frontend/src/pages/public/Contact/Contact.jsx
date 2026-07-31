@@ -68,7 +68,7 @@ export default function Contact() {
               <div className="contact-info-content">
                 <h3>Direct Inquiries</h3>
                 <p>For high-volume client setups or API integration support.</p>
-                <a href="mailto:hello@freel.in">hello@freel.in</a>
+                <a href="mailto:hello@logisticshq.in">hello@logisticshq.in</a>
               </div>
             </div>
 

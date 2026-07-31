@@ -1,0 +1,277 @@
+/* ═══════════════════════════════════════════════════════════
+   OUTREACH PAGE — Premium campaign management UI
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Page Shell ─── */
+.outreach-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Stats Row ─── */
+.outreach-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.outreach-stat-card {
+  background: white;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.outreach-stat-card:hover {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.outreach-stat-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.outreach-stat-icon.teal   { background: rgba(0, 191, 165, 0.1); }
+.outreach-stat-icon.indigo { background: rgba(90, 79, 207, 0.1); }
+.outreach-stat-icon.green  { background: rgba(34, 197, 94, 0.1); }
+.outreach-stat-icon.amber  { background: rgba(245, 158, 11, 0.1); }
+.outreach-stat-value { font-size: 26px; font-weight: 700; color: #1E293B; line-height: 1; }
+.outreach-stat-label { font-size: 12px; color: #64748B; margin-top: 3px; }
+
+/* ─── Tab Bar ─── */
+.outreach-tabs {
+  display: flex;
+  gap: 4px;
+  background: #F1F5F9;
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+}
+.outreach-tab {
+  padding: 8px 24px;
+  border-radius: 7px; border: none;
+  background: transparent;
+  font-size: 13px; font-weight: 500; color: #64748B;
+  cursor: pointer; transition: all 150ms ease;
+  display: flex; align-items: center; gap: 8px;
+}
+.outreach-tab:hover { background: rgba(255,255,255,0.7); color: #1E293B; }
+.outreach-tab.active { background: white; color: #00BFA5; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+/* ─── Action Bar ─── */
+.outreach-action-bar {
+  display: flex; align-items: center; gap: 12px;
+  background: white; border: 1px solid #E2E8F0;
+  border-radius: 12px; padding: 14px 20px;
+}
+.outreach-bar-spacer { flex: 1; }
+.outreach-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: all 150ms ease;
+}
+.outreach-btn-ghost { background: #F1F5F9; color: #475569; }
+.outreach-btn-ghost:hover { background: #E2E8F0; color: #1E293B; }
+.outreach-btn-primary {
+  background: linear-gradient(135deg, #00BFA5, #00a892);
+  color: white; box-shadow: 0 2px 8px rgba(0,191,165,0.3);
+}
+.outreach-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,191,165,0.4); }
+.outreach-btn-danger { background: rgba(239,68,68,0.08); color: #dc2626; }
+.outreach-btn-danger:hover { background: rgba(239,68,68,0.15); }
+.outreach-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* ─── Campaign Table ─── */
+.outreach-table-wrap {
+  background: white; border: 1px solid #E2E8F0;
+  border-radius: 12px; overflow: hidden;
+}
+.outreach-table { width: 100%; border-collapse: collapse; }
+.outreach-table th {
+  padding: 12px 16px; text-align: left;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: #94A3B8; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+.outreach-table td {
+  padding: 14px 16px; font-size: 13.5px; color: #1E293B;
+  border-bottom: 1px solid #F1F5F9; vertical-align: middle;
+}
+.outreach-table tr:last-child td { border-bottom: none; }
+.outreach-table tbody tr { transition: background 120ms ease; }
+.outreach-table tbody tr:hover { background: #FAFBFC; }
+
+/* Campaign name cell */
+.campaign-name-cell { display: flex; flex-direction: column; }
+.campaign-name { font-weight: 600; color: #1E293B; }
+.campaign-date { font-size: 11.5px; color: #94A3B8; margin-top: 2px; }
+
+/* Action menu */
+.campaign-actions { display: flex; gap: 6px; align-items: center; }
+
+/* Empty + Loading */
+.outreach-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 64px 32px; color: #94A3B8; text-align: center;
+}
+.outreach-empty-icon { font-size: 48px; margin-bottom: 16px; }
+.outreach-empty-title { font-size: 16px; font-weight: 600; color: #475569; margin-bottom: 6px; }
+.outreach-empty-sub { font-size: 13px; color: #94A3B8; }
+
+.outreach-skeleton-row td { padding: 14px 16px; }
+.outreach-skeleton-cell {
+  height: 16px; border-radius: 6px;
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ─── Campaign Builder Modal ─── */
+.outreach-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(4px); z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  animation: overlayIn 200ms ease;
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+
+.outreach-modal {
+  background: white; border-radius: 18px;
+  width: 100%; max-width: 560px; padding: 28px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.18);
+  animation: modalIn 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh; overflow-y: auto;
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.modal-title { font-size: 18px; font-weight: 700; color: #1E293B; }
+.modal-close-btn {
+  background: #F1F5F9; border: none; border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; font-size: 18px;
+  color: #94A3B8; display: flex; align-items: center; justify-content: center;
+  transition: all 150ms ease;
+}
+.modal-close-btn:hover { background: #E2E8F0; color: #1E293B; }
+
+/* Step Indicator */
+.step-indicator { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  background: #E2E8F0; color: #94A3B8;
+  transition: all 200ms ease; flex-shrink: 0;
+}
+.step-dot.active { background: linear-gradient(135deg, #00BFA5, #5A4FCF); color: white; }
+.step-dot.done { background: #22C55E; color: white; }
+.step-line { flex: 1; height: 2px; background: #E2E8F0; }
+.step-line.done { background: #22C55E; }
+
+/* Form elements (shared) */
+.outreach-form { display: flex; flex-direction: column; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #475569; }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 9px 12px; border: 1px solid #E2E8F0; border-radius: 8px;
+  font-size: 13px; color: #1E293B; background: #F8FAFC;
+  outline: none; transition: border-color 150ms ease, box-shadow 150ms ease;
+  font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: #00BFA5; box-shadow: 0 0 0 3px rgba(0,191,165,0.1); background: white;
+}
+.form-group textarea { resize: vertical; min-height: 100px; line-height: 1.6; }
+.modal-actions { display: flex; gap: 10px; justify-content: space-between; margin-top: 8px; }
+.modal-actions .outreach-btn { min-width: 100px; justify-content: center; }
+
+/* ─── Email Composer ─── */
+.email-composer-wrap {
+  background: white; border: 1px solid #E2E8F0;
+  border-radius: 16px; overflow: hidden;
+}
+.email-composer-header {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  padding: 24px 28px; color: white;
+}
+.email-composer-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.email-composer-header p { font-size: 13px; color: rgba(255,255,255,0.6); }
+
+.email-composer-body { padding: 28px; display: flex; flex-direction: column; gap: 20px; }
+
+.ai-generate-bar {
+  display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px; align-items: end;
+  background: #F8FAFC; border: 1px solid #E2E8F0;
+  border-radius: 12px; padding: 16px;
+}
+
+.ai-generate-btn {
+  background: linear-gradient(135deg, #5A4FCF, #00BFA5);
+  color: white; border: none; border-radius: 8px;
+  padding: 10px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: all 200ms ease;
+  box-shadow: 0 2px 10px rgba(90,79,207,0.3);
+}
+.ai-generate-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(90,79,207,0.4); }
+.ai-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+.composer-output {
+  display: flex; flex-direction: column; gap: 12px;
+  animation: fadeInUp 0.3s ease;
+}
+.composer-output label { font-size: 12px; font-weight: 600; color: #475569; display: block; margin-bottom: 4px; }
+.composer-subject-input {
+  width: 100%; padding: 10px 14px;
+  border: 1px solid #E2E8F0; border-radius: 8px;
+  font-size: 14px; font-weight: 600; color: #1E293B;
+  background: #F8FAFC; outline: none;
+  transition: border-color 150ms ease;
+  font-family: inherit;
+}
+.composer-subject-input:focus { border-color: #00BFA5; background: white; }
+.composer-body-textarea {
+  width: 100%; padding: 14px; min-height: 220px;
+  border: 1px solid #E2E8F0; border-radius: 8px;
+  font-size: 13.5px; line-height: 1.7; color: #334155;
+  background: #F8FAFC; resize: vertical; outline: none;
+  transition: border-color 150ms ease; font-family: inherit;
+}
+.composer-body-textarea:focus { border-color: #00BFA5; background: white; }
+
+.composer-placeholder {
+  background: #F8FAFC; border: 2px dashed #E2E8F0;
+  border-radius: 12px; padding: 48px 24px;
+  text-align: center; color: #94A3B8;
+}
+.composer-placeholder-icon { font-size: 40px; margin-bottom: 12px; }
+.composer-placeholder-title { font-size: 15px; font-weight: 600; color: #475569; }
+.composer-placeholder-sub { font-size: 13px; margin-top: 4px; }
+
+.composer-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* Error + Loading */
+.outreach-error {
+  background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #dc2626;
+}

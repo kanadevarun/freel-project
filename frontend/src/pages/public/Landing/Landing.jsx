@@ -222,7 +222,7 @@ export default function Landing() {
                     <span className="platform-dot" style={{ background: '#FF5F56' }} />
                     <span className="platform-dot" style={{ background: '#FFBD2E' }} />
                     <span className="platform-dot" style={{ background: '#27C93F' }} />
-                    <span className="text-xs text-slate-400 ml-4">🔒 freel.in/dashboard/{activeTab}</span>
+                    <span className="text-xs text-slate-400 ml-4">🔒 logisticshq.in/dashboard/{activeTab}</span>
                   </div>
                   <div className="platform-content">
                     <div key={activeTab} className="tab-content-animate">

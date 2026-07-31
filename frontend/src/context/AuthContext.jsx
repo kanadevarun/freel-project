@@ -8,9 +8,14 @@ import { onboardingStorage } from '../utils/onboardingStorage';
  * Phase 2B: Uses real backend API integration and authStorage.
  *
  * Provides:
- *   user        — the logged-in person (name, email)
+ *   user        — the logged-in person (name, email, full_name)
  *   org         — the company they belong to (name, org_type, plan)
- *   memberRole  — their permission level (OWNER, ADMIN, FINANCE, etc.)
+ *   memberRole  — the full role object from backend:
+ *                 { name: string, display_name: string, permissions: string[] }
+ *                 e.g. { name: "SUPER_ADMIN", display_name: "Super Admin",
+ *                        permissions: ["LEADS:READ", "LEADS:CREATE", ...] }
+ *                 For backward-compat, may also be a plain string role name
+ *                 in sessions created before this format was introduced.
  *   isAuthenticated — boolean
  *   isBooting   — true on initial page load while checking localStorage
  *   onboardingCompleted - boolean indicating if user has finished setup
@@ -80,6 +85,12 @@ export function AuthProvider({ children }) {
 
   /**
    * login — called after successful auth.
+   *
+   * @param {object} tokenData  — { access_token, id_token, refresh_token, expires_in }
+   * @param {object} userData   — { email, full_name, ... } (optional, falls back to tokenData.email)
+   * @param {object} orgData    — { name, org_type, plan } (optional)
+   * @param {object|string} role — Full role object { name, display_name, permissions[] } from backend
+   *                               LoginResponseData.role, or a plain string for backward compat.
    */
   async function login(tokenData, userData, orgData, role) {
     // Save tokens in localStorage
@@ -90,8 +101,12 @@ export function AuthProvider({ children }) {
     });
 
     const savedUser = userData || { email: tokenData.email || 'user' };
-    const savedOrg = orgData || { name: 'Organization', orgType: 'SHIPPER' }; // Ensure orgType is present
-    const savedRole = role || 'OWNER';
+    const savedOrg = orgData || { name: 'Organization', orgType: 'SHIPPER' };
+
+    // Normalize role: prefer full object; fall back to plain string for legacy compatibility
+    const savedRole = role && typeof role === 'object'
+      ? role
+      : (role ? { name: role, display_name: role, permissions: [] } : { name: 'OWNER', display_name: 'Owner', permissions: [] });
 
     const sessionData = {
       user: savedUser,

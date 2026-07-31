@@ -16,6 +16,8 @@ type Config struct {
 	CognitoUserPoolID   string
 	CognitoClientID     string
 	CognitoClientSecret string
+	DatabaseURL         string
+	OpenAIAPIKey        string
 }
 
 func LoadConfig() *Config {
@@ -29,11 +31,13 @@ func LoadConfig() *Config {
 		AppEnv:              getEnv("APP_ENV", "development"),
 		Port:                getEnv("PORT", "8080"),
 		FrontendURL:         getEnv("FRONTEND_URL", "http://localhost:5173"),
-		FrontendProdURL:     getEnv("FRONTEND_PROD_URL", "https://freel-project.vercel.app"),
+		FrontendProdURL:     getEnv("FRONTEND_PROD_URL", "https://logisticshq.in"),
 		AWSRegion:           getEnv("AWS_REGION", "ap-south-1"),
 		CognitoUserPoolID:   getEnv("COGNITO_USER_POOL_ID", ""),
 		CognitoClientID:     getEnv("COGNITO_CLIENT_ID", ""),
 		CognitoClientSecret: getEnv("COGNITO_CLIENT_SECRET", ""),
+		DatabaseURL:         getEnv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable"),
+		OpenAIAPIKey:        getEnv("OPENAI_API_KEY", ""),
 	}
 
 	return cfg

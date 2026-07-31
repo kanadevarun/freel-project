@@ -1,0 +1,188 @@
+.app-sidebar {
+  width: 240px;
+  background-color: #0F172A; /* Slate 900 */
+  color: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  border-right: 1px solid #1E293B;
+  flex-shrink: 0;
+}
+
+.sidebar-header {
+  height: 64px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1px solid #1E293B;
+}
+
+.sidebar-brand {
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  line-height: 1.2;
+}
+
+.sidebar-org {
+  font-size: 0.75rem;
+  color: #94A3B8;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Custom scrollbar for nav */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-group-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 12px;
+  margin-bottom: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #CBD5E1;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.nav-item:hover {
+  background-color: #1E293B;
+  color: #FFFFFF;
+}
+
+.nav-item.active {
+  background-color: #38BDF8; /* Sky 400 */
+  color: #032940;
+  font-weight: 600;
+}
+
+.nav-icon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.nav-badge {
+  background-color: #EF4444;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 12px;
+  line-height: 1;
+}
+
+.admin-group {
+  margin-top: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #1E293B;
+}
+
+/* ── Footer Profile Card ── */
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #1E293B;
+  background-color: #0B1120;
+}
+
+.user-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-profile-card:hover {
+  background-color: #1E293B;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #38BDF8, #818CF8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #F8FAFC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role-badge {
+  font-size: 0.7rem;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.user-chevron {
+  color: #64748B;
+  font-size: 0.8rem;
+  font-weight: bold;
+}

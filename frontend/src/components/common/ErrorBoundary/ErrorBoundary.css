@@ -1,0 +1,38 @@
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background-color: var(--bg-default);
+  color: var(--text-primary);
+}
+
+.error-boundary-content {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 48px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.error-boundary-content .error-icon {
+  font-size: 48px;
+  margin-bottom: 24px;
+  display: inline-block;
+}
+
+.error-boundary-content h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.error-boundary-content p {
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+  line-height: 1.6;
+}

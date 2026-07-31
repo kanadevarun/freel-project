@@ -1,0 +1,175 @@
+.dashboard-home {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.dashboard-welcome h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-welcome p {
+  font-size: 1rem;
+  color: #64748B;
+}
+
+/* ── Grid Layout ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.dashboard-widget {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-widget.wide {
+  grid-column: span 3;
+}
+
+.dashboard-widget.half {
+  grid-column: span 3;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-widget.half {
+    grid-column: span 1; /* Note: Wait, if there are 2 half widgets, it's better to do something else. We'll use 6 columns. */
+  }
+}
+
+/* Better 6-column grid for precise spans */
+.dashboard-grid {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.dashboard-widget.wide {
+  grid-column: span 6;
+}
+
+.dashboard-widget.half {
+  grid-column: span 3;
+}
+
+.dashboard-widget.two-thirds {
+  grid-column: span 4;
+}
+
+.dashboard-widget.one-third {
+  grid-column: span 2;
+}
+
+.widget-header {
+  margin-bottom: 20px;
+}
+
+.widget-header h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1E293B;
+  letter-spacing: -0.01em;
+}
+
+/* ── Skeleton Loaders ── */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton-base {
+  background: #F1F5F9;
+  background-image: linear-gradient(
+    90deg,
+    #F1F5F9 0px,
+    #E2E8F0 100px,
+    #F1F5F9 200px
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+.widget-skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.skeleton-stat-box {
+  height: 100px;
+  background: #F1F5F9;
+  background-image: linear-gradient(90deg, #F1F5F9 0px, #E2E8F0 100px, #F1F5F9 200px);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 8px;
+}
+
+.widget-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-list-item {
+  height: 60px;
+  background: #F1F5F9;
+  background-image: linear-gradient(90deg, #F1F5F9 0px, #E2E8F0 100px, #F1F5F9 200px);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+.skeleton-list-item.compact {
+  height: 48px;
+}
+
+.widget-skeleton-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-table-row {
+  height: 48px;
+  background: #F1F5F9;
+  background-image: linear-gradient(90deg, #F1F5F9 0px, #E2E8F0 100px, #F1F5F9 200px);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 6px;
+}
+
+.skeleton-table-row.header {
+  height: 32px;
+  margin-bottom: 8px;
+}
+
+.widget-skeleton-chart {
+  height: 250px;
+  background: #F1F5F9;
+  background-image: linear-gradient(90deg, #F1F5F9 0px, #E2E8F0 100px, #F1F5F9 200px);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: 8px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-widget.half,
+  .dashboard-widget.two-thirds,
+  .dashboard-widget.one-third {
+    grid-column: span 6;
+  }
+}

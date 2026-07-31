@@ -1,22 +1,32 @@
 /**
  * authService.js — All API calls for authentication.
  *
- * PHASE 2B (NOW): Real API integration against Go backend.
+ * PHASE 2B: Real API integration against Go backend.
+ *
+ * Auth-flow endpoints (signup, login, verify, forgot, reset) use raw fetch
+ * because they execute BEFORE the user has a JWT. All other calls that need
+ * an authenticated session should use the `api` client from `./api.js`.
  */
 
 import { mapAuthError } from '../utils/authErrorMapper';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
+// ── Internal helper ───────────────────────────────────────────────────────────
+
 /**
- * Helper to handle fetch responses and standardize errors
+ * handleResponse — Parse + standardize auth endpoint responses.
+ * Auth endpoints are public (no JWT) so they use raw fetch independently.
+ *
+ * @param {Response} response
+ * @param {string} [flow] — 'signup' | 'login' | 'verify' | 'forgot' | 'reset'
  */
 async function handleResponse(response, flow = 'default') {
   let data;
   try {
     data = await response.json();
-  } catch (err) {
-    // If not JSON or empty body
+  } catch {
+    // Non-JSON or empty body
     if (!response.ok) {
       throw { code: 'NETWORK_ERROR', message: 'An unexpected error occurred. Please try again.' };
     }
@@ -24,15 +34,16 @@ async function handleResponse(response, flow = 'default') {
   }
 
   if (!response.ok) {
-    // The backend might return errors in different formats (e.g., error string or message field)
     const rawMessage = data?.message || data?.error || 'An error occurred processing your request.';
     throw mapAuthError(rawMessage, flow);
   }
 
-  return data;
+  // Unwrap standard backend envelope { success, message, data }
+  return data?.data !== undefined ? data.data : data;
 }
 
-// ── SIGNUP ──────────────────────────────────────────────
+// ── SIGNUP ────────────────────────────────────────────────────────────────────
+
 /**
  * signup — Create a new user + organization account.
  * @param {{ role, full_name, company_name, email, password }} payload
@@ -46,7 +57,8 @@ export async function signup(payload) {
   return handleResponse(response, 'signup');
 }
 
-// ── VERIFY EMAIL ────────────────────────────────────────
+// ── VERIFY EMAIL ──────────────────────────────────────────────────────────────
+
 /**
  * verifyEmail — Verify the 6-digit OTP sent to email.
  * @param {{ email, code }} payload
@@ -62,18 +74,20 @@ export async function verifyEmail(payload) {
 
 /**
  * resendCode — Resend the verification OTP.
- * (TODO: Wait for backend endpoint)
+ * TODO: Implement once backend exposes POST /auth/resend-code
  * @param {{ email }} data
  */
 export async function resendCode(data) {
-  // Mock until backend implements this
+  // Mocked until backend implements this endpoint
   console.log('Resend code requested for', data.email);
   return { message: 'Code resent.' };
 }
 
-// ── LOGIN ────────────────────────────────────────────────
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+
 /**
  * login — Authenticate with email + password.
+ * Returns: { access_token, id_token, refresh_token, expires_in, role: { name, display_name, permissions[] } }
  * @param {{ email, password }} payload
  */
 export async function login(payload) {
@@ -85,7 +99,8 @@ export async function login(payload) {
   return handleResponse(response, 'login');
 }
 
-// ── FORGOT PASSWORD ───────────────────────────────────────
+// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+
 /**
  * forgotPassword — Request a password reset OTP.
  * @param {{ email }} payload
@@ -112,16 +127,19 @@ export async function resetPassword(payload) {
   return handleResponse(response, 'reset');
 }
 
-// ── LOGOUT ───────────────────────────────────────────────
+// ── LOGOUT ────────────────────────────────────────────────────────────────────
+
 /**
- * logout — Invalidate the session server-side.
- * Currently handled purely client-side via AuthContext.
+ * logout — Session invalidation is handled client-side via AuthContext.clearAll().
+ * A server-side token revocation endpoint can be added here in a future sprint.
  */
 export async function logout() {
   return { message: 'Logged out.' };
 }
 
-// ── ONBOARDING MOCKS (For backward compatibility until real backend) ──
+// ── ONBOARDING MOCKS ─────────────────────────────────────────────────────────
+// Kept for backward compatibility with OnboardingPage until real backend is wired.
+
 export async function saveOnboardingStep(data) {
   return { success: true, nextStep: data.step + 1 };
 }

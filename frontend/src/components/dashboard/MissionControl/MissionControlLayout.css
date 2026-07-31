@@ -1,0 +1,50 @@
+.mission-control-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-areas: 
+    "stats stats"
+    "queue timeline"
+    "ai ai";
+  gap: 24px;
+  padding: 24px 0;
+}
+
+.mc-stats-strip {
+  grid-area: stats;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.mc-main-queue {
+  grid-area: queue;
+}
+
+.mc-side-timeline {
+  grid-area: timeline;
+}
+
+.mc-ai-strip {
+  grid-area: ai;
+}
+
+@media (max-width: 1024px) {
+  .mission-control-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "stats"
+      "queue"
+      "timeline"
+      "ai";
+  }
+  
+  .mc-stats-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .mc-stats-strip {
+    grid-template-columns: 1fr;
+  }
+}

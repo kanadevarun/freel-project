@@ -1,0 +1,197 @@
+.app-topbar {
+  height: 64px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+/* ── Search Bar ── */
+.topbar-search {
+  display: flex;
+  align-items: center;
+  background-color: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 6px 12px;
+  width: 320px;
+  cursor: text;
+  transition: all 0.2s;
+}
+
+.topbar-search:hover {
+  background-color: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.search-icon {
+  font-size: 0.9rem;
+  color: #64748B;
+  margin-right: 8px;
+}
+
+.search-placeholder {
+  flex: 1;
+  color: #94A3B8;
+  font-size: 0.875rem;
+}
+
+.search-shortcut {
+  display: flex;
+  gap: 4px;
+}
+
+.search-shortcut kbd {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  color: #64748B;
+  font-family: inherit;
+  font-weight: 600;
+}
+
+/* ── Actions ── */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.topbar-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.topbar-btn:hover {
+  background-color: #F1F5F9;
+}
+
+.bell-icon {
+  font-size: 1.1rem;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  background-color: #EF4444; /* Red 500 */
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+}
+
+.org-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.org-switcher:hover {
+  background-color: #F1F5F9;
+}
+
+.org-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #0F172A;
+}
+
+.org-chevron {
+  font-size: 0.6rem;
+  color: #64748B;
+}
+
+/* ── Command Palette Modal ── */
+.command-palette-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  padding-top: 10vh;
+}
+
+.command-palette-modal {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 60vh;
+}
+
+.cmd-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+}
+
+.cmd-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 1.1rem;
+  color: #0F172A;
+  background: transparent;
+}
+
+.cmd-input::placeholder {
+  color: #94A3B8;
+}
+
+.cmd-esc {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94A3B8;
+  background-color: #F1F5F9;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cmd-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cmd-empty-state {
+  text-align: center;
+  color: #64748B;
+  padding: 40px 0;
+}
+
+.cmd-empty-state p {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #334155;
+}

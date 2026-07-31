@@ -1,0 +1,172 @@
+/* RolesPage.css */
+
+.roles-page {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.roles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.roles-header h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--slate-900);
+  margin-bottom: 0.5rem;
+}
+
+.roles-header p {
+  color: var(--slate-500);
+  font-size: 1rem;
+}
+
+.roles-container {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+/* Sidebar for Role Selection */
+.roles-sidebar {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.role-item {
+  padding: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 0.5rem;
+  border: 1px solid transparent;
+}
+
+.role-item:last-child {
+  margin-bottom: 0;
+}
+
+.role-item:hover {
+  background: var(--slate-50);
+}
+
+.role-item.active {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+}
+
+.role-name {
+  font-weight: 600;
+  color: var(--slate-900);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.role-item.active .role-name {
+  color: var(--primary);
+}
+
+.role-desc {
+  font-size: 0.85rem;
+  color: var(--slate-500);
+  line-height: 1.4;
+}
+
+/* Main Content area */
+.roles-content {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--slate-200);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.rc-header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--slate-200);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rc-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--slate-900);
+  margin: 0;
+}
+
+/* Matrix Table */
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.matrix-table th {
+  padding: 1rem 1.5rem;
+  background: var(--slate-50);
+  color: var(--slate-500);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.matrix-table th:first-child {
+  text-align: left;
+}
+
+.matrix-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--slate-100);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.matrix-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: var(--slate-700);
+}
+
+.matrix-table tr:last-child td {
+  border-bottom: none;
+}
+
+.matrix-table tr:hover td {
+  background: #f8fafc;
+}
+
+/* Custom Checkbox */
+.perm-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+.perm-checkbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Empty State */
+.roles-empty {
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--slate-500);
+}
+
+@media (max-width: 900px) {
+  .roles-container {
+    grid-template-columns: 1fr;
+  }
+}
