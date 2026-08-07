@@ -49,9 +49,17 @@ func main() {
 	// Initialize Trade Intel Engine
 	tradeIntelEngine := trade_intel.NewMockEngine()
 
-	// Initialize AI Gateway
+	// Initialize AI Gateway (dynamically registers active keys from .env)
 	aiProviders := map[string]ai.Provider{
-		"openai": ai.NewMockProvider(),
+		"mock": ai.NewMockProvider(),
+	}
+	if cfg.GeminiAPIKey != "" {
+		log.Println("🤖 AI: Registering Google Gemini primary provider...")
+		aiProviders["gemini"] = ai.NewGeminiProvider(cfg.GeminiAPIKey)
+	}
+	if cfg.OpenAIAPIKey != "" {
+		log.Println("🤖 AI: Registering OpenAI ChatGPT failover provider...")
+		aiProviders["openai"] = ai.NewOpenAIProvider(cfg.OpenAIAPIKey)
 	}
 	aiGateway := ai.NewGateway(aiProviders)
 	promptManager := ai.NewPromptManager()
@@ -110,8 +118,13 @@ func main() {
 	})
 
 	// Initialize RFQ Module
+	// carrierService wraps the mock provider and adds FetchRates ranking logic.
+	// When the FF partner API is ready, swap NewMockProvider() for the real adapter.
+	carrierProvider := carrier.NewMockProvider()
+	carrierService := carrier.NewService(carrierProvider)
+
 	rfqDL := rfq.NewDataLayer(db)
-	rfqBL := rfq.NewBusinessLogic(rfqDL, eventBus)
+	rfqBL := rfq.NewBusinessLogic(rfqDL, eventBus, carrierService)
 	rfqEndpoints := rfq.NewAllRFQEndpoints(rfqBL)
 
 	// In the workflow processor, the old rfqSvc was passed in.
@@ -122,7 +135,7 @@ func main() {
 	// Let's pass rfqBL for now and see if it compiles (we might need to adapt it).
 
 	// We will create the Pricing Agent
-	carrierProvider := carrier.NewMockProvider()
+	// The carrier provider is already initialized above as part of the RFQ module.
 	pricingAgent := agent.NewPricingAgent(eventBus, rfqBL, carrierProvider, aiGateway, promptManager)
 	pricingAgent.Start()
 

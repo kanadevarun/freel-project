@@ -85,6 +85,23 @@ func AddRFQHandlers(
 		encodeAPIResponse,
 		options...,
 	)))
+
+	// Get Carrier Rates — returns ranked carrier options for an RFQ trade lane.
+	// The frontend Pricing Workspace calls this on page load to populate the rate comparison table.
+	router.Methods(http.MethodGet).Path(spec.GetCarrierRatesURL).Handler(authMiddleware(kitHttp.NewServer(
+		endpoints.GetCarrierRatesEP,
+		decodeGetCarrierRatesRequest,
+		encodeAPIResponse,
+		options...,
+	)))
+
+	// Approve Quote — Pricing team action: approve a quote and advance RFQ to QUOTE_SENT.
+	router.Methods(http.MethodPost).Path(spec.ApproveQuoteURL).Handler(authMiddleware(kitHttp.NewServer(
+		endpoints.ApproveQuoteEP,
+		decodeApproveQuoteRequest,
+		encodeAPIResponse,
+		options...,
+	)))
 }
 
 func getIDFromVars(r *http.Request) (int32, error) {
@@ -173,6 +190,30 @@ func decodeAddQuoteRequest(_ context.Context, r *http.Request) (interface{}, err
 	}
 	var req spec.AddQuoteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req.Quote); err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+	req.ID = id
+	return &req, nil
+}
+
+// decodeGetCarrierRatesRequest reads the RFQ ID from the URL path.
+// No request body is needed — the carrier service reads origin/destination from the DB.
+func decodeGetCarrierRatesRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id, err := getIDFromVars(r)
+	if err != nil {
+		return nil, err
+	}
+	return &spec.GetCarrierRatesRequest{ID: id}, nil
+}
+
+// decodeApproveQuoteRequest reads the RFQ ID from the path and quote_id from the JSON body.
+func decodeApproveQuoteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id, err := getIDFromVars(r)
+	if err != nil {
+		return nil, err
+	}
+	var req spec.ApproveQuoteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
 	req.ID = id

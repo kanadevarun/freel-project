@@ -49,3 +49,18 @@ type AddQuoteRequest struct {
 	ID    int32  `json:"id"`
 	Quote Quote  `json:"quote"`
 }
+
+// GetCarrierRatesRequest asks for all available carrier rates for a given RFQ.
+// The RFQ's origin, destination, and target_date are used to call the carrier provider.
+type GetCarrierRatesRequest struct {
+	OrgID int32 `json:"-"`
+	ID    int32 `json:"id"` // RFQ ID — path param
+}
+
+// ApproveQuoteRequest selects a specific quote and advances the RFQ to QUOTE_SENT.
+// This is triggered when the Pricing team clicks "Approve & Send" in the UI.
+type ApproveQuoteRequest struct {
+	OrgID   int32 `json:"-"`
+	ID      int32 `json:"id"`      // RFQ ID — path param
+	QuoteID int32 `json:"quote_id"` // Which quote to approve
+}

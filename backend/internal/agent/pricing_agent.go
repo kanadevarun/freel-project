@@ -92,8 +92,27 @@ func (a *PricingAgent) handleRFQAssigned(e events.Event) {
 	if rfqData.Origin != nil { origin = *rfqData.Origin }
 	if rfqData.Destination != nil { dest = *rfqData.Destination }
 
-	// Fetch Carrier Rates
-	rates, err := a.carrierProv.GetRates(ctx, origin, dest)
+	incoterms := ""
+	if rfqData.Incoterms != nil { incoterms = *rfqData.Incoterms }
+
+	grossWeight := 0.0
+	volumeCBM := 0.0
+	commodity := ""
+
+	if len(rfqData.Items) > 0 {
+		commodity = rfqData.Items[0].Description
+		for _, item := range rfqData.Items {
+			if item.WeightKG != nil {
+				grossWeight += *item.WeightKG
+			}
+			if item.VolumeCBM != nil {
+				volumeCBM += *item.VolumeCBM
+			}
+		}
+	}
+
+	// Fetch Carrier Rates with cargo details
+	rates, err := a.carrierProv.GetRates(ctx, origin, dest, incoterms, grossWeight, volumeCBM, commodity)
 	if err != nil {
 		log.Printf("[PricingAgent] Failed to fetch rates: %v", err)
 		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
@@ -105,8 +124,6 @@ func (a *PricingAgent) handleRFQAssigned(e events.Event) {
 	
 	ratesJSON, _ := json.Marshal(rates)
 	itemsJSON, _ := json.Marshal(rfqData.Items)
-	incoterms := ""
-	if rfqData.Incoterms != nil { incoterms = *rfqData.Incoterms }
 	targetDate := ""
 	if rfqData.TargetDate != nil { targetDate = rfqData.TargetDate.Format("2006-01-02") }
 
@@ -128,6 +145,12 @@ func (a *PricingAgent) handleRFQAssigned(e events.Event) {
 	// 3. WAITING_FOR_LLM
 	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateWaitingForLLM)
 
+	// ── CALLING THE AI ─────────────────────────────────────────────────────────
+	// This sends our prompt (containing the cargo details, Incoterms, and
+	// available shipping lines) to the AI router. 
+	// Under the hood, the AI router will try Google Gemini first. If Gemini is
+	// busy or down, it automatically falls back to ChatGPT (OpenAI). If both
+	// are missing keys, it uses our mock data so the app doesn't break.
 	responseStr, err := a.aiGateway.ExecutePrompt(ctx, prompt)
 	if err != nil {
 		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)

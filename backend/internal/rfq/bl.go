@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/freel/backend/internal/carrier"
 	"github.com/freel/backend/internal/common/events"
 	"github.com/freel/backend/internal/rfq/spec"
 	"github.com/freel/backend/internal/svcerror"
@@ -17,17 +18,26 @@ type BusinessLogic interface {
 	AdvanceStage(ctx context.Context, orgID, rfqID int32, newStage string) (*spec.RFQ, error)
 	AddQuote(ctx context.Context, orgID int32, quote *spec.Quote) error
 	UpdateAgentStatus(ctx context.Context, orgID, rfqID int32, status string) error
+	// GetCarrierRates fetches ranked carrier rate options for a given RFQ.
+	// It reads the RFQ's origin/destination/target_date and delegates to the carrier service.
+	GetCarrierRates(ctx context.Context, orgID, rfqID int32) (*carrier.FetchRatesResponse, error)
+	// ApproveQuote marks the selected quote as APPROVED and advances the RFQ to QUOTE_SENT.
+	// This is the "Approve & Send" action in the Pricing Workspace.
+	ApproveQuote(ctx context.Context, orgID, rfqID, quoteID int32) (*spec.RFQ, error)
 }
 
 type businessLogic struct {
-	dl       Datalayer
-	eventBus events.Bus
+	dl             Datalayer
+	eventBus       events.Bus
+	// carrierService is used by GetCarrierRates to fetch and rank carrier options.
+	carrierService carrier.Service
 }
 
-func NewBusinessLogic(dl Datalayer, eventBus events.Bus) BusinessLogic {
+func NewBusinessLogic(dl Datalayer, eventBus events.Bus, carrierSvc carrier.Service) BusinessLogic {
 	return &businessLogic{
-		dl:       dl,
-		eventBus: eventBus,
+		dl:             dl,
+		eventBus:       eventBus,
+		carrierService: carrierSvc,
 	}
 }
 
@@ -180,6 +190,107 @@ func (b *businessLogic) UpdateAgentStatus(ctx context.Context, orgID, rfqID int3
 		return svcerror.WrapServiceError(svcerror.ErrInternal, err)
 	}
 	return nil
+}
+
+// GetCarrierRates fetches carrier rate options for the given RFQ.
+// It resolves the RFQ's origin, destination, and target_date, then delegates
+// to the carrier service which calls the FF partner API (or mock in dev).
+func (b *businessLogic) GetCarrierRates(ctx context.Context, orgID, rfqID int32) (*carrier.FetchRatesResponse, error) {
+	// Load the RFQ to get route information
+	rfq, err := b.dl.GetRFQByID(ctx, orgID, rfqID)
+	if err != nil {
+		return nil, svcerror.WrapServiceError(svcerror.ErrResourceNotFound, err)
+	}
+
+	// Both origin and destination are required to fetch rates
+	if rfq.Origin == nil || rfq.Destination == nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+
+	// ── CARGO LOGISTICS & CARRIER SHEET INTEGRATION ────────────────────────────
+	// We extract operational variables directly from the RFQ cargo details
+	// to feed them to the carrier API comparison system.
+	incoterms := ""
+	if rfq.Incoterms != nil {
+		incoterms = *rfq.Incoterms
+	}
+
+	grossWeight := 0.0
+	volumeCBM := 0.0
+	commodity := ""
+
+	// We calculate the gross cargo weight and cubic volume directly by summing
+	// all cargo line items associated with this RFQ.
+	if len(rfq.Items) > 0 {
+		commodity = rfq.Items[0].Description // Represent commodity using the first line-item's name
+		for _, item := range rfq.Items {
+			if item.WeightKG != nil {
+				grossWeight += *item.WeightKG
+			}
+			if item.VolumeCBM != nil {
+				volumeCBM += *item.VolumeCBM
+			}
+		}
+	}
+
+	resp, err := b.carrierService.FetchRates(ctx, *rfq.Origin, *rfq.Destination, rfq.TargetDate, incoterms, grossWeight, volumeCBM, commodity)
+	if err != nil {
+		return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+	}
+
+	return resp, nil
+}
+
+// ApproveQuote marks the selected quote as APPROVED and advances the RFQ stage to QUOTE_SENT.
+// This represents the Pricing Manager's action in the Pricing Workspace: clicking "Approve & Send".
+func (b *businessLogic) ApproveQuote(ctx context.Context, orgID, rfqID, quoteID int32) (*spec.RFQ, error) {
+	// ── STEP 1: SECURITY CHECK (MULTI-TENANT ENFORCEMENT) ──────────────────────
+	// Before making any changes, fetch the RFQ using both the orgID (from the authenticated user)
+	// and the rfqID. This guarantees a user from Organization A cannot view or approve quotes 
+	// belonging to Organization B. If the record isn't found under this orgID, we return a 404.
+	rfq, err := b.dl.GetRFQByID(ctx, orgID, rfqID)
+	if err != nil {
+		return nil, svcerror.WrapServiceError(svcerror.ErrResourceNotFound, err)
+	}
+
+	// ── STEP 2: DATABASE UPDATE (TRANSACTIONAL APPROVAL) ────────────────────────
+	// Update the database records. Under the hood, this executes a SQL transaction that:
+	//   a) Sets the status of the selected quote (quoteID) to 'APPROVED'.
+	//   b) Sets all other alternate carrier quotes for this RFQ to 'REJECTED'.
+	// We run this as a single database transaction to prevent partial updates.
+	if err := b.dl.ApproveQuote(ctx, rfqID, quoteID); err != nil {
+		return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+	}
+
+	// ── STEP 3: STATE MACHINE TRANSITION (STAGE ADVANCEMENT) ─────────────────────
+	// Advance the RFQ's operational lifecycle stage to 'QUOTE_SENT'.
+	// The AdvanceStage function updates the status column in the database and prepares
+	// the state machine to notify downstream sales operations.
+	rfq, err = b.AdvanceStage(ctx, orgID, rfqID, spec.StageQuoteSent)
+	if err != nil {
+		return nil, err
+	}
+
+	// ── STEP 4: ASYNCHRONOUS EVENT DISPATCHING (EVENT BUS) ──────────────────────
+	// Publish the EventQuoteSent message onto the event bus.
+	// This lets other decoupled system modules know the quote is out. For example:
+	//   - The Notification Service will capture this and send an email/WhatsApp to the client.
+	//   - The Audit Logger will write a permanent activity trace.
+	//   - The Outreach Bot can start scheduling follow-up reminders.
+	b.eventBus.Publish(events.Event{
+		Type: events.EventQuoteSent,
+		Payload: map[string]interface{}{
+			"rfq_id":   rfqID,
+			"quote_id": quoteID,
+			"org_id":   orgID,
+		},
+		Timestamp: time.Now(),
+	})
+
+	// ── STEP 5: RETURN RESPONSE ────────────────────────────────────────────────
+	// Return the updated RFQ struct back to the transport (HTTP) layer so it can
+	// be serialized to JSON and displayed immediately to the user in the React frontend.
+	return rfq, nil
 }
 
 func (b *businessLogic) calculateHealthScore(rfq *spec.RFQ) int {

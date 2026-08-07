@@ -11,6 +11,8 @@ type Stats struct {
 	OpenRFQs        int     `json:"open_rfqs"`
 	OpenLeads       int     `json:"open_leads"`
 	ActiveShipments int     `json:"active_shipments"`
+	// WinRate is a percentage 0-100 computed from closed RFQs.
+	WinRate         float64 `json:"win_rate"`
 }
 
 type PendingTask struct {

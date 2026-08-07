@@ -41,4 +41,14 @@ const (
 	// ---
 	// summary: Add Quote to RFQ
 	AddQuoteURL = "/api/v1/rfqs/{id:[0-9]+}/quotes"
+
+	// swagger:operation GET /rfqs/{id}/carrier-rates RFQ GetCarrierRates
+	// ---
+	// summary: Fetch carrier rate options for an RFQ (from FF partner / mock)
+	GetCarrierRatesURL = "/api/v1/rfqs/{id:[0-9]+}/carrier-rates"
+
+	// swagger:operation POST /rfqs/{id}/approve-quote RFQ ApproveQuote
+	// ---
+	// summary: Approve a quote and advance RFQ stage to QUOTE_SENT
+	ApproveQuoteURL = "/api/v1/rfqs/{id:[0-9]+}/approve-quote"
 )

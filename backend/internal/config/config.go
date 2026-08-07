@@ -18,6 +18,7 @@ type Config struct {
 	CognitoClientSecret string
 	DatabaseURL         string
 	OpenAIAPIKey        string
+	GeminiAPIKey        string
 }
 
 func LoadConfig() *Config {
@@ -38,6 +39,7 @@ func LoadConfig() *Config {
 		CognitoClientSecret: getEnv("COGNITO_CLIENT_SECRET", ""),
 		DatabaseURL:         getEnv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable"),
 		OpenAIAPIKey:        getEnv("OPENAI_API_KEY", ""),
+		GeminiAPIKey:        getEnv("GEMINI_API_KEY", ""),
 	}
 
 	return cfg

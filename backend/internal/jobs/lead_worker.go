@@ -129,6 +129,10 @@ func (w *leadWorker) handleLeadCreated(event events.Event) {
 	}
 
 	// 6. Send the prompt to the AI Gateway (like OpenAI or Claude)
+	// ── CALLING THE AI ─────────────────────────────────────────────────────────
+	// This sends our generated lead research prompt to the AI router.
+	// It will run on Google Gemini first, automatically failing over to OpenAI (ChatGPT)
+	// if Gemini fails. If no keys are set, it returns safe mock text.
 	aiResponseStr, err := w.aiGateway.ExecutePrompt(ctx, promptText)
 	if err != nil {
 		log.Printf("Lead Worker Error: AI Gateway failed: %v", err)

@@ -3,6 +3,7 @@ package rfq
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/freel/backend/internal/rfq/spec"
@@ -20,6 +21,8 @@ type Datalayer interface {
 	CreateRFQItem(ctx context.Context, item *spec.RFQItem) error
 	CreateQuote(ctx context.Context, quote *spec.Quote) error
 	GetQuotesByRFQ(ctx context.Context, rfqID int32) ([]spec.Quote, error)
+	// ApproveQuote sets the chosen quote to APPROVED and rejects all others for this RFQ.
+	ApproveQuote(ctx context.Context, rfqID, quoteID int32) error
 }
 
 type dataLayer struct {
@@ -73,10 +76,31 @@ func (d *dataLayer) GetRFQByID(ctx context.Context, orgID, rfqID int32) (*spec.R
 
 func (d *dataLayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int) ([]spec.RFQ, int, error) {
 	var rfqs []spec.RFQ
+
+	// We LEFT JOIN customers so that RFQs without a customer record still show up.
+	// COALESCE ensures customer_name is never null in the JSON output.
 	query := `
-		SELECT * FROM rfqs 
-		WHERE org_id = $1 
-		ORDER BY created_at DESC 
+		SELECT
+			r.id,
+			r.org_id,
+			r.rfq_number,
+			r.customer_id,
+			COALESCE(c.company_name, '') AS customer_name,
+			r.stage,
+			r.origin,
+			r.destination,
+			r.incoterms,
+			r.target_date,
+			r.sales_assignee_id,
+			r.pricing_assignee_id,
+			r.health_score,
+			r.agent_status,
+			r.created_at,
+			r.updated_at
+		FROM rfqs r
+		LEFT JOIN customers c ON c.id = r.customer_id
+		WHERE r.org_id = $1
+		ORDER BY r.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
 	err := d.db.SelectContext(ctx, &rfqs, query, orgID, limit, offset)
@@ -164,4 +188,39 @@ func (d *dataLayer) GetQuotesByRFQ(ctx context.Context, rfqID int32) ([]spec.Quo
 	query := `SELECT * FROM rfq_quotes WHERE rfq_id = $1 ORDER BY created_at ASC`
 	err := d.db.SelectContext(ctx, &quotes, query, rfqID)
 	return quotes, err
+}
+
+// ApproveQuote atomically marks the chosen quote as APPROVED and
+// marks all other quotes for the same RFQ as REJECTED.
+// We do this in a transaction so the DB is never left in a partially-approved state.
+func (d *dataLayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) error {
+	tx, err := d.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Reject all other quotes for this RFQ first
+	_, err = tx.ExecContext(ctx,
+		`UPDATE rfq_quotes SET status = 'REJECTED', updated_at = NOW() WHERE rfq_id = $1 AND id != $2`,
+		rfqID, quoteID,
+	)
+	if err != nil {
+		return err
+	}
+
+	// Approve the selected quote
+	res, err := tx.ExecContext(ctx,
+		`UPDATE rfq_quotes SET status = 'APPROVED', is_recommended = TRUE, updated_at = NOW() WHERE id = $1 AND rfq_id = $2`,
+		quoteID, rfqID,
+	)
+	if err != nil {
+		return err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("quote %d not found for rfq %d", quoteID, rfqID)
+	}
+
+	return tx.Commit()
 }

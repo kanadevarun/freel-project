@@ -41,6 +41,20 @@ func (m *MockDatalayer) EXPECT() *MockDatalayerMockRecorder {
 	return m.recorder
 }
 
+// ApproveQuote mocks base method.
+func (m *MockDatalayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveQuote", ctx, rfqID, quoteID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveQuote indicates an expected call of ApproveQuote.
+func (mr *MockDatalayerMockRecorder) ApproveQuote(ctx, rfqID, quoteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveQuote", reflect.TypeOf((*MockDatalayer)(nil).ApproveQuote), ctx, rfqID, quoteID)
+}
+
 // CreateQuote mocks base method.
 func (m *MockDatalayer) CreateQuote(ctx context.Context, quote *spec.Quote) error {
 	m.ctrl.T.Helper()

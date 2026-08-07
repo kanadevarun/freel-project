@@ -5,21 +5,24 @@ import "time"
 // RFQ models
 
 type RFQ struct {
-	ID                int32      `json:"id"`
-	OrgID             int32      `json:"org_id"`
-	RFQNumber         string     `json:"rfq_number"`
-	CustomerID        int32      `json:"customer_id"`
-	Stage             string     `json:"stage"`
-	Origin            *string    `json:"origin"`
-	Destination       *string    `json:"destination"`
-	Incoterms         *string    `json:"incoterms"`
-	TargetDate        *time.Time `json:"target_date"`
-	SalesAssigneeID   *int32     `json:"sales_assignee_id"`
-	PricingAssigneeID *int32     `json:"pricing_assignee_id"`
-	HealthScore       int        `json:"health_score"`
-	AgentStatus       string     `json:"agent_status"`
-	CreatedAt         time.Time  `json:"created_at"`
-	UpdatedAt         time.Time  `json:"updated_at"`
+	ID                int32      `json:"id" db:"id"`
+	OrgID             int32      `json:"org_id" db:"org_id"`
+	RFQNumber         string     `json:"rfq_number" db:"rfq_number"`
+	CustomerID        int32      `json:"customer_id" db:"customer_id"`
+	// CustomerName is populated via JOIN with the customers table in ListRFQs.
+	// It is NOT stored in the rfqs table — it is a read-only display field.
+	CustomerName      string     `json:"customer_name" db:"customer_name"`
+	Stage             string     `json:"stage" db:"stage"`
+	Origin            *string    `json:"origin" db:"origin"`
+	Destination       *string    `json:"destination" db:"destination"`
+	Incoterms         *string    `json:"incoterms" db:"incoterms"`
+	TargetDate        *time.Time `json:"target_date" db:"target_date"`
+	SalesAssigneeID   *int32     `json:"sales_assignee_id" db:"sales_assignee_id"`
+	PricingAssigneeID *int32     `json:"pricing_assignee_id" db:"pricing_assignee_id"`
+	HealthScore       int        `json:"health_score" db:"health_score"`
+	AgentStatus       string     `json:"agent_status" db:"agent_status"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
 	Items             []RFQItem  `json:"items,omitempty"`
 	Quotes            []Quote    `json:"quotes,omitempty"`
 }
@@ -71,5 +74,16 @@ type GetAgentStatusResponse struct {
 }
 
 type ParseShipmentResponse struct {
+	Data interface{} `json:"data"`
+}
+
+// GetCarrierRatesResponse wraps the carrier service response for the HTTP layer.
+// The data field contains a ranked list of carrier options with AI reasoning.
+type GetCarrierRatesResponse struct {
+	Data interface{} `json:"data"`
+}
+
+// ApproveQuoteResponse confirms the stage advance and returns the updated RFQ.
+type ApproveQuoteResponse struct {
 	Data interface{} `json:"data"`
 }

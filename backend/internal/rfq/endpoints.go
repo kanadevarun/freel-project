@@ -18,6 +18,10 @@ type Endpoints struct {
 	UpdateStageEP          endpoint.Endpoint
 	ParseShipmentRequestEP endpoint.Endpoint
 	AddQuoteEP             endpoint.Endpoint
+	// GetCarrierRatesEP returns ranked carrier rates for an RFQ's trade lane.
+	GetCarrierRatesEP      endpoint.Endpoint
+	// ApproveQuoteEP approves a specific quote and advances the RFQ to QUOTE_SENT.
+	ApproveQuoteEP         endpoint.Endpoint
 }
 
 func NewAllRFQEndpoints(bl BusinessLogic) Endpoints {
@@ -30,6 +34,8 @@ func NewAllRFQEndpoints(bl BusinessLogic) Endpoints {
 		UpdateStageEP:          makeUpdateStageEndpoint(bl),
 		ParseShipmentRequestEP: makeParseShipmentRequestEndpoint(bl),
 		AddQuoteEP:             makeAddQuoteEndpoint(bl),
+		GetCarrierRatesEP:      makeGetCarrierRatesEndpoint(bl),
+		ApproveQuoteEP:         makeApproveQuoteEndpoint(bl),
 	}
 }
 
@@ -189,5 +195,44 @@ func makeAddQuoteEndpoint(bl BusinessLogic) endpoint.Endpoint {
 		}
 
 		return map[string]interface{}{"data": req.Quote}, nil
+	}
+}
+
+// makeGetCarrierRatesEndpoint returns an endpoint that fetches and ranks
+// carrier rate options for the given RFQ. It reads origin/destination from the
+// RFQ record and calls the carrier service (FF partner API or mock).
+func makeGetCarrierRatesEndpoint(bl BusinessLogic) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*spec.GetCarrierRatesRequest)
+		orgID, err := getOrgID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := bl.GetCarrierRates(ctx, orgID, req.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		return &spec.GetCarrierRatesResponse{Data: resp}, nil
+	}
+}
+
+// makeApproveQuoteEndpoint returns an endpoint that approves a specific quote
+// and advances the RFQ stage to QUOTE_SENT. This is the "Approve & Send" action.
+func makeApproveQuoteEndpoint(bl BusinessLogic) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*spec.ApproveQuoteRequest)
+		orgID, err := getOrgID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		rfq, err := bl.ApproveQuote(ctx, orgID, req.ID, req.QuoteID)
+		if err != nil {
+			return nil, err
+		}
+
+		return &spec.ApproveQuoteResponse{Data: rfq}, nil
 	}
 }

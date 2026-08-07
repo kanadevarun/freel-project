@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/freel/backend/internal/carrier"
 	"github.com/freel/backend/internal/common/events"
 	"github.com/freel/backend/internal/rfq"
 	"github.com/freel/backend/internal/rfq/mocks"
@@ -22,7 +23,11 @@ func newServiceWithMocks(t *testing.T) (rfq.BusinessLogic, *mocks.MockDatalayer,
 	mockRepo := mocks.NewMockDatalayer(ctrl)
 	eventBus := events.NewInProcessBus() 
 	
-	svc := rfq.NewBusinessLogic(mockRepo, eventBus)
+	// satisfy the carrier.Service dependency using mock provider for tests
+	carrierProvider := carrier.NewMockProvider()
+	carrierSvc := carrier.NewService(carrierProvider)
+
+	svc := rfq.NewBusinessLogic(mockRepo, eventBus, carrierSvc)
 	return svc, mockRepo, eventBus
 }
 

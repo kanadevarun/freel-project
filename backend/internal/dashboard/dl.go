@@ -23,20 +23,63 @@ func NewDataLayer(db *sqlx.DB) Datalayer {
 
 func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, error) {
 	var stats spec.Stats
-	stats.ActiveShipments = 0
-	stats.TotalRevenue = 0.0
 
-	// Active RFQs
-	err := d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND status NOT IN ('WON', 'LOST')", orgID).Scan(&stats.OpenRFQs)
+	// ── Open RFQs (any stage except terminal WON/LOST) ────────────────────────
+	err := d.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage NOT IN ('WON', 'LOST')`,
+		orgID,
+	).Scan(&stats.OpenRFQs)
 	if err != nil {
 		return stats, err
 	}
 
-	// Active Leads
-	err = d.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM customers WHERE org_id = $1 AND status != 'CUSTOMER'", orgID).Scan(&stats.OpenLeads)
+	// ── Open Leads (customers still in pipeline, not yet converted) ───────────
+	err = d.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM customers WHERE org_id = $1 AND status NOT IN ('CUSTOMER', 'LOST')`,
+		orgID,
+	).Scan(&stats.OpenLeads)
 	if err != nil {
 		return stats, err
 	}
+
+	// ── Total Revenue from WON RFQs ───────────────────────────────────────────
+	// We SUM the sell_price of the recommended (approved) quote for every WON RFQ.
+	// COALESCE handles the case where no WON RFQs exist yet → returns 0.
+	err = d.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(q.sell_price), 0)
+		FROM rfq_quotes q
+		INNER JOIN rfqs r ON r.id = q.rfq_id
+		WHERE r.org_id = $1
+		  AND r.stage = 'WON'
+		  AND q.status = 'APPROVED'
+	`, orgID).Scan(&stats.TotalRevenue)
+	if err != nil {
+		// Non-fatal: revenue may be unavailable if quotes table schema differs
+		stats.TotalRevenue = 0
+	}
+
+	// ── Win Rate ──────────────────────────────────────────────────────────────
+	// WinRate = WON / (WON + LOST) * 100. Stored as a float 0-100.
+	// We derive it in the BL layer from closed counts for simplicity.
+	var wonCount, lostCount int
+	d.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage = 'WON'`, orgID,
+	).Scan(&wonCount)
+	d.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage = 'LOST'`, orgID,
+	).Scan(&lostCount)
+
+	total := wonCount + lostCount
+	if total > 0 {
+		stats.WinRate = float64(wonCount) / float64(total) * 100
+	}
+
+	// ActiveShipments is currently not tracked in a dedicated table.
+	// We approximate it as WON RFQs from the last 90 days.
+	d.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM rfqs
+		WHERE org_id = $1 AND stage = 'WON' AND updated_at > NOW() - INTERVAL '90 days'
+	`, orgID).Scan(&stats.ActiveShipments)
 
 	return stats, nil
 }
