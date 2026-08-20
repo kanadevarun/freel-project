@@ -2,17 +2,17 @@ package database
 
 import (
 	"context"
+	"log"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql" // MySQL driver
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // Postgres driver
 )
 
-// Connect connects to the Postgres database using the provided URL and connection pooling settings.
-// Simple meaning: It opens up the pipeline to the database so our app can save and read data.
-// Example: db, err := database.Connect("postgres://user:pass@localhost:5432/db")
+// Connect connects to the MySQL database using the provided DSN and connection pooling settings.
+// Example: db, err := database.Connect("root@tcp(127.0.0.1:3306)/freel_mysql?parseTime=true")
 func Connect(dbURL string) (*sqlx.DB, error) {
-	db, err := sqlx.Connect("postgres", dbURL)
+	db, err := sqlx.Connect("mysql", dbURL)
 	if err != nil {
 		return nil, err
 	}
@@ -22,6 +22,7 @@ func Connect(dbURL string) (*sqlx.DB, error) {
 	db.SetMaxIdleConns(25)
 	db.SetConnMaxLifetime(5 * time.Minute)
 
+	log.Println("Successfully connected to MySQL database!")
 	return db, nil
 }
 

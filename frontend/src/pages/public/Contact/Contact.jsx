@@ -85,7 +85,7 @@ export default function Contact() {
               <div className="contact-icon">📍</div>
               <div className="contact-info-content">
                 <h3>Command Center</h3>
-                <p>Freel Technologies Pvt. Ltd.<br/>Executive Wing, MIDC Andheri East<br/>Mumbai 400093, Maharashtra, India</p>
+                <p>LogisticsHQ Headquarters<br/>Executive Wing, MIDC Andheri East<br/>Mumbai 400093, Maharashtra, India</p>
                 <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">View Location Map →</a>
               </div>
             </div>

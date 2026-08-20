@@ -26,7 +26,7 @@ func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, erro
 
 	// ── Open RFQs (any stage except terminal WON/LOST) ────────────────────────
 	err := d.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage NOT IN ('WON', 'LOST')`,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = ? AND stage NOT IN ('WON', 'LOST')`,
 		orgID,
 	).Scan(&stats.OpenRFQs)
 	if err != nil {
@@ -35,7 +35,7 @@ func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, erro
 
 	// ── Open Leads (customers still in pipeline, not yet converted) ───────────
 	err = d.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM customers WHERE org_id = $1 AND status NOT IN ('CUSTOMER', 'LOST')`,
+		`SELECT COUNT(*) FROM leads WHERE org_id = ? AND status NOT IN ('CONVERTED', 'LOST')`,
 		orgID,
 	).Scan(&stats.OpenLeads)
 	if err != nil {
@@ -49,7 +49,7 @@ func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, erro
 		SELECT COALESCE(SUM(q.sell_price), 0)
 		FROM rfq_quotes q
 		INNER JOIN rfqs r ON r.id = q.rfq_id
-		WHERE r.org_id = $1
+		WHERE r.org_id = ?
 		  AND r.stage = 'WON'
 		  AND q.status = 'APPROVED'
 	`, orgID).Scan(&stats.TotalRevenue)
@@ -63,10 +63,10 @@ func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, erro
 	// We derive it in the BL layer from closed counts for simplicity.
 	var wonCount, lostCount int
 	d.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage = 'WON'`, orgID,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = ? AND stage = 'WON'`, orgID,
 	).Scan(&wonCount)
 	d.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM rfqs WHERE org_id = $1 AND stage = 'LOST'`, orgID,
+		`SELECT COUNT(*) FROM rfqs WHERE org_id = ? AND stage = 'LOST'`, orgID,
 	).Scan(&lostCount)
 
 	total := wonCount + lostCount
@@ -78,7 +78,7 @@ func (d *dataLayer) GetStats(ctx context.Context, orgID int32) (spec.Stats, erro
 	// We approximate it as WON RFQs from the last 90 days.
 	d.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM rfqs
-		WHERE org_id = $1 AND stage = 'WON' AND updated_at > NOW() - INTERVAL '90 days'
+		WHERE org_id = ? AND stage = 'WON' AND updated_at > NOW() - INTERVAL 90 DAY
 	`, orgID).Scan(&stats.ActiveShipments)
 
 	return stats, nil
@@ -88,9 +88,9 @@ func (d *dataLayer) GetApprovalQueue(ctx context.Context, orgID int32) ([]spec.P
 	var queue []spec.PendingTask
 
 	rows, err := d.db.QueryContext(ctx, `
-		SELECT id, 'RFQ_QUOTE_DRAFT', origin || ' to ' || destination, 'Draft Quote Awaiting Approval', created_at 
+		SELECT id, 'RFQ_QUOTE_DRAFT', CONCAT(origin, ' to ', destination), 'Draft Quote Awaiting Approval', created_at 
 		FROM rfqs 
-		WHERE org_id = $1 AND agent_status = 'WAITING_FOR_HUMAN_REVIEW'
+		WHERE org_id = ? AND agent_status = 'WAITING_FOR_HUMAN_REVIEW'
 		ORDER BY created_at DESC LIMIT 5
 	`, orgID)
 	if err != nil {

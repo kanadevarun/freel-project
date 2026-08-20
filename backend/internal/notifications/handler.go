@@ -19,7 +19,7 @@ func NewHandler(s Service) *Handler {
 
 func (h *Handler) GetUnread(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userCtx, ok := ctx.Value(middleware.UserContextKey).(*middleware.UserContext)
+	userCtx, ok := middleware.GetUserContext(ctx)
 	if !ok {
 		h.respondError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -38,7 +38,7 @@ func (h *Handler) GetUnread(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) MarkAsRead(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	userCtx, ok := ctx.Value(middleware.UserContextKey).(*middleware.UserContext)
+	userCtx, ok := middleware.GetUserContext(ctx)
 	if !ok {
 		h.respondError(w, http.StatusUnauthorized, "unauthorized")
 		return

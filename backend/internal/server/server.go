@@ -6,41 +6,72 @@ import (
 
 	"github.com/freel/backend/internal/auth"
 	"github.com/freel/backend/internal/config"
+	"github.com/freel/backend/internal/contracts"
 	"github.com/freel/backend/internal/dashboard"
 	"github.com/freel/backend/internal/leads"
 	"github.com/freel/backend/internal/notifications"
 	"github.com/freel/backend/internal/outreach"
+	"github.com/freel/backend/internal/rates"
+	"github.com/freel/backend/internal/pricing"
 	"github.com/freel/backend/internal/reports"
 	"github.com/freel/backend/internal/rfq"
 	"github.com/freel/backend/internal/rbac"
+	"github.com/freel/backend/internal/documents"
+	"github.com/freel/backend/internal/finance"
+	"github.com/freel/backend/internal/shipments"
+	"github.com/freel/backend/internal/billing"
+	"github.com/freel/backend/internal/users"
 	"github.com/go-chi/chi/v5"
+	"github.com/jmoiron/sqlx"
 )
 
 type Server struct {
-	cfg             *config.Config
-	router          *chi.Mux
-	authService      *auth.Service
-	rbacSvc          rbac.Service
-	leadsEndpoints   leads.Endpoints
-	outreachEndpoints outreach.Endpoints // Handles all /api/v1/outreach/* routes
-	rfqEndpoints    rfq.Endpoints
-	dashboardEndpoints dashboard.Endpoints
+	cfg                  *config.Config
+	db                   *sqlx.DB
+	router               *chi.Mux
+	authService          *auth.Service
+	rbacSvc              rbac.Service
+	rbacHandler          *rbac.Handler
+	usersHandler         *users.Handler
+	leadsEndpoints       leads.Endpoints
+	leadsEmailHandler    *leads.EmailHandler
+	outreachEndpoints    outreach.Endpoints
+	rfqEndpoints         rfq.Endpoints
+	dashboardEndpoints   dashboard.Endpoints
 	notificationsHandler *notifications.Handler
-	reportsEndpoints  reports.Endpoints
+	reportsEndpoints     reports.Endpoints
+	ratesHandler         *rates.Handler
+	contractsHandler     *contracts.Handler
+	pricingHandler       *pricing.Handler
+	shipmentsHandler     *shipments.Handler
+	documentsHandler     *documents.Handler
+	financeHandler       *finance.Handler
+	billingHandler       *billing.Handler
 }
 
-func NewServer(cfg *config.Config, authService *auth.Service, rbacSvc rbac.Service, leadsEndpoints leads.Endpoints, outreachEndpoints outreach.Endpoints, rfqEndpoints rfq.Endpoints, dashboardEndpoints dashboard.Endpoints, notifHandler *notifications.Handler, reportsEndpoints reports.Endpoints) *Server {
+func NewServer(cfg *config.Config, db *sqlx.DB, authService *auth.Service, rbacSvc rbac.Service, rbacHandler *rbac.Handler, usersHandler *users.Handler, leadsEndpoints leads.Endpoints, leadsEmailHandler *leads.EmailHandler, outreachEndpoints outreach.Endpoints, rfqEndpoints rfq.Endpoints, dashboardEndpoints dashboard.Endpoints, notifHandler *notifications.Handler, reportsEndpoints reports.Endpoints, ratesHandler *rates.Handler, contractsHandler *contracts.Handler, pricingHandler *pricing.Handler, shipmentsHandler *shipments.Handler, documentsHandler *documents.Handler, financeHandler *finance.Handler, billingHandler *billing.Handler) *Server {
 	s := &Server{
-		cfg:             cfg,
-		router:          chi.NewRouter(),
-		authService:      authService,
-		rbacSvc:          rbacSvc,
-		leadsEndpoints:  leadsEndpoints,
-		outreachEndpoints: outreachEndpoints,
-		rfqEndpoints:    rfqEndpoints,
-		dashboardEndpoints: dashboardEndpoints,
+		cfg:                  cfg,
+		db:                   db,
+		router:               chi.NewRouter(),
+		authService:          authService,
+		rbacSvc:              rbacSvc,
+		rbacHandler:          rbacHandler,
+		usersHandler:         usersHandler,
+		leadsEndpoints:       leadsEndpoints,
+		leadsEmailHandler:    leadsEmailHandler,
+		outreachEndpoints:    outreachEndpoints,
+		rfqEndpoints:         rfqEndpoints,
+		dashboardEndpoints:   dashboardEndpoints,
 		notificationsHandler: notifHandler,
-		reportsEndpoints:  reportsEndpoints,
+		reportsEndpoints:     reportsEndpoints,
+		ratesHandler:         ratesHandler,
+		contractsHandler:     contractsHandler,
+		pricingHandler:       pricingHandler,
+		shipmentsHandler:     shipmentsHandler,
+		documentsHandler:     documentsHandler,
+		financeHandler:       financeHandler,
+		billingHandler:       billingHandler,
 	}
 
 	s.setupMiddleware()

@@ -52,7 +52,7 @@ export default function CommandCenter() {
                 Track shipments, carriers, ports and routes from a single connected platform.
               </p>
               <p>
-                Freel brings every moving part of global logistics into one real-time operational view.
+                LogisticsHQ brings every moving part of global logistics into one real-time operational view.
               </p>
               <p>
                 From air cargo and ocean freight to warehousing and final-mile delivery, every shipment stays visible from origin to destination.

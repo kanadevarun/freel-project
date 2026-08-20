@@ -5,7 +5,7 @@ export default function DesignBlog() {
   const posts = [
     {
       id: 1,
-      title: 'Crafting the Ocean Teal Design System for Freel',
+      title: 'Crafting the Ocean Teal Design System for LogisticsHQ',
       desc: 'How we developed our core design system to bring trust, clarity, and modern aesthetics to logistics software.',
       tag: 'Design System',
       tagColor: { bg: '#FDF2F8', text: '#BE185D', border: '#FCE7F3' },
@@ -30,7 +30,7 @@ export default function DesignBlog() {
     {
       id: 3,
       title: 'Data Visualization in Logistics: Making Sense of 10,000+ Shipments',
-      desc: 'A look into how we designed the interactive maps and charts that power the Freel live tracking dashboard.',
+      desc: 'A look into how we designed the interactive maps and charts that power the LogisticsHQ live tracking dashboard.',
       tag: 'Data Viz',
       tagColor: { bg: '#F0FDFA', text: '#0F766E', border: '#CCFBF1' },
       date: 'Apr 28, 2026',
@@ -45,7 +45,7 @@ export default function DesignBlog() {
     <div className="bg-ui-surface min-h-screen">
       <section className="blog-hero">
         <div className="blog-tag" style={{ backgroundColor: '#FDF2F8', color: '#BE185D', borderColor: '#FCE7F3' }}>
-          <span className="text-lg">✨</span> Design at Freel
+          <span className="text-lg">✨</span> Design at LogisticsHQ
         </div>
         <h1 className="blog-hero-title">
           The <span className="text-gradient bg-gradient-to-r from-pink-500 to-orange-400">Design</span> Blog

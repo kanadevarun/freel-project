@@ -61,7 +61,8 @@ export default function CampaignBuilder({ onClose, onCampaignCreated }) {
       onCampaignCreated(); // Tell parent to refresh the list
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to create campaign. Please try again.');
+      const msg = typeof err === 'string' ? err : (err?.message || err?.code || 'Failed to create campaign. Please try again.');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -88,24 +89,23 @@ export default function CampaignBuilder({ onClose, onCampaignCreated }) {
             const isDone   = currentStep > stepNum;
             const isActive = currentStep === stepNum;
             return (
-              <>
+              <div key={label} style={{ display: 'contents' }}>
                 <div
-                  key={label}
                   className={`step-dot ${isDone ? 'done' : isActive ? 'active' : ''}`}
                   title={label}
                 >
                   {isDone ? '✓' : stepNum}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div key={`line-${i}`} className={`step-line ${isDone ? 'done' : ''}`} />
+                  <div className={`step-line ${isDone ? 'done' : ''}`} />
                 )}
-              </>
+              </div>
             );
           })}
         </div>
 
         {/* Error */}
-        {error && <div className="outreach-error" style={{ marginBottom: 16 }}>{error}</div>}
+        {error && <div className="outreach-error" style={{ marginBottom: 16 }}>{typeof error === 'string' ? error : (error?.message || error?.code || 'An error occurred')}</div>}
 
         {/* ── STEP 1: Name ── */}
         {currentStep === 1 && (

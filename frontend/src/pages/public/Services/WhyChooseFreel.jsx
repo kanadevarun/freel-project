@@ -93,7 +93,7 @@ export default function WhyChooseFreel() {
         {/* Header */}
         <div className="mb-16">
           <span className="wcf-eyebrow">Trusted Operations</span>
-          <h2 className="wcf-headline">Why India's Supply Chains Choose Freel</h2>
+          <h2 className="wcf-headline">Why Modern Supply Chains Choose LogisticsHQ</h2>
           <p className="wcf-subheadline">
             Built for reliability, visibility, compliance, and scale — everything modern freight operations need in one network.
           </p>

@@ -1,6 +1,9 @@
 package carrier
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // CarrierRate represents a single pricing option returned by a carrier API.
 type CarrierRate struct {
@@ -24,11 +27,57 @@ type CarrierRate struct {
 	DestinationCharges    float64 // Import handling and local terminal fees at dest
 }
 
-// CarrierProvider is the interface for fetching rates from carriers.
-// In the future, this will be implemented by real MSC, Maersk, ONE API integrations.
-type CarrierProvider interface {
-	// GetRates retrieves carrier rates for a given lane. It takes logistics details like
-	// Incoterms (DDP/FOB), Gross Weight (kg), Volume (CBM), and Commodity to simulate
-	// a real shipping line quotation query.
+// RateProvider is the rate extraction interface.
+type RateProvider interface {
 	GetRates(ctx context.Context, origin, destination string, incoterms string, grossWeight float64, volumeCBM float64, commodity string) ([]CarrierRate, error)
 }
+
+// CarrierProvider is kept as alias to RateProvider for backward compatibility.
+type CarrierProvider = RateProvider
+
+// TrackingRequest contains identifiers used to query a carrier for operational tracking events.
+type TrackingRequest struct {
+	BookingNumber   string
+	ContainerNumber string
+	MBLNumber       string
+	CarrierSCAC     string
+}
+
+// TrackingEvent is a raw tracking update returned by a carrier adapter.
+type TrackingEvent struct {
+	EventID         string
+	MilestoneCode   string
+	EventTime       time.Time
+	Location        string
+	VesselName      string
+	VoyageNumber    string
+	Description     string
+	RawPayload      []byte
+}
+
+// TrackingProvider is implemented by adapters that support active tracking event fetches.
+type TrackingProvider interface {
+	GetTrackingEvents(ctx context.Context, req TrackingRequest) ([]TrackingEvent, error)
+}
+
+// BookingStatus holds carrier booking confirmation data.
+type BookingStatus struct {
+	BookingNumber string
+	Status        string
+	VesselName    string
+	VoyageNumber  string
+	ETD           *time.Time
+	ETA           *time.Time
+}
+
+// BookingProvider is implemented by adapters that support querying/confirming carrier bookings.
+type BookingProvider interface {
+	GetBooking(ctx context.Context, bookingNumber string) (*BookingStatus, error)
+}
+
+// WebhookProvider is implemented by adapters that handle inbound push notifications (webhooks).
+type WebhookProvider interface {
+	VerifyWebhookSignature(payload []byte, headers map[string]string) error
+	ParseWebhookPayload(payload []byte) (*TrackingEvent, error)
+}
+

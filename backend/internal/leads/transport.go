@@ -8,12 +8,13 @@ import (
 
 	"github.com/freel/backend/internal/leads/spec"
 	"github.com/freel/backend/internal/svcerror"
+	"github.com/go-chi/chi/v5"
 	kitHttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 )
 
 func AddLeadsHandlers(
-	router *mux.Router,
+	router chi.Router,
 	endpoints Endpoints,
 	authMiddleware func(http.Handler) http.Handler,
 ) {
@@ -21,53 +22,56 @@ func AddLeadsHandlers(
 		kitHttp.ServerErrorEncoder(encodeErrorResponse),
 	}
 
-	router.Methods(http.MethodGet).Path(spec.ListURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/", kitHttp.NewServer(
 		endpoints.ListLeadsEP,
 		decodeListLeadsRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.CreateURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/", kitHttp.NewServer(
 		endpoints.CreateLeadEP,
 		decodeCreateLeadRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.ImportURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/import", kitHttp.NewServer(
 		endpoints.ImportLeadsEP,
 		decodeImportLeadsRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodGet).Path(spec.GetURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/{id:[0-9]+}", kitHttp.NewServer(
 		endpoints.GetLeadEP,
 		decodeGetLeadRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPut).Path(spec.UpdateURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Put("/{id:[0-9]+}", kitHttp.NewServer(
 		endpoints.UpdateLeadEP,
 		decodeUpdateLeadRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodDelete).Path(spec.DeleteURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Delete("/{id:[0-9]+}", kitHttp.NewServer(
 		endpoints.DeleteLeadEP,
 		decodeDeleteLeadRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 }
 
 func getIDFromVars(r *http.Request) (int32, error) {
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		vars := mux.Vars(r)
+		idStr = vars["id"]
+	}
+	if idStr == "" {
 		return 0, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
 	id, err := strconv.ParseInt(idStr, 10, 32)

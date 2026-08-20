@@ -18,6 +18,11 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+	Email        string `json:"email,omitempty"`
+}
+
 type ForgotPasswordRequest struct {
 	Email string `json:"email"`
 }
@@ -34,14 +39,38 @@ type RoleResponse struct {
 	Permissions []string `json:"permissions"`
 }
 
+type UserResponse struct {
+	ID        int64  `json:"id"`
+	Email     string `json:"email"`
+	FullName  string `json:"full_name"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+type OrgResponse struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+}
+
 type LoginResponseData struct {
 	AccessToken  string       `json:"access_token"`
 	IDToken      string       `json:"id_token"`
 	RefreshToken string       `json:"refresh_token"`
 	ExpiresIn    int32        `json:"expires_in"`
 	Role         RoleResponse `json:"role"`
+	User         UserResponse `json:"user"`
+	Org          OrgResponse  `json:"org"`
+}
+
+type RefreshResponseData struct {
+	AccessToken  string `json:"access_token"`
+	IDToken      string `json:"id_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int32  `json:"expires_in"`
 }
 
 type CurrentUserResponseData struct {
-	Email string `json:"email"`
+	User UserResponse `json:"user"`
+	Org  OrgResponse  `json:"org"`
+	Role RoleResponse `json:"role"`
 }

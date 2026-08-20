@@ -1,5 +1,5 @@
 /**
- * api.js — Base HTTP client for all authenticated API calls in Freel.
+ * api.js — Base HTTP client for all authenticated API calls in LogisticsHQ.
  *
  * Features:
  *  - Automatic JWT (access token) injection via Authorization header
@@ -49,11 +49,14 @@ export async function refreshAccessToken() {
   const { refreshToken } = authStorage.getTokens();
   if (!refreshToken) return null;
 
+  const sessionUser = authStorage.getSessionUser();
+  const email = sessionUser?.user?.email;
+
   try {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
+      body: JSON.stringify({ refresh_token: refreshToken, email: email || '' }),
     });
 
     if (!response.ok) {
@@ -63,15 +66,21 @@ export async function refreshAccessToken() {
     }
 
     const data = await response.json();
+    const payload = data?.data || data;
+
+    if (!payload?.access_token) {
+      authStorage.clearAll();
+      return null;
+    }
 
     // Save new tokens; refresh_token usually stays the same from Cognito
     authStorage.saveTokens({
-      access_token: data.access_token,
-      id_token: data.id_token,
-      refresh_token: data.refresh_token || refreshToken, // keep existing if not rotated
+      access_token: payload.access_token,
+      id_token: payload.id_token,
+      refresh_token: payload.refresh_token || refreshToken, // keep existing if not rotated
     });
 
-    return data.access_token;
+    return payload.access_token;
   } catch {
     authStorage.clearAll();
     return null;

@@ -217,7 +217,7 @@ export default function AirFreight() {
                 One Connected System.
               </h2>
               <p className="af-network__desc">
-                Freel continuously orchestrates air cargo
+                LogisticsHQ continuously orchestrates air cargo
                 across global airline and airport networks
                 in real time.
               </p>

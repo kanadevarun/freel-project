@@ -288,11 +288,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ═══ 50/50 STICKY SHOWCASE — Why Freel ═══ */}
+      {/* ═══ 50/50 STICKY SHOWCASE — Why LogisticsHQ ═══ */}
       <section className="bg-white" style={{ padding: '120px 0' }}>
         <div className="container-lg">
           <Reveal>
-            <SectionHeader label="Why Freel" labelColor="teal" title="Built for the Way Logistics Actually Works"
+            <SectionHeader label="Why LogisticsHQ" labelColor="teal" title="Built for the Way Logistics Actually Works"
               subtitle="We didn't build another marketplace. We built the command center logistics teams actually need." />
           </Reveal>
 
@@ -300,8 +300,8 @@ export default function Landing() {
             {
               id: 'broker',
               title: 'Eliminate Broker Dependency',
-              desc: 'Indian transporters lose ₹5-7 lakh/year to broker commissions. Freel connects you directly with verified shippers — no middlemen, no commission cuts.',
-              stats: [{ v: '₹7L+', l: 'Saved/Year' }, { v: '0%', l: 'Commission' }],
+              desc: 'Transporters lose significant margin to broker commissions. LogisticsHQ connects you directly with verified shippers — no middlemen, no commission cuts.',
+              stats: [{ v: '100%', l: 'Direct Match' }, { v: '0%', l: 'Commission' }],
               image: '/assets/broker_free.png'
             },
             {
@@ -321,7 +321,7 @@ export default function Landing() {
             {
               id: 'payments',
               title: 'Payments in 7 Days, Not 90',
-              desc: 'The industry average payment cycle is 30-90 days. Freel\'s verified shipper network and digital contracts mean you get paid faster — always.',
+              desc: 'The industry average payment cycle is 30-90 days. LogisticsHQ\'s verified shipper network and digital contracts mean you get paid faster — always.',
               stats: [{ v: '7', l: 'Day Payments' }, { v: '85%', l: 'Faster' }],
               image: '/assets/fast_payments.png'
             }
@@ -334,13 +334,13 @@ export default function Landing() {
         <div className="container-lg">
           <Reveal>
             <SectionHeader label="What They Say" title="Trusted by Fleet Owners & Forwarders"
-              subtitle="Real stories from logistics professionals using Freel." />
+              subtitle="Real stories from logistics professionals using LogisticsHQ." />
           </Reveal>
           <div className="testimonial-grid">
             {[
-              { name: 'Rajesh Kumar', role: 'Fleet Owner · 45 trucks · Nagpur', text: 'Before Freel, I was spending 3 hours every morning calling brokers. Now I get load matches in minutes. My trucks run 30% more loaded miles.', avatar: 'RK', color: '#00BFA5' },
+              { name: 'Rajesh Kumar', role: 'Fleet Owner · 45 trucks', text: 'Before LogisticsHQ, I was spending 3 hours every morning calling brokers. Now I get load matches in minutes. My trucks run 30% more loaded miles.', avatar: 'RK', color: '#00BFA5' },
               { name: 'Priya Sharma', role: 'Freight Forwarder · Mumbai', text: 'Rate comparison across 500+ vendors in one click? That alone saved us ₹12 lakh last quarter. The RFQ system is a game-changer.', avatar: 'PS', color: '#5A4FCF' },
-              { name: 'Amit Patel', role: 'Shipper · Chemical Manufacturing · Vadodara', text: 'The compliance module handles HSN codes and MSDS documentation automatically. We cleared customs 40% faster on our last 50 shipments.', avatar: 'AP', color: '#F59E0B' },
+              { name: 'Amit Patel', role: 'Shipper · Chemical Manufacturing', text: 'The compliance module handles HSN codes and MSDS documentation automatically. We cleared customs 40% faster on our last 50 shipments.', avatar: 'AP', color: '#F59E0B' },
             ].map((t, i) => (
               <Reveal key={i} delay={`reveal-delay-${i + 1}`}>
                 <TiltCard>
@@ -364,7 +364,7 @@ export default function Landing() {
         <div className="container-sm text-center relative z-10">
           <Reveal>
             <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to modernize your logistics?</h2>
-            <p className="max-w-lg mx-auto mb-8">Join 500+ fleet owners and freight forwarders who switched to Freel. Create your account today.</p>
+            <p className="max-w-lg mx-auto mb-8">Join 500+ fleet owners and freight forwarders who switched to LogisticsHQ. Create your account today.</p>
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
               <MagneticBtn><Link to="/signup" className="btn-primary">Get Started →</Link></MagneticBtn>
               <MagneticBtn><Link to="/contact" className="btn-secondary" style={{ borderColor: '#94A3B8', color: '#94A3B8' }}>Talk to Sales</Link></MagneticBtn>

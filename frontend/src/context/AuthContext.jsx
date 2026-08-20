@@ -3,7 +3,7 @@ import { authStorage } from '../utils/authStorage';
 import { onboardingStorage } from '../utils/onboardingStorage';
 
 /**
- * AuthContext — Global authentication state for the entire Freel app.
+ * AuthContext — Global authentication state for the entire LogisticsHQ app.
  *
  * Phase 2B: Uses real backend API integration and authStorage.
  *
@@ -59,9 +59,41 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const hydrateSession = async () => {
+    try {
+      const { accessToken } = authStorage.getTokens();
+      if (!accessToken) return;
+
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+      const res = await fetch(`${API_BASE}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (res.ok) {
+        const payload = await res.json();
+        const meData = payload?.data || payload;
+        if (meData?.user) {
+          setUser((prev) => ({ ...(prev || {}), ...meData.user }));
+          if (meData?.org) setOrg((prev) => ({ ...(prev || {}), ...meData.org }));
+          if (meData?.role) setMemberRole(meData.role);
+
+          const curSession = authStorage.getSessionUser() || {};
+          authStorage.saveSessionUser({
+            ...curSession,
+            user: { ...(curSession.user || {}), ...meData.user },
+            org: { ...(curSession.org || {}), ...(meData.org || {}) },
+            memberRole: meData.role || curSession.memberRole,
+          });
+        }
+      }
+    } catch {
+      // Non-blocking background hydration
+    }
+  };
+
   useEffect(() => {
-    // 1. Initial boot check
+    // 1. Initial boot check & background hydration
     checkSession();
+    hydrateSession();
 
     // 2. Listen for cross-tab storage changes
     const handleStorageChange = (e) => {
@@ -72,6 +104,7 @@ export function AuthProvider({ children }) {
         e.key === 'freel_onboarding_state'
       ) {
         checkSession();
+        hydrateSession();
       }
       // If storage was completely cleared (e.key === null)
       if (e.key === null) {
@@ -100,13 +133,14 @@ export function AuthProvider({ children }) {
       refresh_token: tokenData.refresh_token,
     });
 
-    const savedUser = userData || { email: tokenData.email || 'user' };
-    const savedOrg = orgData || { name: 'Organization', orgType: 'SHIPPER' };
+    const savedUser = userData || tokenData.user || { email: tokenData.email || 'user' };
+    const savedOrg = orgData || tokenData.org || { name: 'Your Workspace', orgType: 'FREIGHT_FORWARDER' };
 
     // Normalize role: prefer full object; fall back to plain string for legacy compatibility
-    const savedRole = role && typeof role === 'object'
-      ? role
-      : (role ? { name: role, display_name: role, permissions: [] } : { name: 'OWNER', display_name: 'Owner', permissions: [] });
+    const resolvedRole = role || tokenData.role;
+    const savedRole = resolvedRole && typeof resolvedRole === 'object'
+      ? resolvedRole
+      : (resolvedRole ? { name: resolvedRole, display_name: resolvedRole, permissions: [] } : { name: 'SUPER_ADMIN', display_name: 'Super Admin', permissions: [] });
 
     const sessionData = {
       user: savedUser,

@@ -11,7 +11,7 @@ describe('RFQList Component', () => {
 
   it('renders empty state when no rfqs are provided', () => {
     render(<RFQList isLoading={false} rfqs={[]} onRowClick={() => {}} />);
-    expect(screen.getByText('No RFQs found')).toBeInTheDocument();
+    expect(screen.getByText('No shipment requests yet')).toBeInTheDocument();
   });
 
   it('renders table with data and handles row clicks', () => {

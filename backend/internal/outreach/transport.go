@@ -8,12 +8,13 @@ import (
 
 	"github.com/freel/backend/internal/outreach/spec"
 	"github.com/freel/backend/internal/svcerror"
+	"github.com/go-chi/chi/v5"
 	kitHttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 )
 
 func AddOutreachHandlers(
-	router *mux.Router,
+	router chi.Router,
 	endpoints Endpoints,
 	authMiddleware func(http.Handler) http.Handler,
 ) {
@@ -21,60 +22,63 @@ func AddOutreachHandlers(
 		kitHttp.ServerErrorEncoder(encodeErrorResponse),
 	}
 
-	router.Methods(http.MethodGet).Path(spec.ListCampaignsURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/campaigns", kitHttp.NewServer(
 		endpoints.ListCampaignsEP,
 		decodeListCampaignsRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.CreateCampaignURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/campaigns", kitHttp.NewServer(
 		endpoints.CreateCampaignEP,
 		decodeCreateCampaignRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodGet).Path(spec.GetCampaignURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/campaigns/{id:[0-9]+}", kitHttp.NewServer(
 		endpoints.GetCampaignEP,
 		decodeGetCampaignRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.ActivateCampaignURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/campaigns/{id:[0-9]+}/activate", kitHttp.NewServer(
 		endpoints.ActivateCampaignEP,
 		decodeActivateCampaignRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.PauseCampaignURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/campaigns/{id:[0-9]+}/pause", kitHttp.NewServer(
 		endpoints.PauseCampaignEP,
 		decodePauseCampaignRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodDelete).Path(spec.DeleteCampaignURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Delete("/campaigns/{id:[0-9]+}", kitHttp.NewServer(
 		endpoints.DeleteCampaignEP,
 		decodeDeleteCampaignRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
-	router.Methods(http.MethodPost).Path(spec.GenerateEmailURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/generate-email", kitHttp.NewServer(
 		endpoints.GenerateEmailEP,
 		decodeGenerateEmailRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 }
 
 func getIDFromVars(r *http.Request) (int32, error) {
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		vars := mux.Vars(r)
+		idStr = vars["id"]
+	}
+	if idStr == "" {
 		return 0, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
 	id, err := strconv.ParseInt(idStr, 10, 32)

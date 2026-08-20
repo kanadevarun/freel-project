@@ -7,7 +7,7 @@ export default function BlogIndex() {
     <div className="bg-ui-surface min-h-screen">
       <section className="blog-index-hero">
         <h1 className="blog-index-hero-title">
-          Freel <span className="text-brand-teal">Insights</span>
+          LogisticsHQ <span className="text-brand-teal">Insights</span>
         </h1>
         <p className="blog-index-hero-sub">
           The latest thoughts on logistics engineering, product design, and industry trends from the team building India's first multi-modal logistics OS.

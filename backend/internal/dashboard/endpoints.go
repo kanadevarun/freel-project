@@ -28,7 +28,7 @@ func makeGetMissionControlEndpoint(bl BusinessLogic) endpoint.Endpoint {
 		
 		// If OrgID is not already extracted, try context
 		if req.OrgID == 0 {
-			userCtx, ok := ctx.Value(middleware.UserContextKey).(*middleware.UserContext)
+			userCtx, ok := middleware.GetUserContext(ctx)
 			if !ok {
 				return nil, svcerror.NewServiceError(svcerror.ErrInsufficientResourceAccess)
 			}

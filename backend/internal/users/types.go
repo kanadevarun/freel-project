@@ -50,21 +50,21 @@ type OrgMember struct {
 // It flattens the User and OrgMember data into a single clean API response.
 type OrgMemberResponse struct {
 	// UserID is the unique identifier of the user.
-	UserID int64 `json:"user_id"`
+	UserID int64 `json:"user_id" db:"user_id"`
 	// Email is the user's email address.
-	Email string `json:"email"`
+	Email string `json:"email" db:"email"`
 	// FirstName is the user's given name.
-	FirstName *string `json:"first_name"`
+	FirstName *string `json:"first_name" db:"first_name"`
 	// LastName is the user's family name.
-	LastName *string `json:"last_name"`
+	LastName *string `json:"last_name" db:"last_name"`
 	// RoleID is the identifier of the user's assigned role.
-	RoleID int64 `json:"role_id"`
+	RoleID int64 `json:"role_id" db:"role_id"`
 	// RoleName is the human-readable name of the user's assigned role.
-	RoleName string `json:"role_name"`
+	RoleName string `json:"role_name" db:"role_name"`
 	// Status is the current status of the user's membership in the organization.
-	Status string `json:"status"`
+	Status string `json:"status" db:"status"`
 	// JoinedAt is the timestamp when the user became a member of the organization.
-	JoinedAt time.Time `json:"joined_at"`
+	JoinedAt time.Time `json:"joined_at" db:"joined_at"`
 }
 
 // Invitation represents a pending invitation for a new user to join an organization.

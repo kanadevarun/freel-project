@@ -21,6 +21,7 @@ type RFQ struct {
 	PricingAssigneeID *int32     `json:"pricing_assignee_id" db:"pricing_assignee_id"`
 	HealthScore       int        `json:"health_score" db:"health_score"`
 	AgentStatus       string     `json:"agent_status" db:"agent_status"`
+	Status            string     `json:"status" db:"status"`
 	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at" db:"updated_at"`
 	Items             []RFQItem  `json:"items,omitempty"`
@@ -28,30 +29,30 @@ type RFQ struct {
 }
 
 type RFQItem struct {
-	ID          int32     `json:"id"`
-	RFQID       int32     `json:"rfq_id"`
-	Description string    `json:"description"`
-	Quantity    int       `json:"quantity"`
-	WeightKG    *float64  `json:"weight_kg"`
-	VolumeCBM   *float64  `json:"volume_cbm"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int32     `json:"id" db:"id"`
+	RFQID       int32     `json:"rfq_id" db:"rfq_id"`
+	Description string    `json:"description" db:"description"`
+	Quantity    int       `json:"quantity" db:"quantity"`
+	WeightKG    *float64  `json:"weight_kg" db:"weight_kg"`
+	VolumeCBM   *float64  `json:"volume_cbm" db:"volume_cbm"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type Quote struct {
-	ID                    int32     `json:"id"`
-	RFQID                 int32     `json:"rfq_id"`
-	CarrierName           string    `json:"carrier_name"`
-	TransitTimeDays       *int      `json:"transit_time_days"`
-	BuyPrice              float64   `json:"buy_price"`
-	SellPrice             float64   `json:"sell_price"`
-	IsRecommended         bool      `json:"is_recommended"`
-	ReliabilityScore      int       `json:"reliability_score"`
-	HistoricalSuccessRate float64   `json:"historical_success_rate"`
-	AiReasoning           *string   `json:"ai_reasoning"`
-	Status                string    `json:"status"`
-	CreatedAt             time.Time `json:"created_at"`
-	UpdatedAt             time.Time `json:"updated_at"`
+	ID                    int32     `json:"id" db:"id"`
+	RFQID                 int32     `json:"rfq_id" db:"rfq_id"`
+	CarrierName           string    `json:"carrier_name" db:"carrier_name"`
+	TransitTimeDays       *int      `json:"transit_time_days" db:"transit_time_days"`
+	BuyPrice              float64   `json:"buy_price" db:"buy_price"`
+	SellPrice             float64   `json:"sell_price" db:"sell_price"`
+	IsRecommended         bool      `json:"is_recommended" db:"is_recommended"`
+	ReliabilityScore      int       `json:"reliability_score" db:"reliability_score"`
+	HistoricalSuccessRate float64   `json:"historical_success_rate" db:"historical_success_rate"`
+	AiReasoning           *string   `json:"ai_reasoning" db:"ai_reasoning"`
+	Status                string    `json:"status" db:"status"`
+	CreatedAt             time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Responses

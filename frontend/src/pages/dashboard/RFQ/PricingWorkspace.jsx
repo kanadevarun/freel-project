@@ -210,7 +210,7 @@ export default function PricingWorkspace({ rfq, quotes, onQuoteSubmitted }) {
             <div className="ai-reasoning-box" style={{ marginBottom: '16px' }}>
               <div style={{ fontSize: '1rem', flexShrink: 0, marginTop: '2px' }}>🤖</div>
               <div>
-                <div className="ai-reasoning-label">FREEL AI RECOMMENDATION</div>
+                <div className="ai-reasoning-label">LOGISTICSHQ AI RECOMMENDATION</div>
                 <div className="ai-reasoning-text">{overallReasoning}</div>
               </div>
             </div>

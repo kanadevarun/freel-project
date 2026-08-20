@@ -40,8 +40,9 @@ type UpdateStageRequest struct {
 }
 
 type ParseShipmentRequest struct {
-	OrgID       int32  `json:"-"`
-	RawEmail    string `json:"raw_email"`
+	OrgID    int32  `json:"-"`
+	RawEmail string `json:"raw_email"`
+	RawText  string `json:"raw_text"`
 }
 
 type AddQuoteRequest struct {

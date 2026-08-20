@@ -8,13 +8,14 @@ import (
 
 	"github.com/freel/backend/internal/rfq/spec"
 	"github.com/freel/backend/internal/svcerror"
+	"github.com/go-chi/chi/v5"
 	kitHttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 )
 
 // AddRFQHandlers adds the handlers to the rest methods for the rfq module
 func AddRFQHandlers(
-	router *mux.Router,
+	router chi.Router,
 	endpoints Endpoints,
 	authMiddleware func(http.Handler) http.Handler,
 ) {
@@ -23,91 +24,93 @@ func AddRFQHandlers(
 	}
 
 	// List RFQs
-	router.Methods(http.MethodGet).Path(spec.ListURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/", kitHttp.NewServer(
 		endpoints.ListRFQsEP,
 		decodeListRFQsRequest,
 		encodeAPIResponse,
 		options...,
-	)))
-
-	// Get RFQ
-	router.Methods(http.MethodGet).Path(spec.GetURL).Handler(authMiddleware(kitHttp.NewServer(
-		endpoints.GetRFQEP,
-		decodeGetRFQRequest,
-		encodeAPIResponse,
-		options...,
-	)))
-
-	// Get Timeline
-	router.Methods(http.MethodGet).Path(spec.GetTimelineURL).Handler(authMiddleware(kitHttp.NewServer(
-		endpoints.GetTimelineEP,
-		decodeGetTimelineRequest,
-		encodeAPIResponse,
-		options...,
-	)))
-
-	// Get Agent Status
-	router.Methods(http.MethodGet).Path(spec.GetAgentStatusURL).Handler(authMiddleware(kitHttp.NewServer(
-		endpoints.GetAgentStatusEP,
-		decodeGetAgentStatusRequest,
-		encodeAPIResponse,
-		options...,
-	)))
+	).ServeHTTP)
 
 	// Create RFQ
-	router.Methods(http.MethodPost).Path(spec.CreateURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/", kitHttp.NewServer(
 		endpoints.CreateRFQEP,
 		decodeCreateRFQRequest,
 		encodeAPIResponse,
 		options...,
-	)))
-
-	// Update Stage
-	router.Methods(http.MethodPut).Path(spec.UpdateStageURL).Handler(authMiddleware(kitHttp.NewServer(
-		endpoints.UpdateStageEP,
-		decodeUpdateStageRequest,
-		encodeAPIResponse,
-		options...,
-	)))
+	).ServeHTTP)
 
 	// Parse Shipment Request
-	router.Methods(http.MethodPost).Path(spec.ParseShipmentRequestURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/parse-shipment-request", kitHttp.NewServer(
 		endpoints.ParseShipmentRequestEP,
 		decodeParseShipmentRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
+
+	// Get RFQ
+	router.With(authMiddleware).Get("/{id:[0-9]+}", kitHttp.NewServer(
+		endpoints.GetRFQEP,
+		decodeGetRFQRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
+
+	// Get Timeline
+	router.With(authMiddleware).Get("/{id:[0-9]+}/timeline", kitHttp.NewServer(
+		endpoints.GetTimelineEP,
+		decodeGetTimelineRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
+
+	// Get Agent Status
+	router.With(authMiddleware).Get("/{id:[0-9]+}/agent-status", kitHttp.NewServer(
+		endpoints.GetAgentStatusEP,
+		decodeGetAgentStatusRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
+
+	// Update Stage
+	router.With(authMiddleware).Put("/{id:[0-9]+}/stage", kitHttp.NewServer(
+		endpoints.UpdateStageEP,
+		decodeUpdateStageRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
 
 	// Add Quote
-	router.Methods(http.MethodPost).Path(spec.AddQuoteURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/{id:[0-9]+}/quotes", kitHttp.NewServer(
 		endpoints.AddQuoteEP,
 		decodeAddQuoteRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
 	// Get Carrier Rates — returns ranked carrier options for an RFQ trade lane.
-	// The frontend Pricing Workspace calls this on page load to populate the rate comparison table.
-	router.Methods(http.MethodGet).Path(spec.GetCarrierRatesURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Get("/{id:[0-9]+}/carrier-rates", kitHttp.NewServer(
 		endpoints.GetCarrierRatesEP,
 		decodeGetCarrierRatesRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 
 	// Approve Quote — Pricing team action: approve a quote and advance RFQ to QUOTE_SENT.
-	router.Methods(http.MethodPost).Path(spec.ApproveQuoteURL).Handler(authMiddleware(kitHttp.NewServer(
+	router.With(authMiddleware).Post("/{id:[0-9]+}/approve-quote", kitHttp.NewServer(
 		endpoints.ApproveQuoteEP,
 		decodeApproveQuoteRequest,
 		encodeAPIResponse,
 		options...,
-	)))
+	).ServeHTTP)
 }
 
 func getIDFromVars(r *http.Request) (int32, error) {
-	vars := mux.Vars(r)
-	idStr, ok := vars["id"]
-	if !ok {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		vars := mux.Vars(r)
+		idStr = vars["id"]
+	}
+	if idStr == "" {
 		return 0, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
 	id, err := strconv.ParseInt(idStr, 10, 32)

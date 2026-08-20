@@ -309,7 +309,7 @@ export default function RFQLanding() {
       <section className="r3-compare" id="rfq-compare">
         <div className="r3-wrap">
           <R>
-            <span className="r3-section-kicker">Why Freel</span>
+            <span className="r3-section-kicker">Why LogisticsHQ</span>
             <h2 className="r3-compare-headline">
               Why Manage Vendors Manually<br />When Vendors Can Compete For You?
             </h2>
@@ -359,7 +359,7 @@ export default function RFQLanding() {
 
             {/* New Way */}
             <R d="r3-d2" className="r3-compare-side r3-compare-new">
-              <span className="r3-compare-tag new">Freel RFQ</span>
+              <span className="r3-compare-tag new">LogisticsHQ RFQ</span>
               <div className="r3-new-flow">
                 {[
                   { icon: '📋', text: 'One RFQ', sub: 'Enter shipment details once' },
@@ -478,7 +478,7 @@ export default function RFQLanding() {
             <div className="r3-savings-callout">
               <div>
                 <div className="r3-savings-meta-title">Average market savings achieved</div>
-                <div className="r3-savings-meta-sub">Across all Freel RFQ shipments in FY2024</div>
+                <div className="r3-savings-meta-sub">Across all LogisticsHQ RFQ shipments in FY2024</div>
               </div>
               <div className="r3-savings-main">
                 <Counter to={14.2} decimals={1} suffix="%" />
@@ -527,7 +527,7 @@ export default function RFQLanding() {
                     <span style={{ background: '#f59e0b' }} />
                     <span style={{ background: '#22c55e' }} />
                   </div>
-                  <div className="r3-dash-topbar-title">Freel — RFQ Management</div>
+                  <div className="r3-dash-topbar-title">LogisticsHQ — RFQ Management</div>
                   <div className="r3-dash-topbar-badge">3 Live RFQs</div>
                 </div>
 

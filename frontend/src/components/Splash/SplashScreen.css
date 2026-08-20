@@ -1,0 +1,305 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOGISTICSHQ — CINEMATIC COMMAND OS SPLASH & LOADER
+   Deep midnight theme, luminous 3D logo aura, and freight telemetry stream.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.lhq-splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: #060B19; /* Deep midnight logistics navy */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  opacity: 1;
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.5s ease, backdrop-filter 0.5s ease;
+  overflow: hidden;
+  user-select: none;
+}
+
+.lhq-splash-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  backdrop-filter: blur(16px);
+}
+
+/* Ambient Radial Mesh Lighting */
+.lhq-splash-ambient-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.22) 0%, rgba(99, 102, 241, 0.14) 40%, rgba(6, 11, 25, 0) 70%);
+  filter: blur(50px);
+  pointer-events: none;
+  animation: splashAmbientPulse 4s ease-in-out infinite alternate;
+}
+
+/* Subtle High-Tech Grid Mesh Pattern */
+.lhq-splash-grid-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+@keyframes splashAmbientPulse {
+  0% { transform: scale(0.92) translate(-10px, -10px); opacity: 0.8; }
+  100% { transform: scale(1.08) translate(10px, 10px); opacity: 1; }
+}
+
+.lhq-splash-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 24px;
+  max-width: 92vw;
+}
+
+/* ─── 3D LOGO CONTAINER ─── */
+.lhq-splash-logo-box {
+  position: relative;
+  width: 108px;
+  height: 78px;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: scale(0.85) translateY(12px);
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lhq-splash-logo-box.visible {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  animation: logoLevitate 3.5s ease-in-out infinite alternate;
+}
+
+.lhq-splash-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 28px rgba(14, 165, 233, 0.45));
+}
+
+@keyframes logoLevitate {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-6px); }
+}
+
+/* Radar Orbit Ring */
+.lhq-splash-orbit-pulse {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1px dashed rgba(56, 189, 248, 0.35);
+  animation: rotateOrbit 14s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rotateOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── BRAND TYPOGRAPHY ─── */
+.lhq-splash-title {
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F1F5F9 55%, #BAE6FD 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 24px rgba(56, 189, 248, 0.35);
+  margin: 0 0 6px 0;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  line-height: 1.1;
+}
+
+.lhq-splash-title.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lhq-splash-tagline {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #38BDF8;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0 0 26px 0;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lhq-splash-tagline.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ─── TELEMETRY PROGRESS TRACK ─── */
+.lhq-splash-progress-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.lhq-splash-progress-wrapper.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lhq-splash-progress-track {
+  width: 260px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.lhq-splash-progress-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #00F2FE, #38BDF8, #6366F1, #00F2FE);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  animation: progressFill 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards, progressShimmer 1.5s linear infinite;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.8);
+}
+
+@keyframes progressFill {
+  0% { transform: scaleX(0); transform-origin: left; }
+  100% { transform: scaleX(1); transform-origin: left; }
+}
+
+@keyframes progressShimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.lhq-splash-status-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94A3B8;
+  letter-spacing: 0.02em;
+}
+
+.lhq-status-beacon {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981;
+  animation: beaconBlink 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes beaconBlink {
+  0% { opacity: 0.4; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ─── MULTI-MODAL MODE CHIPS ─── */
+.lhq-splash-modes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.lhq-splash-modes.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.lhq-mode-chip {
+  padding: 5px 12px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #E2E8F0;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  backdrop-filter: blur(8px);
+  letter-spacing: 0.03em;
+  transition: all 0.2s ease;
+}
+
+.lhq-mode-chip:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #FFFFFF;
+}
+
+/* ─── REDUCED MOTION ─── */
+@media (prefers-reduced-motion: reduce) {
+  .lhq-splash-overlay {
+    transition: opacity 0.2s ease;
+  }
+  .lhq-splash-logo-box,
+  .lhq-splash-title,
+  .lhq-splash-tagline,
+  .lhq-splash-progress-wrapper,
+  .lhq-splash-modes {
+    transition: opacity 0.2s ease;
+    transform: none !important;
+    animation: none !important;
+  }
+  .lhq-splash-orbit-pulse,
+  .lhq-splash-ambient-glow,
+  .lhq-splash-grid-mesh {
+    display: none;
+  }
+}
+
+/* ─── MOBILE RESPONSIVENESS ─── */
+@media (max-width: 640px) {
+  .lhq-splash-logo-box {
+    width: 88px;
+    height: 64px;
+    margin-bottom: 18px;
+  }
+  .lhq-splash-title {
+    font-size: 1.9rem;
+  }
+  .lhq-splash-tagline {
+    font-size: 0.75rem;
+    margin-bottom: 20px;
+  }
+  .lhq-splash-progress-track {
+    width: 210px;
+  }
+  .lhq-splash-modes {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

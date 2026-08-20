@@ -2,34 +2,41 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
+	"strconv"
 
 	"github.com/freel/backend/internal/ai"
-	"github.com/freel/backend/internal/carrier"
-	"github.com/freel/backend/internal/common"
 	"github.com/freel/backend/internal/common/events"
+	"github.com/freel/backend/internal/rates"
 	"github.com/freel/backend/internal/rfq"
 	"github.com/freel/backend/internal/rfq/spec"
 )
 
 // PricingAgent acts as a Senior Pricing Analyst.
+// It subscribes to RFQ assignment events, fetches the best available rates
+// from the Rate Intelligence Service (covering both spot and contract rates),
+// and drafts a recommended quote for human review.
 type PricingAgent struct {
-	eventBus      events.Bus
-	rfqService    rfq.BusinessLogic
-	carrierProv   carrier.CarrierProvider
-	aiGateway     ai.Gateway
-	promptManager ai.PromptManager
+	eventBus       events.Bus
+	rfqService     rfq.BusinessLogic
+	rateSvc        rates.Service // unified Rate Intelligence layer
+	aiGateway      ai.Gateway
+	promptManager  ai.PromptManager
+	backendBaseURL string // e.g. "http://backend:8080" — no trailing slash
 }
 
-func NewPricingAgent(eb events.Bus, rs rfq.BusinessLogic, cp carrier.CarrierProvider, ag ai.Gateway, pm ai.PromptManager) *PricingAgent {
+// NewPricingAgent creates a PricingAgent wired to the Rate Intelligence Service.
+// backendBaseURL is the resolved base URL of the Go backend (e.g. GO_BACKEND_URL env var).
+// The rateSvc replaces the old carrierProv — it transparently serves contract
+// rates when available and falls back to live spot rates automatically.
+func NewPricingAgent(eb events.Bus, rs rfq.BusinessLogic, rateSvc rates.Service, ag ai.Gateway, pm ai.PromptManager, backendBaseURL string) *PricingAgent {
 	return &PricingAgent{
-		eventBus:      eb,
-		rfqService:    rs,
-		carrierProv:   cp,
-		aiGateway:     ag,
-		promptManager: pm,
+		eventBus:       eb,
+		rfqService:     rs,
+		rateSvc:        rateSvc,
+		aiGateway:      ag,
+		promptManager:  pm,
+		backendBaseURL: backendBaseURL,
 	}
 }
 
@@ -37,7 +44,7 @@ func NewPricingAgent(eb events.Bus, rs rfq.BusinessLogic, cp carrier.CarrierProv
 func (a *PricingAgent) Start() {
 	// Listen for when an RFQ is assigned to pricing.
 	a.eventBus.Subscribe(events.EventRFQAssigned, a.handleRFQAssigned)
-	
+
 	// Listen to RFQ Created as well to auto-assign for this demo
 	a.eventBus.Subscribe(events.EventRFQCreated, a.handleRFQCreated)
 }
@@ -60,7 +67,7 @@ func (a *PricingAgent) handleRFQAssigned(e events.Event) {
 	if !ok {
 		return
 	}
-	
+
 	// Convert IDs cleanly
 	var rfqID int32
 	switch v := payload["rfq_id"].(type) {
@@ -72,143 +79,55 @@ func (a *PricingAgent) handleRFQAssigned(e events.Event) {
 		rfqID = int32(v)
 	}
 
-	// Hardcode orgID 5 for MVP if not in payload (since it's not emitted in AdvanceStage)
-	orgID := int32(5)
+	var orgID int32
+	if val, ok := payload["org_id"].(int32); ok {
+		orgID = val
+	} else if val, ok := payload["org_id"].(int); ok {
+		orgID = int32(val)
+	} else if val, ok := payload["org_id"].(float64); ok {
+		orgID = int32(val)
+	} else {
+		log.Printf("[PricingAgent] Error: org_id is missing in EventRFQAssigned payload: %v", payload)
+		return
+	}
 
 	ctx := context.Background()
 
-	// 1. COLLECTING_INFORMATION
-	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateCollectingInformation)
-	
-	rfqData, err := a.rfqService.GetRFQ(ctx, orgID, rfqID)
+	// 1. Update status to COLLECTING_INFORMATION
+	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, "COLLECTING_INFORMATION")
+
+	// Get correlation ID if present in the event payload
+	correlationID := ""
+	if val, ok := payload["correlation_id"].(string); ok {
+		correlationID = val
+	}
+
+	// Construct task payload
+	taskPayload := map[string]interface{}{
+		"rfq_id":         rfqID,
+		"org_id":         orgID,
+		"entity_type":    "RFQ",
+		"entity_id":      strconv.Itoa(int(rfqID)),
+		"correlation_id": correlationID,
+		"callback_url":   a.backendBaseURL + "/internal/pricing/callback",
+	}
+
+	// Create AI task in generalized queue
+	err := a.rfqService.CreateAITask(
+		ctx,
+		int64(orgID),
+		"RFQ",
+		strconv.Itoa(int(rfqID)),
+		"PRICING_ANALYZE",
+		taskPayload,
+	)
 	if err != nil {
-		log.Printf("[PricingAgent] Failed to fetch RFQ %d: %v", rfqID, err)
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
+		log.Printf("[PricingAgent] Failed to create AI task for RFQ %d: %v", rfqID, err)
+		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, "ERROR")
 		return
 	}
 
-	origin := ""
-	dest := ""
-	if rfqData.Origin != nil { origin = *rfqData.Origin }
-	if rfqData.Destination != nil { dest = *rfqData.Destination }
-
-	incoterms := ""
-	if rfqData.Incoterms != nil { incoterms = *rfqData.Incoterms }
-
-	grossWeight := 0.0
-	volumeCBM := 0.0
-	commodity := ""
-
-	if len(rfqData.Items) > 0 {
-		commodity = rfqData.Items[0].Description
-		for _, item := range rfqData.Items {
-			if item.WeightKG != nil {
-				grossWeight += *item.WeightKG
-			}
-			if item.VolumeCBM != nil {
-				volumeCBM += *item.VolumeCBM
-			}
-		}
-	}
-
-	// Fetch Carrier Rates with cargo details
-	rates, err := a.carrierProv.GetRates(ctx, origin, dest, incoterms, grossWeight, volumeCBM, commodity)
-	if err != nil {
-		log.Printf("[PricingAgent] Failed to fetch rates: %v", err)
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
-		return
-	}
-
-	// 2. ANALYZING_DATA
-	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateAnalyzing)
-	
-	ratesJSON, _ := json.Marshal(rates)
-	itemsJSON, _ := json.Marshal(rfqData.Items)
-	targetDate := ""
-	if rfqData.TargetDate != nil { targetDate = rfqData.TargetDate.Format("2006-01-02") }
-
-	promptVars := map[string]interface{}{
-		"Origin":      origin,
-		"Destination": dest,
-		"Incoterms":   incoterms,
-		"TargetDate":  targetDate,
-		"Items":       string(itemsJSON),
-		"CarrierRates": string(ratesJSON),
-	}
-
-	prompt, err := a.promptManager.GetPrompt("pricing_analyst", promptVars)
-	if err != nil {
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
-		return
-	}
-
-	// 3. WAITING_FOR_LLM
-	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateWaitingForLLM)
-
-	// ── CALLING THE AI ─────────────────────────────────────────────────────────
-	// This sends our prompt (containing the cargo details, Incoterms, and
-	// available shipping lines) to the AI router. 
-	// Under the hood, the AI router will try Google Gemini first. If Gemini is
-	// busy or down, it automatically falls back to ChatGPT (OpenAI). If both
-	// are missing keys, it uses our mock data so the app doesn't break.
-	responseStr, err := a.aiGateway.ExecutePrompt(ctx, prompt)
-	if err != nil {
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
-		return
-	}
-
-	// 4. GENERATING_DRAFT
-	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateGeneratingDraft)
-
-	// Parse AI Response
-	type AIResponse struct {
-		Recommendation common.AIRecommendation `json:"recommendation"`
-		DraftQuote     struct {
-			CarrierName           string  `json:"carrier_name"`
-			BuyPrice              float64 `json:"buy_price"`
-			SellPrice             float64 `json:"sell_price"`
-			TransitTimeDays       int     `json:"transit_time_days"`
-			ReliabilityScore      int     `json:"reliability_score"`
-			HistoricalSuccessRate float64 `json:"historical_success_rate"`
-		} `json:"draft_quote"`
-	}
-
-	var aiResp AIResponse
-	if err := json.Unmarshal([]byte(responseStr), &aiResp); err != nil {
-		log.Printf("[PricingAgent] Failed to parse JSON: %v", err)
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
-		return
-	}
-
-	transitDays := aiResp.DraftQuote.TransitTimeDays
-	reasoning := aiResp.Recommendation.Reason
-
-	quote := &spec.Quote{
-		RFQID:                 rfqID,
-		CarrierName:           aiResp.DraftQuote.CarrierName,
-		BuyPrice:              aiResp.DraftQuote.BuyPrice,
-		SellPrice:             aiResp.DraftQuote.SellPrice,
-		TransitTimeDays:       &transitDays,
-		ReliabilityScore:      aiResp.DraftQuote.ReliabilityScore,
-		HistoricalSuccessRate: aiResp.DraftQuote.HistoricalSuccessRate,
-		IsRecommended:         true,
-		AiReasoning:           &reasoning,
-		Status:                "DRAFT", // Important! AI only drafts
-	}
-
-	err = a.rfqService.AddQuote(ctx, orgID, quote)
-	if err != nil {
-		_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateError)
-		return
-	}
-
-	// Emit custom agent event (Draft Quote Generated)
-	a.eventBus.Publish(events.Event{
-		Type:      events.EventType("agent.pricing.draft_ready"),
-		Payload:   map[string]interface{}{"rfq_id": rfqID, "quote_id": quote.ID, "recommendation": aiResp.Recommendation},
-	})
-
-	// 5. WAITING_FOR_HUMAN
-	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, StateWaitingForHuman)
-	fmt.Printf("[PricingAgent] Successfully generated draft quote for RFQ %d\n", rfqID)
+	// 2. Set status to PROCESSING (meaning queued and worker will pick up shortly)
+	_ = a.rfqService.UpdateAgentStatus(ctx, orgID, rfqID, "PROCESSING")
+	log.Printf("[PricingAgent] Enqueued PRICING_ANALYZE task for RFQ %d in org %d", rfqID, orgID)
 }

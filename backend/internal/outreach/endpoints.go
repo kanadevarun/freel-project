@@ -32,7 +32,7 @@ func NewAllOutreachEndpoints(bl BusinessLogic) Endpoints {
 }
 
 func getOrgID(ctx context.Context) (int32, error) {
-	userCtx, ok := ctx.Value(middleware.UserContextKey).(*middleware.UserContext)
+	userCtx, ok := middleware.GetUserContext(ctx)
 	if !ok {
 		return 0, svcerror.NewServiceError(svcerror.ErrInsufficientResourceAccess)
 	}

@@ -50,7 +50,7 @@ export default function RoadFreightCTA() {
         {/* Headline */}
         <h2 className="cta-headline">
           The Trucks Move Freight.<br />
-          Freel Moves The Entire Network.
+          LogisticsHQ Moves The Entire Network.
         </h2>
 
         {/* Supporting text */}

@@ -221,7 +221,7 @@ export default function GlobalScale() {
 
           <p className="gs-body">
             Global trade moves through a vast network of ports, airports,
-            carriers and distribution hubs. Freel connects it all in one platform.
+            carriers and distribution hubs. LogisticsHQ connects it all in one platform.
           </p>
 
           <div className="gs-meta-row">

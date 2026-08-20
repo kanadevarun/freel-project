@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/utils"
 )
 
@@ -24,7 +25,6 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 
 	err := h.service.Signup(r.Context(), req)
 	if err != nil {
-		// Basic error handling for Cognito errors, could be expanded
 		utils.Error(w, http.StatusBadRequest, err.Error(), "SIGNUP_FAILED")
 		return
 	}
@@ -64,6 +64,22 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Login successful", data)
 }
 
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req RefreshRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid request payload", "INVALID_PAYLOAD")
+		return
+	}
+
+	data, err := h.service.Refresh(r.Context(), req)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, err.Error(), "REFRESH_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Token refreshed successfully", data)
+}
+
 func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	var req ForgotPasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,9 +112,6 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Password reset successfully. Please log in.", nil)
 }
 
-// AcceptInvite processes the POST /auth/invite/accept HTTP request.
-// It decodes the token and user details from the JSON body, and delegates
-// the business logic to the Auth Service.
 func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	var req AcceptInviteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -116,12 +129,17 @@ func (h *Handler) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	// MVP: For now, we will simply extract the basic user information from a passed token.
-	// In Phase 2, we will implement full JWT validation via middleware.
-	// Since the user asked for a simple MVP get auth me that extracts info from Authorization header:
-	
-	// Example of a basic placeholder that returns generic success:
-	utils.Success(w, http.StatusOK, "User details fetched successfully", CurrentUserResponseData{
-		Email: "user@example.com", // This will be decoded from token later
-	})
+	userCtx, ok := r.Context().Value(middleware.UserContextKey).(middleware.UserContext)
+	if !ok || userCtx.UserID == 0 {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
+
+	data, err := h.service.GetMe(r.Context(), userCtx.UserID)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, err.Error(), "FETCH_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "User details fetched successfully", data)
 }

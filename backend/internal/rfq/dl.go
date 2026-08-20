@@ -3,6 +3,7 @@ package rfq
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -23,6 +24,7 @@ type Datalayer interface {
 	GetQuotesByRFQ(ctx context.Context, rfqID int32) ([]spec.Quote, error)
 	// ApproveQuote sets the chosen quote to APPROVED and rejects all others for this RFQ.
 	ApproveQuote(ctx context.Context, rfqID, quoteID int32) error
+	CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error
 }
 
 type dataLayer struct {
@@ -36,8 +38,7 @@ func NewDataLayer(db *sqlx.DB) Datalayer {
 func (d *dataLayer) CreateRFQ(ctx context.Context, rfq *spec.RFQ) error {
 	query := `
 		INSERT INTO rfqs (org_id, rfq_number, customer_id, stage, origin, destination, incoterms, target_date, created_at, updated_at)
-		VALUES (:org_id, :rfq_number, :customer_id, :stage, :origin, :destination, :incoterms, :target_date, :created_at, :updated_at)
-		RETURNING id
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 	rfq.CreatedAt = time.Now()
 	rfq.UpdatedAt = time.Now()
@@ -45,31 +46,31 @@ func (d *dataLayer) CreateRFQ(ctx context.Context, rfq *spec.RFQ) error {
 		rfq.Stage = spec.StageRFQCreated
 	}
 
-	rows, err := d.db.NamedQueryContext(ctx, query, rfq)
+	res, err := d.db.ExecContext(ctx, query, rfq.OrgID, rfq.RFQNumber, rfq.CustomerID, rfq.Stage, rfq.Origin, rfq.Destination, rfq.Incoterms, rfq.TargetDate)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-
-	if rows.Next() {
-		return rows.Scan(&rfq.ID)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
 	}
+	rfq.ID = int32(id)
 	return nil
 }
 
 func (d *dataLayer) GetRFQByID(ctx context.Context, orgID, rfqID int32) (*spec.RFQ, error) {
 	var rfq spec.RFQ
-	query := `SELECT * FROM rfqs WHERE id = $1 AND org_id = $2`
+	query := `SELECT * FROM rfqs WHERE id = ? AND org_id = ?`
 	err := d.db.GetContext(ctx, &rfq, query, rfqID, orgID)
 	if err != nil {
 		return nil, err
 	}
 	
 	// Load items
-	d.db.SelectContext(ctx, &rfq.Items, `SELECT * FROM rfq_items WHERE rfq_id = $1`, rfq.ID)
+	d.db.SelectContext(ctx, &rfq.Items, `SELECT * FROM rfq_items WHERE rfq_id = ?`, rfq.ID)
 	
 	// Load quotes
-	d.db.SelectContext(ctx, &rfq.Quotes, `SELECT * FROM rfq_quotes WHERE rfq_id = $1`, rfq.ID)
+	d.db.SelectContext(ctx, &rfq.Quotes, `SELECT * FROM rfq_quotes WHERE rfq_id = ?`, rfq.ID)
 
 	return &rfq, nil
 }
@@ -85,7 +86,7 @@ func (d *dataLayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int
 			r.org_id,
 			r.rfq_number,
 			r.customer_id,
-			COALESCE(c.company_name, '') AS customer_name,
+			COALESCE(comp.name, '') AS customer_name,
 			r.stage,
 			r.origin,
 			r.destination,
@@ -99,9 +100,10 @@ func (d *dataLayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int
 			r.updated_at
 		FROM rfqs r
 		LEFT JOIN customers c ON c.id = r.customer_id
-		WHERE r.org_id = $1
+		LEFT JOIN companies comp ON comp.id = c.company_id
+		WHERE r.org_id = ?
 		ORDER BY r.created_at DESC
-		LIMIT $2 OFFSET $3
+		LIMIT ? OFFSET ?
 	`
 	err := d.db.SelectContext(ctx, &rfqs, query, orgID, limit, offset)
 	if err != nil {
@@ -109,13 +111,13 @@ func (d *dataLayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int
 	}
 
 	var total int
-	d.db.GetContext(ctx, &total, `SELECT COUNT(*) FROM rfqs WHERE org_id = $1`, orgID)
+	d.db.GetContext(ctx, &total, `SELECT COUNT(*) FROM rfqs WHERE org_id = ?`, orgID)
 
 	return rfqs, total, nil
 }
 
 func (d *dataLayer) UpdateStage(ctx context.Context, orgID, rfqID int32, stage string) error {
-	query := `UPDATE rfqs SET stage = $1, updated_at = NOW() WHERE id = $2 AND org_id = $3`
+	query := `UPDATE rfqs SET stage = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`
 	res, err := d.db.ExecContext(ctx, query, stage, rfqID, orgID)
 	if err != nil {
 		return err
@@ -128,7 +130,7 @@ func (d *dataLayer) UpdateStage(ctx context.Context, orgID, rfqID int32, stage s
 }
 
 func (d *dataLayer) UpdateAgentStatus(ctx context.Context, orgID, rfqID int32, status string) error {
-	query := `UPDATE rfqs SET agent_status = $1, updated_at = NOW() WHERE id = $2 AND org_id = $3`
+	query := `UPDATE rfqs SET agent_status = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`
 	res, err := d.db.ExecContext(ctx, query, status, rfqID, orgID)
 	if err != nil {
 		return err
@@ -143,28 +145,27 @@ func (d *dataLayer) UpdateAgentStatus(ctx context.Context, orgID, rfqID int32, s
 func (d *dataLayer) CreateRFQItem(ctx context.Context, item *spec.RFQItem) error {
 	query := `
 		INSERT INTO rfq_items (rfq_id, description, quantity, weight_kg, volume_cbm, created_at, updated_at)
-		VALUES (:rfq_id, :description, :quantity, :weight_kg, :volume_cbm, :created_at, :updated_at)
-		RETURNING id
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
 	`
 	item.CreatedAt = time.Now()
 	item.UpdatedAt = time.Now()
 	
-	rows, err := d.db.NamedQueryContext(ctx, query, item)
+	res, err := d.db.ExecContext(ctx, query, item.RFQID, item.Description, item.Quantity, item.WeightKG, item.VolumeCBM)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-	if rows.Next() {
-		return rows.Scan(&item.ID)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
 	}
+	item.ID = int32(id)
 	return nil
 }
 
 func (d *dataLayer) CreateQuote(ctx context.Context, quote *spec.Quote) error {
 	query := `
 		INSERT INTO rfq_quotes (rfq_id, carrier_name, transit_time_days, buy_price, sell_price, is_recommended, reliability_score, historical_success_rate, ai_reasoning, status, created_at, updated_at)
-		VALUES (:rfq_id, :carrier_name, :transit_time_days, :buy_price, :sell_price, :is_recommended, :reliability_score, :historical_success_rate, :ai_reasoning, :status, :created_at, :updated_at)
-		RETURNING id
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
 	`
 	quote.CreatedAt = time.Now()
 	quote.UpdatedAt = time.Now()
@@ -172,20 +173,24 @@ func (d *dataLayer) CreateQuote(ctx context.Context, quote *spec.Quote) error {
 		quote.Status = "DRAFT"
 	}
 	
-	rows, err := d.db.NamedQueryContext(ctx, query, quote)
+	res, err := d.db.ExecContext(ctx, query,
+		quote.RFQID, quote.CarrierName, quote.TransitTimeDays, quote.BuyPrice, quote.SellPrice,
+		quote.IsRecommended, quote.ReliabilityScore, quote.HistoricalSuccessRate, quote.AiReasoning, quote.Status,
+	)
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-	if rows.Next() {
-		return rows.Scan(&quote.ID)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
 	}
+	quote.ID = int32(id)
 	return nil
 }
 
 func (d *dataLayer) GetQuotesByRFQ(ctx context.Context, rfqID int32) ([]spec.Quote, error) {
 	var quotes []spec.Quote
-	query := `SELECT * FROM rfq_quotes WHERE rfq_id = $1 ORDER BY created_at ASC`
+	query := `SELECT * FROM rfq_quotes WHERE rfq_id = ? ORDER BY created_at ASC`
 	err := d.db.SelectContext(ctx, &quotes, query, rfqID)
 	return quotes, err
 }
@@ -202,7 +207,7 @@ func (d *dataLayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) erro
 
 	// Reject all other quotes for this RFQ first
 	_, err = tx.ExecContext(ctx,
-		`UPDATE rfq_quotes SET status = 'REJECTED', updated_at = NOW() WHERE rfq_id = $1 AND id != $2`,
+		`UPDATE rfq_quotes SET status = 'REJECTED', updated_at = NOW() WHERE rfq_id = ? AND id != ?`,
 		rfqID, quoteID,
 	)
 	if err != nil {
@@ -211,7 +216,7 @@ func (d *dataLayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) erro
 
 	// Approve the selected quote
 	res, err := tx.ExecContext(ctx,
-		`UPDATE rfq_quotes SET status = 'APPROVED', is_recommended = TRUE, updated_at = NOW() WHERE id = $1 AND rfq_id = $2`,
+		`UPDATE rfq_quotes SET status = 'APPROVED', is_recommended = TRUE, updated_at = NOW() WHERE id = ? AND rfq_id = ?`,
 		quoteID, rfqID,
 	)
 	if err != nil {
@@ -223,4 +228,21 @@ func (d *dataLayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) erro
 	}
 
 	return tx.Commit()
+}
+
+func (d *dataLayer) CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal task payload: %w", err)
+	}
+
+	const query = `
+INSERT INTO ai_processing_tasks (
+    org_id, entity_type, entity_id, task_type, payload, status, created_at, updated_at
+) VALUES (
+    ?, ?, ?, ?, ?, 'QUEUED', NOW(), NOW()
+)
+`
+	_, err = d.db.ExecContext(ctx, query, orgID, entityType, entityID, taskType, payloadJSON)
+	return err
 }

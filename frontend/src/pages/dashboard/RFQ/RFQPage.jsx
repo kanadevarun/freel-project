@@ -19,7 +19,8 @@ export default function RFQPage() {
     setIsLoading(true);
     try {
       const res = await rfqService.listRFQs();
-      setRfqs(res.data.rfqs || []);
+      const items = Array.isArray(res) ? res : (res?.data || res?.rfqs || []);
+      setRfqs(items);
     } catch (error) {
       console.error('Failed to fetch RFQs:', error);
       toast.error('Failed to load RFQs');
@@ -87,6 +88,7 @@ export default function RFQPage() {
         rfqs={filteredRFQs} 
         isLoading={isLoading} 
         onRowClick={handleRowClick}
+        onNewRFQ={() => setShowBuilder(true)}
       />
 
       {showBuilder && (

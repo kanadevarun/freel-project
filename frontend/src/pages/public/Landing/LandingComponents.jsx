@@ -4,24 +4,74 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 export function PageLoader() {
   const [loading, setLoading] = useState(true);
   const [fadeOut, setFadeOut] = useState(false);
+  const [statusIdx, setStatusIdx] = useState(0);
+
+  const statuses = [
+    'Initializing Freight Command OS...',
+    'Syncing Multi-Modal Carrier Rates...',
+    'Connecting AIS Vessel & Flight Tracking...',
+    'Logistics Workspace Ready'
+  ];
 
   useEffect(() => {
     // Only show on initial mount (hard refresh)
-    const timer = setTimeout(() => {
-      setFadeOut(true);
-      setTimeout(() => setLoading(false), 600); // match fade out transition
-    }, 1200);
-    return () => clearTimeout(timer);
+    const s1 = setTimeout(() => setStatusIdx(1), 400);
+    const s2 = setTimeout(() => setStatusIdx(2), 850);
+    const s3 = setTimeout(() => setStatusIdx(3), 1300);
+    const fadeTimer = setTimeout(() => setFadeOut(true), 1650);
+    const removeTimer = setTimeout(() => setLoading(false), 2150);
+
+    return () => {
+      clearTimeout(s1);
+      clearTimeout(s2);
+      clearTimeout(s3);
+      clearTimeout(fadeTimer);
+      clearTimeout(removeTimer);
+    };
   }, []);
 
   if (!loading) return null;
 
   return (
     <div className={`page-loader ${fadeOut ? 'fade-out' : ''}`}>
+      <div className="loader-ambient-glow" />
+      <div className="loader-grid-mesh" />
       <div className="loader-content">
-        <h1 className="loader-logo">Freel</h1>
-        <div className="loader-bar-bg">
-          <div className="loader-bar-fill" />
+        {/* 3D Logo on top of name */}
+        <div className="loader-logo-box">
+          <img
+            src="/images/logo/logo.png"
+            alt="LogisticsHQ"
+            className="loader-logo-img"
+          />
+          <div className="loader-orbit-ring" />
+        </div>
+
+        {/* Brand Title */}
+        <h1 className="loader-logo">LogisticsHQ</h1>
+
+        {/* Tagline */}
+        <p className="loader-tagline">
+          The Operating System for Global Logistics
+        </p>
+
+        {/* Telemetry Progress */}
+        <div className="loader-progress-wrapper">
+          <div className="loader-bar-bg">
+            <div className="loader-bar-fill" />
+          </div>
+          <div className="loader-status-text">
+            <span className="loader-status-beacon" />
+            <span>{statuses[statusIdx]}</span>
+          </div>
+        </div>
+
+        {/* Transport Modes Badges */}
+        <div className="loader-modes">
+          <span className="loader-mode-chip">✈️ Air</span>
+          <span className="loader-mode-chip">🚢 Ocean</span>
+          <span className="loader-mode-chip">🚛 Road</span>
+          <span className="loader-mode-chip">🏢 Customs</span>
         </div>
       </div>
     </div>

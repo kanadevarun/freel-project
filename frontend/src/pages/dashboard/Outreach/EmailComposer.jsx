@@ -46,7 +46,7 @@ export default function EmailComposer() {
       const result = await generateEmail({
         company_name: companyName.trim(),
         industry: industry.trim(),
-        goal: goal.trim() || 'introduce Freel as a freight forwarding partner',
+        goal: goal.trim() || 'introduce LogisticsHQ as a freight forwarding partner',
       });
 
       // Populate the editable output fields

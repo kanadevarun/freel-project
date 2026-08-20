@@ -34,7 +34,7 @@ func TestGetRoles(t *testing.T) {
 			prepareMock: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{"id", "org_id", "name", "description"}).
 					AddRow(1, 1, "SUPER_ADMIN", "Full access")
-				mock.ExpectQuery(`SELECT id, org_id, name, description FROM roles WHERE org_id = \$1 ORDER BY id ASC`).
+				mock.ExpectQuery(`SELECT id, org_id, name, description FROM roles WHERE org_id = \? ORDER BY id ASC`).
 					WithArgs(int64(1)).
 					WillReturnRows(rows)
 			},
@@ -99,14 +99,14 @@ func TestGetRolePermissions(t *testing.T) {
 			wantErr: false,
 			prepareMock: func(mock sqlmock.Sqlmock) {
 				// 1. Verify role
-				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \$1 AND org_id = \$2`).
+				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \? AND org_id = \?`).
 					WithArgs(int64(1), int64(1)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(1))
 
 				// 2. Get permissions
 				permsRows := sqlmock.NewRows([]string{"resource", "action"}).
 					AddRow("COMPANIES", "READ")
-				mock.ExpectQuery(`SELECT p\.resource, p\.action FROM role_permissions rp JOIN permissions p ON rp\.permission_id = p\.id WHERE rp\.role_id = \$1`).
+				mock.ExpectQuery(`SELECT p\.resource, p\.action FROM role_permissions rp JOIN permissions p ON rp\.permission_id = p\.id WHERE rp\.role_id = \?`).
 					WithArgs(int64(1)).
 					WillReturnRows(permsRows)
 			},
@@ -166,7 +166,7 @@ func TestUpdateRolePermissions(t *testing.T) {
 			wantErr: false,
 			prepareMock: func(mock sqlmock.Sqlmock) {
 				// 1. Verify role
-				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \$1 AND org_id = \$2`).
+				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \? AND org_id = \?`).
 					WithArgs(int64(1), int64(1)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(1))
 
@@ -174,12 +174,12 @@ func TestUpdateRolePermissions(t *testing.T) {
 				mock.ExpectBegin()
 
 				// 3. Delete existing
-				mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = \$1`).
+				mock.ExpectExec(`DELETE FROM role_permissions WHERE role_id = \?`).
 					WithArgs(int64(1)).
 					WillReturnResult(sqlmock.NewResult(0, 1))
 
 				// 4. Insert new
-				mock.ExpectPrepare(`INSERT INTO role_permissions \(role_id, permission_id\) SELECT \$1, id FROM permissions WHERE resource = \$2 AND action = \$3`)
+				mock.ExpectPrepare(`INSERT INTO role_permissions \(role_id, permission_id\) SELECT \?, id FROM permissions WHERE resource = \? AND action = \?`)
 				mock.ExpectExec(`INSERT INTO role_permissions`).
 					WithArgs(int64(1), "COMPANIES", "READ").
 					WillReturnResult(sqlmock.NewResult(0, 1))

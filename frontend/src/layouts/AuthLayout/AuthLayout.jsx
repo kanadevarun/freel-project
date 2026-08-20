@@ -1,5 +1,6 @@
 import { Outlet, Link } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
+import LogisticsHQLogo from '../../components/Brand/LogisticsHQLogo';
 import './AuthLayout.css';
 
 export default function AuthLayout() {
@@ -18,10 +19,7 @@ export default function AuthLayout() {
           
           {/* Header */}
           <div className="auth-brand-header">
-            <Link to="/" className="auth-logo">
-              <span className="auth-logo-icon">⚡</span>
-              Freel
-            </Link>
+            <LogisticsHQLogo variant="header" linkTo="/" className="auth-logo" />
             <div className="auth-tagline">
               Freight OS<br />For Global Trade
             </div>

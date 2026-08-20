@@ -184,7 +184,7 @@ export default function CustomsBrokerage() {
                   </div>
                   <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3">
                     <div className="text-xs text-slate-500">CHA Facilitator</div>
-                    <div className="text-md font-bold text-green-600">Freel CHA Tier-1</div>
+                    <div className="text-md font-bold text-green-600">LogisticsHQ CHA Tier-1</div>
                   </div>
                 </div>
               </div>

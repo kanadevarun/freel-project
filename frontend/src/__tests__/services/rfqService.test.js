@@ -12,7 +12,7 @@ describe('rfqService', () => {
   it('listRFQs calls api.get with correct params', async () => {
     api.get.mockResolvedValue({ data: { rfqs: [], total: 0 } });
     await rfqService.listRFQs(10, 20);
-    expect(api.get).toHaveBeenCalledWith('/rfqs?limit=10&offset=20');
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs?limit=10&offset=20');
   });
 
   it('parseShipmentRequest calls api.post with raw_text', async () => {
@@ -21,7 +21,7 @@ describe('rfqService', () => {
     
     const result = await rfqService.parseShipmentRequest('Please quote Miami to London');
     
-    expect(api.post).toHaveBeenCalledWith('/rfqs/parse-shipment-request', {
+    expect(api.post).toHaveBeenCalledWith('/api/v1/rfqs/parse-shipment-request', {
       raw_text: 'Please quote Miami to London'
     });
     expect(result).toEqual(mockResponse);

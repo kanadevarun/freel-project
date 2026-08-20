@@ -170,3 +170,18 @@ func (mr *MockDatalayerMockRecorder) UpdateStage(ctx, orgID, rfqID, stage any) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStage", reflect.TypeOf((*MockDatalayer)(nil).UpdateStage), ctx, orgID, rfqID, stage)
 }
+
+// CreateAITask mocks base method.
+func (m *MockDatalayer) CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAITask", ctx, orgID, entityType, entityID, taskType, payload)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateAITask indicates an expected call of CreateAITask.
+func (mr *MockDatalayerMockRecorder) CreateAITask(ctx, orgID, entityType, entityID, taskType, payload any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAITask", reflect.TypeOf((*MockDatalayer)(nil).CreateAITask), ctx, orgID, entityType, entityID, taskType, payload)
+}
+

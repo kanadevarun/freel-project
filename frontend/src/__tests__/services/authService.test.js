@@ -54,7 +54,7 @@ describe('authService', () => {
 
       const result = await signup({
         full_name: 'Alice',
-        company_name: 'Freel',
+        company_name: 'LogisticsHQ',
         email: 'alice@logisticshq.in',
         password: 'P@ssword123',
         role: 'freight_forwarder',

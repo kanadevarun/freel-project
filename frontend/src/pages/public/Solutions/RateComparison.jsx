@@ -144,11 +144,11 @@ export default function RateComparison() {
               <div className="rc-prob-card-msg">The market moved before<br/>the quotes arrived.</div>
             </div>
 
-            {/* Right Card: Freel Intelligence */}
+            {/* Right Card: LogisticsHQ Intelligence */}
             <div className="rc-prob-card rc-prob-right">
-              <h3 className="rc-prob-card-title">Freel Intelligence</h3>
+              <h3 className="rc-prob-card-title">LogisticsHQ Intelligence</h3>
               <div className="rc-prob-img-box">
-                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" alt="Freel Intelligence" />
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" alt="LogisticsHQ Intelligence" />
                 <div className="rc-prob-chip rc-pchip-5">✅ 200+ Live Rates</div>
                 <div className="rc-prob-chip rc-pchip-6">✅ Updated Hourly</div>
                 <div className="rc-prob-chip rc-pchip-7">✅ Best Carrier Identified</div>
@@ -275,7 +275,7 @@ export default function RateComparison() {
               Start Controlling Spend.
             </h2>
             <p className="rc-impact-desc">
-              Freel helps procurement teams buy at the right time,<br />
+              LogisticsHQ helps procurement teams buy at the right time,<br />
               from the right carrier, at the right price.
             </p>
           </div>
@@ -408,7 +408,7 @@ export default function RateComparison() {
             </h2>
             <p className="rc-drivers-desc">
               Rates change because markets move.<br />
-              Freel helps you understand why.
+              LogisticsHQ helps you understand why.
             </p>
           </div>
 
@@ -423,7 +423,7 @@ export default function RateComparison() {
                   Freight pricing is influenced by fuel costs, port congestion, cargo capacity, global trade events and seasonal demand.
                 </p>
                 <p className="rc-unified-text">
-                  Freel tracks these signals continuously so teams can understand not just the price, but the reason behind it.
+                  LogisticsHQ tracks these signals continuously so teams can understand not just the price, but the reason behind it.
                 </p>
                 
                 <div className="rc-signal-chips">

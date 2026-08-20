@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import LogisticsHQLogo from '../Brand/LogisticsHQLogo';
 import {
   Plane, Ship, Truck, Train, Scroll, ShieldCheck, Warehouse, FileText,
   Calculator, Timer, Anchor, Globe,
@@ -73,7 +74,7 @@ export default function Navbar() {
     <nav className={`navbar ${navClass}`} id="main-navbar">
       <div className="navbar-container">
         {/* Logo */}
-        <Link to="/" className="navbar-logo">Freel</Link>
+        <LogisticsHQLogo variant="header" linkTo="/" className="navbar-logo" />
 
         {/* Desktop Links */}
         <div className="navbar-links">

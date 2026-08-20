@@ -81,7 +81,7 @@ export default function EngineeringBlog() {
     <div className="bg-ui-surface min-h-screen">
       <section className="blog-hero">
         <div className="blog-tag">
-          <span className="text-lg">⚙️</span> Engineering at Freel
+          <span className="text-lg">⚙️</span> Engineering at LogisticsHQ
         </div>
         <h1 className="blog-hero-title">
           The <span className="text-gradient bg-gradient-to-r from-brand-teal to-brand-indigo">Engineering</span> Blog

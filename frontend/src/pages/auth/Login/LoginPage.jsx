@@ -5,6 +5,7 @@ import { login as apiLogin } from '../../../services/authService';
 import { useAuth } from '../../../context/AuthContext';
 import { onboardingStorage } from '../../../utils/onboardingStorage';
 import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
+import LogisticsHQLogo from '../../../components/Brand/LogisticsHQLogo';
 import './LoginPage.css';
 
 export default function LoginPage() {
@@ -31,19 +32,24 @@ export default function LoginPage() {
       // Call real auth service
       const response = await apiLogin(formData);
       
-      // Update global context (localStorage) via helper
-      await setGlobalAuth(response.data);
+      // Handle both unwrapped and wrapped response structures safely
+      const tokenData = response?.access_token ? response : (response?.data || response);
+      
+      // Update global context (localStorage) via helper with real user and org data
+      await setGlobalAuth(
+        tokenData,
+        tokenData?.user || { email: formData.email },
+        tokenData?.org || { name: 'ABC Logistics' },
+        tokenData?.role
+      );
 
-      if (onboardingStorage.isOnboardingCompleted()) {
-        navigate('/dashboard');
-      } else {
-        navigate('/onboarding');
-      }
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message ? err : { message: 'Incorrect email or password.' });
     } finally {
       setIsLoading(false);
     }
+
   };
 
   const handleGoogleLogin = () => {
@@ -65,7 +71,7 @@ export default function LoginPage() {
         <div className="login-left-content">
           <div className="login-left-main">
             <span className="login-badge">GLOBAL FREIGHT PLATFORM</span>
-            <h1 className="login-heading">Welcome Back To Freel</h1>
+            <h1 className="login-heading">Welcome Back To LogisticsHQ</h1>
             <p className="login-description">
               Manage shipments, compare freight rates, collaborate with your logistics team, and monitor global cargo movements from a single platform.
             </p>
@@ -109,8 +115,8 @@ export default function LoginPage() {
           
           {/* Logo & Header */}
           <div className="login-card-header">
-            <div className="login-logo">
-              <span className="login-logo-icon">⚡</span> FREEL
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <LogisticsHQLogo variant="auth" linkTo="/" />
             </div>
             <h2>Welcome Back</h2>
             <p>Sign in to access your freight workspace.</p>

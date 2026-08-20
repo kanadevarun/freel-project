@@ -7,13 +7,13 @@ import (
 
 	"github.com/freel/backend/internal/reports/spec"
 	"github.com/freel/backend/internal/svcerror"
+	"github.com/go-chi/chi/v5"
 	kitHttp "github.com/go-kit/kit/transport/http"
-	"github.com/gorilla/mux"
 )
 
 // AddReportsHandlers adds the handlers to the rest methods for the reports module
 func AddReportsHandlers(
-	router *mux.Router,
+	router chi.Router,
 	endpoints Endpoints,
 	authMiddleware func(http.Handler) http.Handler,
 ) {
@@ -28,7 +28,7 @@ func AddReportsHandlers(
 		options...,
 	))
 
-	router.Methods(http.MethodGet).Path(spec.GetMetricsURL).Handler(metricsHandler)
+	router.Get("/metrics", metricsHandler.ServeHTTP)
 }
 
 func decodeGetMetricsRequest(_ context.Context, r *http.Request) (interface{}, error) {

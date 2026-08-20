@@ -28,16 +28,16 @@ func NewRepository(db *sqlx.DB) Repository {
 // Simple meaning: It takes the organization data and saves it permanently into the Postgres database.
 // Example: err := repo.Create(ctx, &Organization{Name: "Acme Corp"})
 func (r *repository) Create(ctx context.Context, org *Organization) error {
-	query := `INSERT INTO organizations (name, created_at, updated_at) VALUES (:name, :created_at, :updated_at) RETURNING id`
-	
-	// Prepare the statement with named arguments
-	stmt, err := r.db.PrepareNamedContext(ctx, query)
+	query := `INSERT INTO organizations (name, created_at, updated_at) VALUES (?, NOW(), NOW())`
+	res, err := r.db.ExecContext(ctx, query, org.Name)
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
-
-	return stmt.QueryRowxContext(ctx, org).Scan(&org.ID)
+	id, err := res.LastInsertId()
+	if err == nil {
+		org.ID = id
+	}
+	return nil
 }
 
 // GetByID retrieves an organization by its ID.
@@ -45,7 +45,7 @@ func (r *repository) Create(ctx context.Context, org *Organization) error {
 // Example: org, err := repo.GetByID(ctx, 123)
 func (r *repository) GetByID(ctx context.Context, id int64) (*Organization, error) {
 	var org Organization
-	query := `SELECT id, name, created_at, updated_at FROM organizations WHERE id = $1`
+	query := `SELECT id, name, created_at, updated_at FROM organizations WHERE id = ?`
 	err := r.db.GetContext(ctx, &org, query, id)
 	if err != nil {
 		return nil, err

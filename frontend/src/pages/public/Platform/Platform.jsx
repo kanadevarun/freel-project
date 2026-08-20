@@ -158,7 +158,7 @@ export default function Platform() {
 
                 <div className="flex justify-between items-center relative z-10">
                   <div>
-                    <div className="text-sm text-slate-500 mb-1">Freel Command OS</div>
+                    <div className="text-sm text-slate-500 mb-1">LogisticsHQ Command OS</div>
                     <div className="text-slate-800 font-bold text-xl flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span> Systems Operational
                     </div>
@@ -246,7 +246,7 @@ export default function Platform() {
                 <span className="text-brand-teal font-bold tracking-widest uppercase text-sm mb-3 block">
                   Console Telemetry
                 </span>
-                <h2 className="text-4xl md:text-5xl font-extrabold mb-6">Four Pillars of Freel OS</h2>
+                <h2 className="text-4xl md:text-5xl font-extrabold mb-6">Four Pillars of LogisticsHQ OS</h2>
                 <p className="text-slate-300 text-lg mb-8 leading-relaxed">
                   Our system combines ground operational capabilities with modern cloud automation. Click on each pillar below to sync your screen and see active operations metrics.
                 </p>
@@ -402,7 +402,7 @@ export default function Platform() {
                   />
                   <div className="absolute bottom-0 left-0 w-full p-8 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent z-20">
                     <div className="text-brand-teal font-mono text-xs mb-1 uppercase tracking-widest">
-                      Freel Dashboard Software
+                      LogisticsHQ Dashboard Software
                     </div>
                     <div className="text-white font-bold text-2xl">
                       Automated Analytics & Discovery
@@ -422,7 +422,7 @@ export default function Platform() {
                     Smart Analytics & Single Pane of Glass
                   </h2>
                   <p className="text-slate-600 text-lg leading-relaxed mb-6">
-                    Managing fragmented logistics providers requires smart dashboards. Freel aggregates rate sheets, transit lanes, document compliance, and financial audits into one powerful software window.
+                    Managing fragmented logistics providers requires smart dashboards. LogisticsHQ aggregates rate sheets, transit lanes, document compliance, and financial audits into one powerful software window.
                   </p>
                   <p className="text-slate-500 text-sm leading-relaxed">
                     With automated invoicing audits and digital E-POD wallets, your logistics desk spends less time resolving paperwork discrepancies and more time shipping. Our rate comparative metrics offer full transparency with no hidden margins.

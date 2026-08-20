@@ -187,7 +187,7 @@ export default function About() {
                     <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#14B8A6,#2563EB)' }}>
                       <Zap className="w-4 h-4 text-white" />
                     </div>
-                    <span className="font-bold text-slate-800 text-[15px] tracking-tight">Freel OS</span>
+                    <span className="font-bold text-slate-800 text-[15px] tracking-tight">LogisticsHQ OS</span>
                   </div>
                   <div className="flex items-center gap-1.5 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>
@@ -1079,7 +1079,7 @@ export default function About() {
             className="text-center text-[#64748B] max-w-[700px] mb-[100px]"
             style={{ fontSize: '18px', lineHeight: 1.7 }}
           >
-            The real challenge is keeping everyone—from carriers to customers—aligned with accurate data. <strong className="text-slate-800 font-semibold">Freel is the operating system connecting them all.</strong>
+            The real challenge is keeping everyone—from carriers to customers—aligned with accurate data. <strong className="text-slate-800 font-semibold">LogisticsHQ is the operating system connecting them all.</strong>
           </motion.p>
 
           {/* Ecosystem Visualization */}
@@ -1162,7 +1162,7 @@ export default function About() {
               </motion.div>
             ))}
 
-            {/* Center Freel Node */}
+            {/* Center LogisticsHQ Node */}
             <motion.div
               initial={{ opacity: 0, scale: 0.5 }}
               whileInView={{ opacity: 1, scale: 1 }}
@@ -1179,7 +1179,7 @@ export default function About() {
               <div className="absolute inset-0 rounded-full animate-pulse opacity-40 pointer-events-none" style={{ border: '2px solid rgba(255,255,255,0.2)', transform: 'scale(1.1)' }}/>
               <div className="absolute inset-0 rounded-full animate-pulse opacity-20 pointer-events-none" style={{ border: '1px solid rgba(255,255,255,0.1)', transform: 'scale(1.25)', animationDelay: '0.5s' }}/>
 
-              <div className="text-white text-[48px] font-black tracking-tight mb-1" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>Freel</div>
+              <div className="text-white text-[38px] font-black tracking-tight mb-1" style={{ textShadow: '0 4px 20px rgba(0,0,0,0.1)' }}>LogisticsHQ</div>
               <div className="text-teal-100 text-[12px] font-bold uppercase tracking-[0.2em] text-center px-4 leading-relaxed">
                 Logistics<br/>Operating System
               </div>
@@ -1207,7 +1207,7 @@ export default function About() {
               className="font-black text-[#0F172A] mb-6 tracking-tight"
               style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, maxWidth: '900px' }}
             >
-              What Changes When<br/>Companies Switch To <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#14B8A6] to-[#2563EB]">Freel</span>?
+              What Changes When<br/>Companies Switch To <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#14B8A6] to-[#2563EB]">LogisticsHQ</span>?
             </motion.h2>
 
             <motion.p
@@ -1222,7 +1222,7 @@ export default function About() {
           {/* Main Comparison Area */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px_1fr] gap-8 lg:gap-0 items-stretch relative">
             
-            {/* Left Column: Before Freel */}
+            {/* Left Column: Before LogisticsHQ */}
             <motion.div
               initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.3 }}
               className="flex flex-col gap-6 w-full"
@@ -1230,7 +1230,7 @@ export default function About() {
               {/* Header */}
               <div className="flex flex-col items-center text-center mb-6">
                 <div className="bg-red-500 text-white text-[11px] font-bold tracking-widest uppercase px-5 py-1.5 rounded-full mb-6 shadow-sm">
-                  Before Freel
+                  Before LogisticsHQ
                 </div>
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Disconnected. Manual. Error-Prone.</h3>
               </div>
@@ -1392,7 +1392,7 @@ export default function About() {
               </motion.div>
             </div>
 
-            {/* Right Column: With Freel */}
+            {/* Right Column: With LogisticsHQ */}
             <motion.div
               initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.5 }}
               className="flex flex-col gap-6 w-full"
@@ -1400,7 +1400,7 @@ export default function About() {
               {/* Header */}
               <div className="flex flex-col items-center text-center mb-6">
                 <div className="text-white text-[11px] font-bold tracking-widest uppercase px-5 py-1.5 rounded-full mb-6 shadow-sm" style={{ background: 'linear-gradient(135deg, #14B8A6, #2563EB)' }}>
-                  With Freel
+                  With LogisticsHQ
                 </div>
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">Connected. Automated. Reliable.</h3>
               </div>
@@ -1528,7 +1528,7 @@ export default function About() {
             <div>
               <h3 className="text-[28px] font-black text-slate-800 mb-2">From Disconnected To Intelligent</h3>
               <p className="text-slate-600 text-[18px] leading-relaxed max-w-[800px]">
-                Freel brings freight operations, compliance, documents, communication, and visibility together in one unified operating system.
+                LogisticsHQ brings freight operations, compliance, documents, communication, and visibility together in one unified operating system.
               </p>
             </div>
           </motion.div>
@@ -1589,7 +1589,7 @@ export default function About() {
               className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full mb-12"
             >
               <Link to="/contact" className="h-[64px] px-[36px] rounded-full flex items-center justify-center text-white font-bold text-lg transition-transform hover:scale-105 duration-300" style={{ background: 'linear-gradient(135deg, #14B8A6, #2563EB)' }}>
-                Join Freel
+                Join LogisticsHQ
               </Link>
               <Link to="/contact" className="h-[64px] px-[36px] rounded-full flex items-center justify-center text-white font-bold text-lg transition-colors hover:bg-white/10 duration-300" style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.2)' }}>
                 Book Demo

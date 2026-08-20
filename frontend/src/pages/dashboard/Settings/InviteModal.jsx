@@ -19,17 +19,25 @@ export default function InviteModal({ isOpen, onClose, onSuccess }) {
     }
   }, [isOpen]);
 
+  const DEFAULT_ROLES = [
+    { id: 1, name: 'SUPER_ADMIN', description: 'Full system & organization administration' },
+    { id: 2, name: 'ADMIN', description: 'Full organization workspace access' },
+    { id: 3, name: 'SALES', description: 'Manage leads, pipeline & customer outreach' },
+    { id: 4, name: 'PRICING', description: 'Manage carrier rates, RFQ quotes & margins' },
+    { id: 5, name: 'OPERATIONS', description: 'Manage carrier bookings, container tracking & docs' },
+  ];
+
   const fetchRoles = async () => {
     setIsLoadingRoles(true);
     try {
       const data = await api.get('/api/v1/roles');
-      setRoles(data || []);
-      if (data && data.length > 0) {
-        setRoleId(data[0].id);
-      }
+      const loadedRoles = (Array.isArray(data) && data.length > 0) ? data : DEFAULT_ROLES;
+      setRoles(loadedRoles);
+      setRoleId(loadedRoles[0].id);
     } catch (err) {
       console.error("Failed to fetch roles:", err);
-      setError('Failed to load available roles.');
+      setRoles(DEFAULT_ROLES);
+      setRoleId(DEFAULT_ROLES[0].id);
     } finally {
       setIsLoadingRoles(false);
     }

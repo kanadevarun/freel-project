@@ -1,88 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { dashboardService } from '../../../services/dashboardService';
-import toast from 'react-hot-toast';
-
-import MissionControlLayout from '../../../components/dashboard/MissionControl/MissionControlLayout';
-import StatCardWidget from '../../../components/dashboard/MissionControl/StatCardWidget';
-import ApprovalQueueWidget from '../../../components/dashboard/MissionControl/ApprovalQueueWidget';
-import GlobalTimelineWidget from '../../../components/dashboard/MissionControl/GlobalTimelineWidget';
-import AIWorkforceWidget from '../../../components/dashboard/MissionControl/AIWorkforceWidget';
-
+import NewFFDashboard from './NewFFDashboard';
+import OperationalDashboard from './OperationalDashboard';
 import './DashboardHome.css';
 
 export default function DashboardHome() {
-  const { user } = useAuth();
+  const { user, isBooting, isAuthenticated } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
+    if (isBooting) return;
+
+    let isMounted = true;
+
     const fetchMissionControl = async () => {
       try {
+        setLoading(true);
+        setAuthError(false);
+        setFetchError(null);
+
         const response = await dashboardService.getMissionControl();
-        setData(response.data);
+        if (isMounted) {
+          // Normalize response envelope
+          const missionData = response?.data || response || {};
+          setData(missionData);
+        }
       } catch (err) {
-        console.error("Failed to fetch mission control data", err);
-        toast.error("Failed to load Mission Control");
+        if (isMounted) {
+          console.error('Failed to fetch mission control data', err);
+          if (err?.status === 401 || err?.code === 'UNAUTHORIZED') {
+            setAuthError(true);
+          } else {
+            const errorMsg = typeof err === 'string' ? err : err?.message || 'Unable to connect to service';
+            setFetchError(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg));
+          }
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchMissionControl();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  return (
-    <div className="dashboard-home">
-      <div className="dashboard-welcome">
-        <h1>Welcome back, {user?.full_name || user?.email?.split('@')[0]}</h1>
-        <p>Mission Control: Here is what requires your attention today.</p>
+  // 1. Loading State
+  if (loading) {
+    return (
+      <div className="dashboard-loading-state">
+        <div className="dashboard-spinner"></div>
+        <p className="loading-text">Loading freight workspace...</p>
       </div>
+    );
+  }
 
-      {loading ? (
-        <div className="dashboard-loading">
-          <div className="spinner"></div>
-          <p>Loading Mission Control...</p>
-        </div>
-      ) : data ? (
-        <MissionControlLayout>
-          <div className="mc-stats-strip">
-            <StatCardWidget 
-              title="Total Revenue" 
-              value={data.stats?.total_revenue || 0} 
-              prefix="$" 
-              trend={5.2} 
-            />
-            <StatCardWidget 
-              title="Open RFQs" 
-              value={data.stats?.open_rfqs || 0} 
-            />
-            <StatCardWidget 
-              title="Open Leads" 
-              value={data.stats?.open_leads || 0} 
-            />
-            <StatCardWidget 
-              title="Active Shipments" 
-              value={data.stats?.active_shipments || 0} 
-            />
-          </div>
+  // 2. Authentication Error (401)
+  if (authError) {
+    return (
+      <div className="dashboard-notice-card auth-error">
+        <div className="notice-icon">🔒</div>
+        <h3>Session Expired or Unauthorized</h3>
+        <p>Please log in again to access your freight workspace.</p>
+        <button
+          className="btn-notice-action"
+          onClick={() => {
+            window.location.href = '/login';
+          }}
+        >
+          Go to Login →
+        </button>
+      </div>
+    );
+  }
 
-          <div className="mc-main-queue">
-            <ApprovalQueueWidget queue={data.approval_queue} />
-          </div>
+  // 3. Backend Error (500)
+  if (fetchError && !data) {
+    return (
+      <div className="dashboard-notice-card server-error">
+        <div className="notice-icon">⚠️</div>
+        <h3>Unable to load workspace data</h3>
+        <p>{String(fetchError)}</p>
+        <button
+          className="btn-notice-action secondary"
+          onClick={() => window.location.reload()}
+        >
+          Retry Connection
+        </button>
+      </div>
+    );
+  }
 
-          <div className="mc-side-timeline">
-            <GlobalTimelineWidget timeline={[]} />
-          </div>
+  // 4. Determine Progressive Dashboard State
+  // An organization is considered operational if it has any active RFQs, shipments, revenue, or pending quotes in queue.
+  const stats = data?.stats || {};
+  const approvalQueue = data?.approval_queue || [];
+  const isOperational =
+    (stats.open_rfqs && stats.open_rfqs > 0) ||
+    (stats.active_shipments && stats.active_shipments > 0) ||
+    (stats.total_revenue && stats.total_revenue > 0) ||
+    (stats.open_leads && stats.open_leads > 0) ||
+    approvalQueue.length > 0;
 
-          <div className="mc-ai-strip">
-            <AIWorkforceWidget status={data.ai_status} />
-          </div>
-        </MissionControlLayout>
-      ) : (
-        <div className="dashboard-error">
-          <p>Failed to load dashboard data. Please refresh.</p>
-        </div>
-      )}
-    </div>
-  );
+  if (isOperational) {
+    return <OperationalDashboard data={data} />;
+  }
+
+  // Default: New Freight Forwarder Onboarding / Empty-State Dashboard
+  return <NewFFDashboard />;
 }

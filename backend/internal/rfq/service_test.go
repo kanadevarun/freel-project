@@ -5,8 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/freel/backend/internal/ai"
 	"github.com/freel/backend/internal/carrier"
 	"github.com/freel/backend/internal/common/events"
+	"github.com/freel/backend/internal/rates"
 	"github.com/freel/backend/internal/rfq"
 	"github.com/freel/backend/internal/rfq/mocks"
 	"github.com/freel/backend/internal/rfq/spec"
@@ -27,7 +29,19 @@ func newServiceWithMocks(t *testing.T) (rfq.BusinessLogic, *mocks.MockDatalayer,
 	carrierProvider := carrier.NewMockProvider()
 	carrierSvc := carrier.NewService(carrierProvider)
 
-	svc := rfq.NewBusinessLogic(mockRepo, eventBus, carrierSvc)
+	// satisfy the rates.Service dependency
+	ratesRepo := rates.NewRepository(nil)
+	spotNormalizer := rates.NewSpotNormalizer()
+	rateSvc := rates.NewService(ratesRepo, spotNormalizer, carrierSvc)
+
+	// satisfy the ai.Gateway and ai.PromptManager dependencies
+	mockProviders := map[string]ai.Provider{
+		"mock": ai.NewMockProvider(),
+	}
+	aiGateway := ai.NewGateway(mockProviders)
+	promptManager := ai.NewPromptManager()
+
+	svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager)
 	return svc, mockRepo, eventBus
 }
 
@@ -127,3 +141,62 @@ func TestService_AdvanceStage(t *testing.T) {
 		assert.Nil(t, updatedRfq)
 	})
 }
+
+func TestService_ParseShipmentRequest(t *testing.T) {
+	t.Run("Successfully parses raw shipment request email via AI", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		mockRepo := mocks.NewMockDatalayer(ctrl)
+		eventBus := events.NewInProcessBus()
+
+		// satisfy dependencies
+		carrierProvider := carrier.NewMockProvider()
+		carrierSvc := carrier.NewService(carrierProvider)
+		ratesRepo := rates.NewRepository(nil)
+		spotNormalizer := rates.NewSpotNormalizer()
+		rateSvc := rates.NewService(ratesRepo, spotNormalizer, carrierSvc)
+
+		// Create a custom provider returning the exact expected JSON format
+		customResponse := `{
+			"data": {
+				"origin": "Nhava Sheva",
+				"destination": "Hamburg",
+				"incoterms": "FOB",
+				"weight": "15 Tons",
+				"volume": "30 CBM"
+			},
+			"confidence_score": 95,
+			"missing_fields": ["Target Date"]
+		}`
+		mockProviders := map[string]ai.Provider{
+			"mock": &customMockProvider{response: customResponse},
+		}
+		aiGateway := ai.NewGateway(mockProviders)
+		promptManager := ai.NewPromptManager()
+
+		svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager)
+
+		resp, err := svc.ParseShipmentRequest(context.Background(), "Please quote from Nhava Sheva to Hamburg FOB, weight 15 Tons, 30 CBM")
+		require.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		dataMap := resp.Data.(map[string]interface{})
+		innerData := dataMap["data"].(map[string]interface{})
+
+		assert.Equal(t, "Nhava Sheva", *(innerData["origin"].(*string)))
+		assert.Equal(t, "Hamburg", *(innerData["destination"].(*string)))
+		assert.Equal(t, "FOB", *(innerData["incoterms"].(*string)))
+		assert.Equal(t, "15 Tons", *(innerData["weight"].(*string)))
+		assert.Equal(t, "30 CBM", *(innerData["volume"].(*string)))
+		assert.Equal(t, 95, dataMap["confidence_score"].(int))
+		assert.Equal(t, []string{"Target Date"}, dataMap["missing_fields"].([]string))
+	})
+}
+
+type customMockProvider struct {
+	response string
+}
+
+func (p *customMockProvider) GenerateCompletion(ctx context.Context, prompt string) (string, error) {
+	return p.response, nil
+}
+

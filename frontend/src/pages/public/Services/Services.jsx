@@ -228,7 +228,7 @@ export default function Services() {
         <Reveal>
           <div style={{ maxWidth: '700px', margin: '0 auto' }}>
             <h2>Start Shipping Smarter Today</h2>
-            <p>Get instant access to all services with your free Freel account.</p>
+            <p>Get instant access to all services with your free LogisticsHQ account.</p>
             <Link to="/signup" className="services-cta-banner-btn">
               Get Started →
             </Link>

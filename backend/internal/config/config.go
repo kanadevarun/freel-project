@@ -28,6 +28,19 @@ func LoadConfig() *Config {
 		log.Println("No .env file found or error loading it, relying on system environment variables.")
 	}
 
+	dbHost := getEnv("DB_HOST", "127.0.0.1")
+	dbPort := getEnv("DB_PORT", "3306")
+	dbUser := getEnv("DB_USER", "root")
+	dbPassword := getEnv("DB_PASSWORD", "")
+	dbName := getEnv("DB_NAME", "freel_mysql")
+
+	var defaultMySQLDSN string
+	if dbPassword != "" {
+		defaultMySQLDSN = dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true&loc=UTC&multiStatements=true"
+	} else {
+		defaultMySQLDSN = dbUser + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?parseTime=true&loc=UTC&multiStatements=true"
+	}
+
 	cfg := &Config{
 		AppEnv:              getEnv("APP_ENV", "development"),
 		Port:                getEnv("PORT", "8080"),
@@ -37,7 +50,7 @@ func LoadConfig() *Config {
 		CognitoUserPoolID:   getEnv("COGNITO_USER_POOL_ID", ""),
 		CognitoClientID:     getEnv("COGNITO_CLIENT_ID", ""),
 		CognitoClientSecret: getEnv("COGNITO_CLIENT_SECRET", ""),
-		DatabaseURL:         getEnv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable"),
+		DatabaseURL:         getEnv("DB_URL", defaultMySQLDSN),
 		OpenAIAPIKey:        getEnv("OPENAI_API_KEY", ""),
 		GeminiAPIKey:        getEnv("GEMINI_API_KEY", ""),
 	}

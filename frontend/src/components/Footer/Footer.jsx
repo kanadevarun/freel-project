@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import LogisticsHQLogo from '../Brand/LogisticsHQLogo';
 import './Footer.css';
 
 const footerData = {
@@ -35,9 +36,9 @@ export default function Footer() {
         <div className="footer-grid">
           {/* Brand Column */}
           <div className="footer-brand">
-            <Link to="/" className="footer-logo">Freel</Link>
+            <LogisticsHQLogo variant="footer" linkTo="/" className="footer-logo" />
             <p className="footer-tagline">
-              India's first multi-modal logistics OS. Your Freight Command Center — Road • Air • Sea.
+              The multi-modal logistics operating system. Your Freight Command Center — Road • Air • Sea.
             </p>
           </div>
 
@@ -85,7 +86,7 @@ export default function Footer() {
         {/* Bottom Row */}
         <div className="footer-bottom">
           <div className="footer-copyright">
-            © {new Date().getFullYear()} Freel Technologies Pvt. Ltd. All rights reserved.
+            © {new Date().getFullYear()} LogisticsHQ. All rights reserved.
           </div>
           <div className="footer-socials">
             <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="social-link">X (Twitter)</a>

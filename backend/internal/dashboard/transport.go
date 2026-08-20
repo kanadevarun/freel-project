@@ -7,23 +7,20 @@ import (
 
 	"github.com/freel/backend/internal/dashboard/spec"
 	"github.com/freel/backend/internal/svcerror"
+	"github.com/go-chi/chi/v5"
 	kitHttp "github.com/go-kit/kit/transport/http"
-	"github.com/gorilla/mux"
 )
 
 // AddDashboardHandlers adds the handlers to the rest methods for the dashboard module
 func AddDashboardHandlers(
-	router *mux.Router,
+	router chi.Router,
 	endpoints Endpoints,
 	authMiddleware func(http.Handler) http.Handler,
 ) {
-	// Options for go-kit HTTP server
 	options := []kitHttp.ServerOption{
 		kitHttp.ServerErrorEncoder(encodeErrorResponse),
 	}
 
-	// Get Mission Control
-	// We wrap the go-kit handler with our existing auth middleware
 	missionControlHandler := authMiddleware(kitHttp.NewServer(
 		endpoints.GetMissionControlEP,
 		decodeGetMissionControlRequest,
@@ -31,7 +28,7 @@ func AddDashboardHandlers(
 		options...,
 	))
 
-	router.Methods(http.MethodGet).Path(spec.GetMissionControlURL).Handler(missionControlHandler)
+	router.Get("/mission-control", missionControlHandler.ServeHTTP)
 }
 
 func decodeGetMissionControlRequest(_ context.Context, r *http.Request) (interface{}, error) {

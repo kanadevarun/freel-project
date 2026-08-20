@@ -211,74 +211,154 @@ export default function LeadsPage() {
         </button>
       </div>
 
-      {/* ─── Table ─── */}
-      <div className="leads-table-wrap">
-        <table className="leads-table">
-          <thead>
-            <tr>
-              <th>Company</th>
-              <th>Status</th>
-              <th>AI Score</th>
-              <th>Source</th>
-              <th>Added</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <SkeletonRows count={7} />
-            ) : visibleLeads.length === 0 ? (
+      {/* ─── Table or Enterprise Empty State ─── */}
+      {loading ? (
+        <div className="leads-table-wrap">
+          <table className="leads-table">
+            <thead>
               <tr>
-                <td colSpan={5}>
-                  <div className="leads-empty">
-                    <div className="leads-empty-icon">
-                      {searchQuery ? '🔍' : '🎯'}
-                    </div>
-                    <div className="leads-empty-title">
-                      {searchQuery ? 'No leads match your search' : 'No leads yet'}
-                    </div>
-                    <div className="leads-empty-sub">
-                      {searchQuery
-                        ? 'Try a different search term'
-                        : 'Add your first lead or import a CSV file'}
-                    </div>
-                  </div>
-                </td>
+                <th>Company</th>
+                <th>Status</th>
+                <th>AI Score</th>
+                <th>Source</th>
+                <th>Added</th>
               </tr>
-            ) : (
-              visibleLeads.map(lead => {
-                const statusCfg = STATUS_CFG[lead.status] || { label: lead.status, type: 'neutral' };
-                const avatar = lead.company_name?.slice(0, 2).toUpperCase() || '??';
+            </thead>
+            <tbody>
+              <SkeletonRows count={7} />
+            </tbody>
+          </table>
+        </div>
+      ) : allLeads.length === 0 ? (
+        <div className="leads-empty-enterprise" style={{
+          background: '#FFFFFF',
+          border: '1px solid #E2E8F0',
+          borderRadius: '16px',
+          padding: '48px 32px 32px 32px',
+          textAlign: 'center',
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+        }}>
+          <div style={{
+            width: '56px',
+            height: '56px',
+            borderRadius: '14px',
+            background: '#EFF6FF',
+            border: '1px solid #DBEAFE',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.6rem',
+            margin: '0 auto 16px auto',
+          }}>
+            🎯
+          </div>
+          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+            No leads yet
+          </h3>
+          <p style={{ fontSize: '0.85rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+            Start building your customer pipeline. Add your first prospect manually or import your existing customer list.
+          </p>
 
-                return (
-                  <tr key={lead.id} onClick={() => setSelectedLead(lead)}>
-                    <td>
-                      <div className="lead-company-cell">
-                        <div className="lead-avatar">{avatar}</div>
-                        <div>
-                          <div className="lead-company-name">{lead.company_name}</div>
-                          <div className="lead-contact-name">{lead.contact_name || lead.email || '—'}</div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '32px' }}>
+            <button
+              className="leads-btn leads-btn-primary"
+              onClick={() => setShowAddModal(true)}
+              style={{ padding: '10px 22px', fontSize: '0.82rem', fontWeight: 700 }}
+            >
+              + Add Your First Lead
+            </button>
+            <button
+              className="leads-btn leads-btn-ghost"
+              onClick={() => setShowImportModal(true)}
+              style={{ padding: '10px 20px', fontSize: '0.82rem', fontWeight: 600 }}
+            >
+              📥 Import from CSV
+            </button>
+          </div>
+
+          {/* AI Lead Qualification Feature Banner */}
+          <div style={{
+            borderTop: '1px solid #F1F5F9',
+            paddingTop: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            color: '#475569',
+            fontSize: '0.78rem',
+          }}>
+            <span style={{
+              background: '#EEF2FF',
+              color: '#4F46E5',
+              fontWeight: 800,
+              padding: '2px 8px',
+              borderRadius: '4px',
+              fontSize: '0.68rem',
+            }}>
+              AI FEATURE
+            </span>
+            <span><strong>AI Lead Qualification:</strong> LogisticsHQ automatically scores and prioritizes new leads based on shipment volume and trade lanes.</span>
+          </div>
+        </div>
+      ) : (
+        <div className="leads-table-wrap">
+          <table className="leads-table">
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Status</th>
+                <th>AI Score</th>
+                <th>Source</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleLeads.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="leads-empty">
+                      <div className="leads-empty-icon">🔍</div>
+                      <div className="leads-empty-title">No leads match your search</div>
+                      <div className="leads-empty-sub">Try a different search term</div>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                visibleLeads.map(lead => {
+                  const statusCfg = STATUS_CFG[lead.status] || { label: lead.status, type: 'neutral' };
+                  const avatar = lead.company_name?.slice(0, 2).toUpperCase() || '??';
+
+                  return (
+                    <tr key={lead.id} onClick={() => setSelectedLead(lead)}>
+                      <td>
+                        <div className="lead-company-cell">
+                          <div className="lead-avatar">{avatar}</div>
+                          <div>
+                            <div className="lead-company-name">{lead.company_name}</div>
+                            <div className="lead-contact-name">{lead.contact_name || lead.email || '—'}</div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <StatusBadge
-                        status={lead.status || 'NEW'}
-                        customLabel={statusCfg.label}
-                        customType={statusCfg.type}
-                      />
-                    </td>
-                    <td><AIScoreBadge score={lead.ai_score} /></td>
-                    <td style={{ color: '#475569' }}>{lead.source || '—'}</td>
-                    <td style={{ color: '#94A3B8', fontSize: 12 }}>
-                      {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '—'}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                      </td>
+                      <td>
+                        <StatusBadge
+                          status={lead.status || 'NEW'}
+                          customLabel={statusCfg.label}
+                          customType={statusCfg.type}
+                        />
+                      </td>
+                      <td><AIScoreBadge score={lead.ai_score} /></td>
+                      <td style={{ color: '#475569' }}>{lead.source || '—'}</td>
+                      <td style={{ color: '#94A3B8', fontSize: 12 }}>
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString() : '—'}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* ─── Modals & Drawer ─── */}
       {selectedLead && (

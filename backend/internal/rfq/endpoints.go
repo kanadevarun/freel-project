@@ -40,7 +40,7 @@ func NewAllRFQEndpoints(bl BusinessLogic) Endpoints {
 }
 
 func getOrgID(ctx context.Context) (int32, error) {
-	userCtx, ok := ctx.Value(middleware.UserContextKey).(*middleware.UserContext)
+	userCtx, ok := middleware.GetUserContext(ctx)
 	if !ok {
 		return 0, svcerror.NewServiceError(svcerror.ErrInsufficientResourceAccess)
 	}
@@ -163,19 +163,11 @@ func makeParseShipmentRequestEndpoint(bl BusinessLogic) endpoint.Endpoint {
 		}
 		req.OrgID = orgID
 
-		// Mock AI parser
-		return &spec.ParseShipmentResponse{
-			Data: map[string]interface{}{
-				"origin":      "Shanghai",
-				"destination": "Los Angeles",
-				"incoterms":   "FOB",
-				"items": []map[string]interface{}{
-					{"description": "Electronics", "quantity": 10},
-				},
-				"confidence":     92,
-				"missing_fields": []string{"Target Date", "Weight"},
-			},
-		}, nil
+		rawText := req.RawEmail
+		if rawText == "" {
+			rawText = req.RawText
+		}
+		return bl.ParseShipmentRequest(ctx, rawText)
 	}
 }
 

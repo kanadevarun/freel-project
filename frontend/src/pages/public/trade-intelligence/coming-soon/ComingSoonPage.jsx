@@ -90,7 +90,7 @@ export default function TradeIntelligenceComingSoon({
           <h1 className="cs-title">{title}</h1>
           <p className="cs-subtitle">
             We're building this page with the same care and depth as everything else in the
-            Freel Trade Intelligence hub. It will be ready soon — check back shortly!
+            LogisticsHQ Trade Intelligence hub. It will be ready soon — check back shortly!
           </p>
         </motion.div>
 

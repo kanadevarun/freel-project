@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo } from 'react';
 import { useAuth } from './AuthContext';
 
 /**
- * RBACContext — Role-Based Access Control for the Freel frontend.
+ * RBACContext — Role-Based Access Control for the LogisticsHQ frontend.
  *
  * Consumes `role` from AuthContext and provides two helpers:
  *   can(module, action) — returns true if the user has the given permission.

@@ -1,54 +1,15 @@
 package spec
 
-// RFQ paths
+// RFQ paths (relative to /api/v1/rfqs mount)
 const (
-	// swagger:operation GET /rfqs RFQ ListRFQs
-	// ---
-	// summary: List RFQs
-	ListURL = "/api/v1/rfqs"
-
-	// swagger:operation GET /rfqs/{id} RFQ GetRFQ
-	// ---
-	// summary: Get RFQ
-	GetURL = "/api/v1/rfqs/{id:[0-9]+}"
-
-	// swagger:operation GET /rfqs/{id}/timeline RFQ GetTimeline
-	// ---
-	// summary: Get RFQ Timeline
-	GetTimelineURL = "/api/v1/rfqs/{id:[0-9]+}/timeline"
-
-	// swagger:operation GET /rfqs/{id}/agent-status RFQ GetAgentStatus
-	// ---
-	// summary: Get Agent Status
-	GetAgentStatusURL = "/api/v1/rfqs/{id:[0-9]+}/agent-status"
-
-	// swagger:operation POST /rfqs RFQ CreateRFQ
-	// ---
-	// summary: Create RFQ
-	CreateURL = "/api/v1/rfqs"
-
-	// swagger:operation PUT /rfqs/{id}/stage RFQ UpdateStage
-	// ---
-	// summary: Update RFQ Stage
-	UpdateStageURL = "/api/v1/rfqs/{id:[0-9]+}/stage"
-
-	// swagger:operation POST /rfqs/parse-shipment-request RFQ ParseShipmentRequest
-	// ---
-	// summary: Parse Shipment Request via AI
-	ParseShipmentRequestURL = "/api/v1/rfqs/parse-shipment-request"
-
-	// swagger:operation POST /rfqs/{id}/quotes RFQ AddQuote
-	// ---
-	// summary: Add Quote to RFQ
-	AddQuoteURL = "/api/v1/rfqs/{id:[0-9]+}/quotes"
-
-	// swagger:operation GET /rfqs/{id}/carrier-rates RFQ GetCarrierRates
-	// ---
-	// summary: Fetch carrier rate options for an RFQ (from FF partner / mock)
-	GetCarrierRatesURL = "/api/v1/rfqs/{id:[0-9]+}/carrier-rates"
-
-	// swagger:operation POST /rfqs/{id}/approve-quote RFQ ApproveQuote
-	// ---
-	// summary: Approve a quote and advance RFQ stage to QUOTE_SENT
-	ApproveQuoteURL = "/api/v1/rfqs/{id:[0-9]+}/approve-quote"
+	ListURL                 = "/"
+	GetURL                  = "/{id:[0-9]+}"
+	GetTimelineURL          = "/{id:[0-9]+}/timeline"
+	GetAgentStatusURL       = "/{id:[0-9]+}/agent-status"
+	CreateURL               = "/"
+	UpdateStageURL          = "/{id:[0-9]+}/stage"
+	ParseShipmentRequestURL = "/parse-shipment-request"
+	AddQuoteURL             = "/{id:[0-9]+}/quotes"
+	GetCarrierRatesURL      = "/{id:[0-9]+}/carrier-rates"
+	ApproveQuoteURL         = "/{id:[0-9]+}/approve-quote"
 )

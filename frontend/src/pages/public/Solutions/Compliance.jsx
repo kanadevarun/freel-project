@@ -452,7 +452,7 @@ export default function Compliance() {
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-indigo to-brand-teal">To Customs Ready.</span>
             </h2>
             <p className="text-lg lg:text-xl text-slate-500 max-w-[760px] leading-[1.6]">
-              Upload shipment details once. Freel automatically validates HSN codes, analyzes MSDS documents, verifies customer credentials, calculates duties, and ensures customs readiness before booking.
+              Upload shipment details once. LogisticsHQ automatically validates HSN codes, analyzes MSDS documents, verifies customer credentials, calculates duties, and ensures customs readiness before booking.
             </p>
           </div>
 
@@ -1126,20 +1126,20 @@ export default function Compliance() {
         </div>
       </section>
 
-      {/* ═══ WHY FREEL (EMBEDDED WORKFLOW) ═══ */}
+      {/* ═══ WHY LOGISTICSHQ (EMBEDDED WORKFLOW) ═══ */}
       <section className="bg-slate-50 py-[120px] overflow-hidden">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
           
           {/* Section Header */}
           <div className="flex flex-col items-center text-center mb-24">
             <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-200/50 border border-slate-300 text-slate-700 text-xs font-bold tracking-widest uppercase mb-[40px]">
-              Why Freel
+              Why LogisticsHQ
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-[#0F172A] leading-tight tracking-tight max-w-[900px] mb-[24px]">
               Compliance Built Into Logistics.<br/>Not Added On Later.
             </h2>
             <p className="text-[22px] text-[#64748B] leading-[1.7] max-w-[800px]">
-              Most compliance platforms live outside the shipping workflow. Freel validates, verifies, calculates, and clears shipments directly inside the operating system.
+              Most compliance platforms live outside the shipping workflow. LogisticsHQ validates, verifies, calculates, and clears shipments directly inside the operating system.
             </p>
           </div>
 
@@ -1313,7 +1313,7 @@ export default function Compliance() {
               Stop Guessing.<br/>Start Shipping.
             </h2>
             <p className="text-[20px] md:text-[24px] text-white/75 leading-[1.7] max-w-[850px]">
-              Every shipment should know exactly what regulations apply, what documents are required, what duties will be charged, and whether it is customs ready. Freel makes that happen automatically.
+              Every shipment should know exactly what regulations apply, what documents are required, what duties will be charged, and whether it is customs ready. LogisticsHQ makes that happen automatically.
             </p>
           </div>
 

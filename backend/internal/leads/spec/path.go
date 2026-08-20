@@ -1,34 +1,11 @@
 package spec
 
-// Leads paths
+// Leads paths (relative to /api/v1/leads mount)
 const (
-	// swagger:operation GET /leads Leads ListLeads
-	// ---
-	// summary: List Leads
-	ListURL = "/api/v1/leads"
-
-	// swagger:operation POST /leads Leads CreateLead
-	// ---
-	// summary: Create Lead
-	CreateURL = "/api/v1/leads"
-
-	// swagger:operation POST /leads/import Leads ImportLeads
-	// ---
-	// summary: Import Leads
-	ImportURL = "/api/v1/leads/import"
-
-	// swagger:operation GET /leads/{id} Leads GetLead
-	// ---
-	// summary: Get Lead
-	GetURL = "/api/v1/leads/{id:[0-9]+}"
-
-	// swagger:operation PUT /leads/{id} Leads UpdateLead
-	// ---
-	// summary: Update Lead
-	UpdateURL = "/api/v1/leads/{id:[0-9]+}"
-
-	// swagger:operation DELETE /leads/{id} Leads DeleteLead
-	// ---
-	// summary: Delete Lead
-	DeleteURL = "/api/v1/leads/{id:[0-9]+}"
+	ListURL   = "/"
+	CreateURL = "/"
+	ImportURL = "/import"
+	GetURL    = "/{id:[0-9]+}"
+	UpdateURL = "/{id:[0-9]+}"
+	DeleteURL = "/{id:[0-9]+}"
 )

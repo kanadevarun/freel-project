@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -54,7 +55,13 @@ type geminiResponse struct {
 func (g *geminiProvider) GenerateCompletion(ctx context.Context, prompt string) (string, error) {
 	// ── STEP 1: CONSTRUCT URL ─────────────────────────────────────────────────
 	// We build the HTTP API endpoint URL, appending your Google AI Studio API Key.
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=%s", g.apiKey)
+	geminiModel := os.Getenv("GEMINI_MODEL")
+	if geminiModel == "" {
+		geminiModel = "gemini-3.1-flash-lite"
+	}
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", geminiModel, g.apiKey)
+
+
 
 	// ── STEP 2: BUILD JSON REQUEST BODY ───────────────────────────────────────
 	// Format the prompt text into the nested structure Gemini API expects.

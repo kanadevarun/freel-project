@@ -1,4 +1,6 @@
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import SplashScreen from './components/Splash/SplashScreen';
 import PublicLayout from './layouts/PublicLayout/PublicLayout';
 import Landing from './pages/public/Landing/Landing';
 import Services from './pages/public/Services/Services';
@@ -52,6 +54,126 @@ import RolesPage from './pages/dashboard/Settings/RolesPage';
 import LeadsPage from './pages/dashboard/Leads/LeadsPage';
 import OutreachPage from './pages/dashboard/Outreach/OutreachPage';
 import RFQPage from './pages/dashboard/RFQ/RFQPage';
+import ShipmentsPage from './pages/dashboard/Shipments/ShipmentsPage';
+import ShipmentDetail from './pages/dashboard/Shipments/ShipmentDetail';
+import ContractsPage from './pages/dashboard/Contracts/ContractsPage';
+import RateManagementPage from './pages/dashboard/RateManagement/RateManagementPage';
+import QuotationsPage from './pages/dashboard/Quotations/QuotationsPage';
+import TrackingPage from './pages/dashboard/Tracking/TrackingPage';
+import ApprovalsPage from './pages/dashboard/Approvals/ApprovalsPage';
+import InvoicesPage from './pages/dashboard/Finance/InvoicesPage';
+import PaymentsPage from './pages/dashboard/Finance/PaymentsPage';
+import CustomersPage from './pages/dashboard/Customers/CustomersPage';
+import DocumentsPage from './pages/dashboard/Documents/DocumentsPage';
+import TemplatesPage from './pages/dashboard/Templates/TemplatesPage';
+
+/** Branded workspace placeholder for modules inside the Freight OS AppShell */
+function WorkspacePlaceholder({ title, emoji, section = 'Operations', note = 'This module is currently being connected to your freight workflow.' }) {
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #E2E8F0',
+      borderRadius: '16px',
+      padding: '48px 32px',
+      textAlign: 'center',
+      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+      maxWidth: '680px',
+      margin: '40px auto',
+    }}>
+      <div style={{
+        width: '56px',
+        height: '56px',
+        borderRadius: '14px',
+        background: '#EFF6FF',
+        border: '1px solid #DBEAFE',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '1.6rem',
+        margin: '0 auto 16px auto',
+      }}>
+        {emoji}
+      </div>
+      <div style={{
+        fontSize: '0.72rem',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        letterSpacing: '0.08em',
+        color: '#2563EB',
+        marginBottom: '6px',
+      }}>
+        {section}
+      </div>
+      <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+        {title}
+      </h2>
+      <p style={{ fontSize: '0.85rem', color: '#64748B', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+        {note}
+      </p>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <Link
+          to="/dashboard"
+          style={{
+            background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+            color: '#FFFFFF',
+            borderRadius: '9px',
+            padding: '9px 20px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            textDecoration: 'none',
+            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+          }}
+        >
+          ← Back to Dashboard
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** 404 handler for routes under /dashboard/* that keeps the AppShell layout intact */
+function DashboardNotFound() {
+  return (
+    <div style={{
+      background: '#FFFFFF',
+      border: '1px solid #E2E8F0',
+      borderRadius: '16px',
+      padding: '48px 32px',
+      textAlign: 'center',
+      boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+      maxWidth: '600px',
+      margin: '40px auto',
+    }}>
+      <div style={{ fontSize: '3rem', fontWeight: 900, color: '#CBD5E1', marginBottom: '8px', lineHeight: 1 }}>
+        404
+      </div>
+      <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#64748B', marginBottom: '8px' }}>
+        LogisticsHQ Workspace
+      </div>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+        We couldn't find this workspace page.
+      </h2>
+      <p style={{ fontSize: '0.85rem', color: '#64748B', maxWidth: '380px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+        The URL you requested doesn't exist or is not available in your organization's subscription.
+      </p>
+      <Link
+        to="/dashboard"
+        style={{
+          display: 'inline-block',
+          background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+          color: '#FFFFFF',
+          borderRadius: '9px',
+          padding: '9px 20px',
+          fontSize: '0.82rem',
+          fontWeight: 700,
+          textDecoration: 'none',
+        }}
+      >
+        ← Back to Dashboard
+      </Link>
+    </div>
+  );
+}
 import './App.css';
 
 /**
@@ -60,7 +182,7 @@ import './App.css';
 function RootRedirect() {
   const { isBooting, isAuthenticated, onboardingCompleted } = useAuth();
   if (isBooting) return <div className="boot-screen"><div className="auth-spinner" /></div>;
-  
+
   if (isAuthenticated) {
     if (!onboardingCompleted) return <Navigate to="/onboarding" replace />;
     return <Navigate to="/dashboard" replace />;
@@ -121,27 +243,44 @@ function NotFoundPage() {
 }
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(() => {
+    try {
+      return !sessionStorage.getItem('lhq_splash_shown');
+    } catch {
+      return false;
+    }
+  });
+
+  const handleSplashComplete = () => {
+    try {
+      sessionStorage.setItem('lhq_splash_shown', 'true');
+    } catch {}
+    setShowSplash(false);
+  };
+
   return (
-    <AuthProvider>
-      <RBACProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
+    <>
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <AuthProvider>
+        <RBACProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <Routes>
 
-            {/* ── AUTH ROUTES (Split Panel Layout) ── */}
-            <Route element={<PublicOnlyRoute />}>
-              <Route element={<AuthLayout />}>
-                <Route path="/signup" element={<SignupPage />} />
-                <Route path="/verify-email" element={<VerifyEmailPage />} />
-                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                <Route path="/accept-invite" element={<AcceptInvitePage />} />
+              {/* ── AUTH ROUTES (Split Panel Layout) ── */}
+              <Route element={<PublicOnlyRoute />}>
+                <Route element={<AuthLayout />}>
+                  <Route path="/signup" element={<SignupPage />} />
+                  <Route path="/verify-email" element={<VerifyEmailPage />} />
+                  <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Route path="/accept-invite" element={<AcceptInvitePage />} />
+                </Route>
+
+                {/* Standalone Auth Routes */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/auth/callback" element={<CallbackPage />} />
               </Route>
-
-              {/* Standalone Auth Routes */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/auth/callback" element={<CallbackPage />} />
-            </Route>
 
             {/* ── DEMO ROUTE ── */}
             <Route path="/demo-onboarding" element={<OnboardingPage />} />
@@ -150,50 +289,44 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/onboarding" element={<OnboardingPage />} />
               <Route element={<AppShell />}>
+                {/* ── 1. OPERATIONS ── */}
                 <Route path="/dashboard" element={<DashboardHome />} />
-                
-                {/* ── REPORTS ── */}
-                <Route element={<ProtectedRoute requiredModule="DASHBOARD" requiredAction="READ" />}>
-                  <Route path="/dashboard/reports" element={<ReportsPage />} />
-                </Route>
-                
-                {/* ── SALES ── */}
-                <Route element={<ProtectedRoute requiredModule="LEADS" requiredAction="READ" />}>
-                  <Route path="/dashboard/leads" element={<LeadsPage />} />
-                </Route>
-                <Route element={<ProtectedRoute requiredModule="RFQS" requiredAction="READ" />}>
-                  <Route path="/dashboard/rfqs" element={<RFQPage />} />
-                </Route>
-                <Route element={<ProtectedRoute requiredModule="OUTREACH" requiredAction="READ" />}>
-                  <Route path="/dashboard/outreach" element={<OutreachPage />} />
-                </Route>
-                <Route element={<ProtectedRoute requiredModule="COMPANIES" requiredAction="READ" />}>
-                  <Route path="/dashboard/companies" element={<PlaceholderPage title="Company Directory" emoji="🏢" note="Global directory of freight forwarders and shippers." />} />
-                </Route>
+                <Route path="/dashboard/leads" element={<LeadsPage />} />
+                <Route path="/dashboard/rfqs" element={<RFQPage />} />
+                <Route path="/dashboard/shipments" element={<ShipmentsPage />} />
+                <Route path="/dashboard/shipments/:id" element={<ShipmentDetail />} />
+                <Route path="/dashboard/bookings" element={<ShipmentsPage mode="bookings" defaultStatus="BOOKED" />} />
+                <Route path="/dashboard/tracking" element={<TrackingPage />} />
 
-                {/* ── INTELLIGENCE ── */}
-                <Route path="/dashboard/market-insights" element={<PlaceholderPage title="Market Insights" emoji="📊" note="Global freight rate trends and analytics." />} />
-                <Route element={<ProtectedRoute requiredModule="ROUTES" requiredAction="READ" />}>
-                  <Route path="/dashboard/routes" element={<PlaceholderPage title="Route Optimization" emoji="🗺️" note="AI-driven shipment routing." />} />
-                </Route>
+                {/* ── 2. COMMERCIAL ── */}
+                <Route path="/dashboard/quotations" element={<QuotationsPage />} />
+                <Route path="/dashboard/rate-management" element={<RateManagementPage />} />
+                <Route path="/dashboard/contracts" element={<ContractsPage />} />
+                <Route path="/dashboard/companies" element={<CustomersPage />} />
 
-                {/* ── TOOLS ── */}
-                <Route path="/dashboard/calculators" element={<PlaceholderPage title="Calculators" emoji="🧮" note="CBM, Volumetric Weight, and Duty calculators." />} />
-                <Route path="/dashboard/documents" element={<PlaceholderPage title="Document Generator" emoji="📄" note="Automated generation of HBL, Commercial Invoice, etc." />} />
+                {/* ── 3. DOCUMENTS ── */}
+                <Route path="/dashboard/documents" element={<DocumentsPage />} />
+                <Route path="/dashboard/templates" element={<TemplatesPage />} />
+                <Route path="/dashboard/approvals" element={<ApprovalsPage />} />
 
-                {/* ── ADMIN (Super Admin Only fallback) ── */}
-                {/* Since we don't have dedicated 'SETTINGS' module, we can restrict by role if needed, or by a generic admin module. 
-                    For now, we'll use role="SUPER_ADMIN" via ProtectedRoute if it supported it. 
-                    Wait, ProtectedRoute currently only checks module/action. 
-                    We'll just map them to USERS/SETTINGS modules. 
-                */}
-                <Route element={<ProtectedRoute requiredModule="USERS" requiredAction="READ" />}>
-                  <Route path="/dashboard/users" element={<UsersPage />} />
-                  <Route path="/dashboard/settings" element={<RolesPage />} />
-                </Route>
+                {/* ── 4. FINANCE ── */}
+                <Route path="/dashboard/invoices" element={<InvoicesPage />} />
+                <Route path="/dashboard/payments" element={<PaymentsPage />} />
+                <Route path="/dashboard/reports" element={<ReportsPage />} />
 
-                {/* Unauthorized Fallback */}
-                <Route path="/dashboard/unauthorized" element={<PlaceholderPage title="Unauthorized" emoji="🚫" note="You do not have permission to view this module." />} />
+                {/* ── 5. OUTREACH & TOOLS ── */}
+                <Route path="/dashboard/outreach" element={<OutreachPage />} />
+                <Route path="/dashboard/market-insights" element={<WorkspacePlaceholder section="Intelligence" title="Market Insights" emoji="📊" note="Global freight rate trends, port congestion analytics, and fuel bunker surcharges." />} />
+                <Route path="/dashboard/routes" element={<WorkspacePlaceholder section="Intelligence" title="Route Optimization" emoji="🗺️" note="AI-driven shipment routing and carbon emission estimation." />} />
+                <Route path="/dashboard/calculators" element={<WorkspacePlaceholder section="Tools" title="Freight Calculators" emoji="🧮" note="CBM, Volumetric Weight, and Duty calculators." />} />
+
+                {/* ── 6. ADMIN & SETTINGS ── */}
+                <Route path="/dashboard/users" element={<UsersPage />} />
+                <Route path="/dashboard/settings" element={<RolesPage />} />
+
+                {/* ── 7. PERMISSION & 404 FALLBACKS WITHIN WORKSPACE ── */}
+                <Route path="/dashboard/unauthorized" element={<WorkspacePlaceholder section="Security" title="Unauthorized" emoji="🚫" note="You do not have permission to access this module. Please contact your organization administrator." />} />
+                <Route path="/dashboard/*" element={<DashboardNotFound />} />
               </Route>
             </Route>
 
@@ -290,5 +423,6 @@ export default function App() {
         </BrowserRouter>
       </RBACProvider>
     </AuthProvider>
+  </>
   );
 }

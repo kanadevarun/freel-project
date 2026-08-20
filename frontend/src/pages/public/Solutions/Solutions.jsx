@@ -70,7 +70,7 @@ export default function Solutions() {
             <div className="solution-module-icon">📋</div>
             <h2 className="solution-module-title">RFQ Management</h2>
             <p className="solution-module-desc">
-              Don't have rates? Send RFQs to multiple vendors simultaneously. Auto-collect responses, compare side-by-side, and pick the best deal — all within Freel.
+              Don't have rates? Send RFQs to multiple vendors simultaneously. Auto-collect responses, compare side-by-side, and pick the best deal — all within LogisticsHQ.
             </p>
           </div>
         </Reveal>

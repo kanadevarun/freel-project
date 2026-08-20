@@ -32,7 +32,7 @@ const QUESTIONS = {
     {
       step: 4,
       key: 'primary_goal',
-      title: 'What are you looking for from Freel?',
+      title: 'What are you looking for from LogisticsHQ?',
       type: 'multi',
       options: ['Better Freight Rates', 'Shipment Tracking', 'Carrier Discovery', 'RFQ Management', 'Trade Intelligence'],
     },
@@ -207,7 +207,7 @@ export default function OnboardingPage() {
 
       <div className="onboarding-content animate-fade-in-up">
         <div className="onboarding-header">
-          <h2>Welcome to Freel</h2>
+          <h2>Welcome to LogisticsHQ</h2>
           <p>Let's customize your {roleType.toLowerCase().replace('_', ' ')} experience. (Step {currentStep} of {questions.length})</p>
         </div>
 
@@ -289,7 +289,7 @@ export default function OnboardingPage() {
                   <Check size={40} color="white" />
                 </div>
                 <h3>Organization Ready</h3>
-                <p>Welcome to Freel.<br/>Your logistics workspace is now active.</p>
+                <p>Welcome to LogisticsHQ.<br/>Your logistics workspace is now active.</p>
               </div>
             )}
           </div>

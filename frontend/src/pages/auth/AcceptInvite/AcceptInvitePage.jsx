@@ -60,7 +60,7 @@ export default function AcceptInvitePage() {
       <div className="accept-invite-page">
         <div className="ai-success">
           <div className="ai-success-icon">🎉</div>
-          <h2>Welcome to Freel!</h2>
+          <h2>Welcome to LogisticsHQ!</h2>
           <p>Your account has been successfully created and linked to your organization.</p>
           <button 
             className="ai-submit-btn" 
@@ -77,7 +77,7 @@ export default function AcceptInvitePage() {
     <div className="accept-invite-page">
       <div className="ai-header">
         <h1>Accept Invitation</h1>
-        <p>Complete your profile to join your team on Freel.</p>
+        <p>Complete your profile to join your team on LogisticsHQ.</p>
       </div>
 
       <div className="ai-card">

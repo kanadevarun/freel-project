@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/freel/backend/internal/common/events"
+	"github.com/freel/backend/internal/middleware"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -29,15 +30,17 @@ func NewTimelineService(db *sqlx.DB, eb events.Bus) TimelineService {
 }
 
 func (s *timelineService) RecordActivity(ctx context.Context, entityType string, entityID int64, action string, details string) error {
-	// We need org_id. For now, assuming org_id = 1 if we can't extract it easily, 
-	// or we can fetch it. To be safe, we'll insert a dummy 1 if it's not provided 
-	// in context, but ideally it should be.
+	var orgID int64 = 1
+	userCtx, ok := ctx.Value(middleware.UserContextKey).(middleware.UserContext)
+	if ok && userCtx.OrgID > 0 {
+		orgID = userCtx.OrgID
+	}
 	
 	query := `
 		INSERT INTO activities (org_id, entity_type, entity_id, action, description) 
-		VALUES ($1, $2, $3, $4, $5)
+		VALUES (?, ?, ?, ?, ?)
 	`
-	_, err := s.db.ExecContext(ctx, query, 1, entityType, entityID, action, details)
+	_, err := s.db.ExecContext(ctx, query, orgID, entityType, entityID, action, details)
 	return err
 }
 

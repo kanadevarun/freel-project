@@ -28,19 +28,19 @@ func NewDataLayer(db *sqlx.DB) Datalayer {
 
 func (d *dataLayer) CreateCampaign(ctx context.Context, c *spec.Campaign) error {
 	query := `
-		INSERT INTO outreach_campaigns (org_id, name, status)
-		VALUES (:org_id, :name, :status)
-		RETURNING id, created_at, updated_at
+		INSERT INTO outreach_campaigns (org_id, name, status, created_at, updated_at)
+		VALUES (?, ?, ?, NOW(), NOW())
 	`
-	rows, err := d.db.NamedQueryContext(ctx, query, c)
+	res, err := d.db.ExecContext(ctx, query, c.OrgID, c.Name, c.Status)
 	if err != nil {
 		return fmt.Errorf("outreach.CreateCampaign: insert failed: %w", err)
 	}
-	defer rows.Close()
-	if rows.Next() {
-		return rows.Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("outreach.CreateCampaign: get id failed: %w", err)
 	}
-	return fmt.Errorf("outreach.CreateCampaign: no row returned after insert")
+	c.ID = int32(id)
+	return nil
 }
 
 func (d *dataLayer) GetCampaignByID(ctx context.Context, orgID, id int32) (*spec.Campaign, error) {
@@ -48,7 +48,7 @@ func (d *dataLayer) GetCampaignByID(ctx context.Context, orgID, id int32) (*spec
 	query := `
 		SELECT id, org_id, name, status, created_at, updated_at
 		FROM outreach_campaigns
-		WHERE id = $1 AND org_id = $2
+		WHERE id = ? AND org_id = ?
 	`
 	err := d.db.GetContext(ctx, c, query, id, orgID)
 	if err != nil {
@@ -59,7 +59,7 @@ func (d *dataLayer) GetCampaignByID(ctx context.Context, orgID, id int32) (*spec
 	seqQuery := `
 		SELECT id, campaign_id, step_number, channel, template, delay_days, created_at, updated_at
 		FROM outreach_sequences
-		WHERE campaign_id = $1
+		WHERE campaign_id = ?
 		ORDER BY step_number ASC
 	`
 	err = d.db.SelectContext(ctx, &c.Sequences, seqQuery, c.ID)
@@ -77,7 +77,7 @@ func (d *dataLayer) ListCampaigns(ctx context.Context, orgID int32, limit, offse
 	var campaigns []*spec.Campaign
 	var total int
 
-	countQuery := `SELECT COUNT(*) FROM outreach_campaigns WHERE org_id = $1`
+	countQuery := `SELECT COUNT(*) FROM outreach_campaigns WHERE org_id = ?`
 	if err := d.db.GetContext(ctx, &total, countQuery, orgID); err != nil {
 		return nil, 0, err
 	}
@@ -89,9 +89,9 @@ func (d *dataLayer) ListCampaigns(ctx context.Context, orgID int32, limit, offse
 	listQuery := `
 		SELECT id, org_id, name, status, created_at, updated_at
 		FROM outreach_campaigns
-		WHERE org_id = $1
+		WHERE org_id = ?
 		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
+		LIMIT ? OFFSET ?
 	`
 	if err := d.db.SelectContext(ctx, &campaigns, listQuery, orgID, limit, offset); err != nil {
 		return nil, 0, err
@@ -103,15 +103,15 @@ func (d *dataLayer) ListCampaigns(ctx context.Context, orgID int32, limit, offse
 func (d *dataLayer) UpdateCampaign(ctx context.Context, c *spec.Campaign) error {
 	query := `
 		UPDATE outreach_campaigns
-		SET name = :name, status = :status, updated_at = NOW()
-		WHERE id = :id AND org_id = :org_id
+		SET name = ?, status = ?, updated_at = NOW()
+		WHERE id = ? AND org_id = ?
 	`
-	_, err := d.db.NamedExecContext(ctx, query, c)
+	_, err := d.db.ExecContext(ctx, query, c.Name, c.Status, c.ID, c.OrgID)
 	return err
 }
 
 func (d *dataLayer) DeleteCampaign(ctx context.Context, orgID, id int32) error {
-	query := `DELETE FROM outreach_campaigns WHERE id = $1 AND org_id = $2`
+	query := `DELETE FROM outreach_campaigns WHERE id = ? AND org_id = ?`
 	res, err := d.db.ExecContext(ctx, query, id, orgID)
 	if err != nil {
 		return err
@@ -125,17 +125,17 @@ func (d *dataLayer) DeleteCampaign(ctx context.Context, orgID, id int32) error {
 
 func (d *dataLayer) AddSequence(ctx context.Context, s *spec.Sequence) error {
 	query := `
-		INSERT INTO outreach_sequences (campaign_id, step_number, channel, template, delay_days)
-		VALUES (:campaign_id, :step_number, :channel, :template, :delay_days)
-		RETURNING id, created_at, updated_at
+		INSERT INTO outreach_sequences (campaign_id, step_number, channel, template, delay_days, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
 	`
-	rows, err := d.db.NamedQueryContext(ctx, query, s)
+	res, err := d.db.ExecContext(ctx, query, s.CampaignID, s.StepNumber, s.Channel, s.Template, s.DelayDays)
 	if err != nil {
 		return fmt.Errorf("outreach.AddSequence: %w", err)
 	}
-	defer rows.Close()
-	if rows.Next() {
-		return rows.Scan(&s.ID, &s.CreatedAt, &s.UpdatedAt)
+	id, err := res.LastInsertId()
+	if err != nil {
+		return fmt.Errorf("outreach.AddSequence get id: %w", err)
 	}
-	return fmt.Errorf("outreach.AddSequence: no row returned after insert")
+	s.ID = int32(id)
+	return nil
 }
