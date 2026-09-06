@@ -1,0 +1,326 @@
+/* RFQDetailPage.css — Modern enterprise styling for RFQ Workspace */
+
+:root {
+  --rfq-bg: #F8FAFC;
+  --rfq-surface: #FFFFFF;
+  --rfq-surface-subtle: #F8FAFC;
+  --rfq-surface-muted: #F1F5F9;
+  --rfq-border: #E2E8F0;
+  --rfq-border-subtle: #F1F5F9;
+  --rfq-text-primary: #0F172A;
+  --rfq-text-secondary: #475569;
+  --rfq-text-muted: #94A3B8;
+  --rfq-primary: #4F46E5;
+  --rfq-primary-hover: #4338CA;
+  --rfq-primary-subtle: #EEF2FF;
+  --rfq-success: #10B981;
+  --rfq-success-subtle: #ECFDF5;
+  --rfq-success-border: #A7F3D0;
+  --rfq-warning: #F59E0B;
+  --rfq-warning-subtle: #FFFBEB;
+  --rfq-warning-border: #FDE68A;
+  --rfq-danger: #EF4444;
+  --rfq-danger-subtle: #FEF2F2;
+  --rfq-danger-border: #FECACA;
+  --rfq-info: #3B82F6;
+  --rfq-info-subtle: #EFF6FF;
+  --rfq-info-border: #BFDBFE;
+}
+
+.rfq-workspace-container {
+  min-height: 100vh;
+  background-color: var(--rfq-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.rfq-workspace-content {
+  max-width: 1360px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 32px 64px 32px;
+  box-sizing: border-box;
+}
+
+/* Nav Tabs (Sticky at top under TopBar when scrolling) */
+.rfq-workspace-tabs-container {
+  position: sticky;
+  top: 68px; /* Sticks right underneath TopBar (height: 68px, top: 0, z-index: 40) */
+  z-index: 35;
+  background: rgba(248, 250, 252, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  margin: -20px -32px 24px -32px;
+  padding: 12px 32px 0 32px;
+  border-bottom: 1px solid var(--rfq-border);
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+}
+
+.rfq-workspace-tabs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.rfq-workspace-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.rfq-workspace-tab-btn {
+  padding: 8px 4px 10px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--rfq-text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rfq-workspace-tab-btn:hover:not(.locked) {
+  color: var(--rfq-text-primary);
+}
+
+.rfq-workspace-tab-btn.active {
+  color: var(--rfq-primary);
+  border-bottom-color: var(--rfq-primary);
+  font-weight: 700;
+}
+
+.rfq-workspace-tab-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 1px 6px;
+  line-height: 1.2;
+}
+
+.rfq-workspace-tab-count-badge.orange {
+  background: #FEF3C7;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.rfq-workspace-tab-btn.locked {
+  color: var(--rfq-text-muted);
+  cursor: pointer;
+}
+
+.rfq-workspace-tab-btn.locked:hover {
+  color: var(--rfq-text-secondary);
+}
+
+/* Reusable RFQ Design System Components */
+.rfq-card {
+  background: var(--rfq-surface);
+  border: 1px solid var(--rfq-border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.rfq-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rfq-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Unified Horizontal KPI Strip */
+.rfq-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  background: var(--rfq-surface);
+  border: 1px solid var(--rfq-border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.rfq-kpi-segment {
+  padding: 14px 20px;
+  border-right: 1px solid var(--rfq-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.rfq-kpi-segment:last-child {
+  border-right: none;
+}
+
+.rfq-kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--rfq-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rfq-kpi-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--rfq-text-primary);
+  margin-top: 4px;
+  line-height: 1.2;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.rfq-kpi-subtext {
+  font-size: 11px;
+  color: var(--rfq-text-muted);
+  margin-top: 2px;
+}
+
+/* Operational Tables */
+.rfq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rfq-table th {
+  background: var(--rfq-surface-subtle);
+  color: var(--rfq-text-secondary);
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rfq-border);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.rfq-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rfq-border-subtle);
+  color: var(--rfq-text-primary);
+  vertical-align: middle;
+}
+
+.rfq-table tr:hover td {
+  background: #F8FAFC;
+}
+
+/* Slide-over Drawer */
+.rfq-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 60;
+  display: flex;
+  justify-content: flex-end;
+  animation: rfq-fade-in 0.2s ease-out;
+}
+
+.rfq-drawer-panel {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  background: var(--rfq-surface);
+  box-shadow: -4px 0 24px rgba(15, 23, 42, 0.15);
+  display: flex;
+  flex-direction: column;
+  animation: rfq-slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+
+/* Modal Overlay & Card */
+.rfq-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  animation: rfq-fade-in 0.2s ease-out;
+}
+
+.rfq-modal-card {
+  width: 100%;
+  max-width: 580px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.25);
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: rfq-scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rfq-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes rfq-slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes rfq-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Skeleton & Loading */
+.rfq-skeleton-header {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  padding: 24px 32px;
+}
+
+.rfq-skeleton-box {
+  background: linear-gradient(90deg, #F1F5F9 25%, #E2E8F0 50%, #F1F5F9 75%);
+  background-size: 200% 100%;
+  animation: rfq-shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes rfq-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .rfq-kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .rfq-workspace-content {
+    padding: 16px 16px 48px 16px;
+  }
+  .rfq-workspace-tabs-container {
+    margin: -16px -16px 20px -16px;
+    padding: 10px 16px 0 16px;
+    top: 60px;
+  }
+  .rfq-kpi-strip {
+    grid-template-columns: 1fr;
+  }
+}
+

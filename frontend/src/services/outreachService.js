@@ -80,14 +80,164 @@ export async function deleteCampaign(id) {
 
 /**
  * generateEmail — Ask the AI to write a personalized outreach email.
- *
- * Simple meaning: You provide context about the company you want to email.
- * The AI reads it, picks an angle, and writes a ready-to-send subject line
- * and email body. The user can then edit it before using it.
- *
  * @param {{ company_name: string, industry?: string, goal?: string }} payload
  * @returns {Promise<{ subject: string, body: string }>}
  */
 export async function generateEmail(payload) {
   return api.post('/api/v1/outreach/generate-email', payload);
 }
+
+// ── SEQUENCE STEPS ────────────────────────────────────────────────────────────
+
+export async function getCampaignSequence(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/sequence`);
+}
+
+export async function addCampaignSequenceStep(campaignId, stepData) {
+  return api.post(`/api/v1/outreach/campaigns/${campaignId}/sequence`, stepData);
+}
+
+export async function updateCampaignSequenceStep(campaignId, stepId, stepData) {
+  return api.put(`/api/v1/outreach/campaigns/${campaignId}/sequence/${stepId}`, stepData);
+}
+
+export async function deleteCampaignSequenceStep(campaignId, stepId) {
+  return api.delete(`/api/v1/outreach/campaigns/${campaignId}/sequence/${stepId}`);
+}
+
+export async function reorderCampaignSequence(campaignId, stepIds) {
+  return api.put(`/api/v1/outreach/campaigns/${campaignId}/sequence/reorder`, { step_ids: stepIds });
+}
+
+// ── CAMPAIGN AUDIENCE ─────────────────────────────────────────────────────────
+
+export async function getCampaignAudience(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/audience`);
+}
+
+export async function addCampaignAudience(campaignId, leadIds) {
+  return api.post(`/api/v1/outreach/campaigns/${campaignId}/audience`, { lead_ids: leadIds });
+}
+
+export async function removeCampaignAudience(campaignId, leadId) {
+  return api.delete(`/api/v1/outreach/campaigns/${campaignId}/audience/${leadId}`);
+}
+
+// ── ANALYTICS, LEADS GENERATED & INSIGHTS ────────────────────────────────────
+
+export async function getOutreachAnalytics() {
+  return api.get('/api/v1/outreach/analytics');
+}
+
+export async function getCampaignAnalytics(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/analytics`);
+}
+
+export async function getCampaignLeads(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/leads`);
+}
+
+export async function getCampaignInsights(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/insights`);
+}
+
+export async function getConversionFunnel() {
+  return api.get('/api/v1/outreach/conversion-funnel');
+}
+
+// ── OUTREACH ACTIVITIES CRUD ───────────────────────────────────────────────
+
+export async function createOutreachActivity(payload) {
+  return api.post('/api/v1/outreach/activities', payload);
+}
+
+export async function getOutreachActivity(id) {
+  return api.get(`/api/v1/outreach/activities/${id}`);
+}
+
+export async function updateOutreachActivity(id, payload) {
+  return api.put(`/api/v1/outreach/activities/${id}`, payload);
+}
+
+export async function completeOutreachActivity(id) {
+  return api.put(`/api/v1/outreach/activities/${id}/complete`);
+}
+
+export async function deleteOutreachActivity(id) {
+  return api.delete(`/api/v1/outreach/activities/${id}`);
+}
+
+// ── ENGAGEMENT & PROSPECTS SERVICE METHODS ────────────────────────────────
+
+export async function getCampaignRecipients(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/recipients`);
+}
+
+export async function getCampaignActivity(campaignId) {
+  return api.get(`/api/v1/outreach/campaigns/${campaignId}/activity`);
+}
+
+export async function getProspects() {
+  return api.get('/api/v1/outreach/prospects');
+}
+
+export async function getProspectEngagement(leadId) {
+  return api.get(`/api/v1/outreach/prospects/${leadId}/engagement`);
+}
+
+export async function getLeadOutreachActivity(leadId) {
+  return api.get(`/api/v1/outreach/prospects/${leadId}/activity`);
+}
+
+export async function getProspectDetail(leadId) {
+  return api.get(`/api/v1/outreach/prospects/${leadId}`);
+}
+
+export async function enrollProspect(campaignId, leadId) {
+  return api.post('/api/v1/outreach/prospects', { campaign_id: campaignId, lead_id: leadId });
+}
+
+export async function updateProspect(leadId, campaignId, status, currentStep) {
+  return api.put(`/api/v1/outreach/prospects/${leadId}`, { campaign_id: campaignId, status, current_step: currentStep });
+}
+
+export async function pauseProspect(leadId, campaignId) {
+  return api.post(`/api/v1/outreach/prospects/${leadId}/pause`, { campaign_id: campaignId });
+}
+
+export async function resumeProspect(leadId, campaignId) {
+  return api.post(`/api/v1/outreach/prospects/${leadId}/resume`, { campaign_id: campaignId });
+}
+
+export async function stopProspect(leadId, campaignId) {
+  return api.post(`/api/v1/outreach/prospects/${leadId}/stop`, { campaign_id: campaignId });
+}
+
+export async function getFollowUps(filter = '') {
+  return api.get(`/api/v1/outreach/follow-ups?filter=${filter}`);
+}
+
+export async function createFollowUp(payload) {
+  return api.post('/api/v1/outreach/follow-ups', payload);
+}
+
+export async function getFollowUp(id) {
+  return api.get(`/api/v1/outreach/follow-ups/${id}`);
+}
+
+export async function updateFollowUp(id, payload) {
+  return api.put(`/api/v1/outreach/follow-ups/${id}`, payload);
+}
+
+export async function completeFollowUp(id) {
+  return api.post(`/api/v1/outreach/follow-ups/${id}/complete`);
+}
+
+export async function cancelFollowUp(id) {
+  return api.post(`/api/v1/outreach/follow-ups/${id}/cancel`);
+}
+
+export async function rescheduleFollowUp(id, scheduledAt) {
+  return api.post(`/api/v1/outreach/follow-ups/${id}/reschedule`, { scheduled_at: scheduledAt });
+}
+

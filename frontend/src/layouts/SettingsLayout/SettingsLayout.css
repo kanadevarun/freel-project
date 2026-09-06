@@ -1,0 +1,103 @@
+/* SettingsLayout.css */
+
+.settings-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: stretch; /* Allows sidebar to stretch to full height */
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.settings-sidebar {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05), 0 2px 6px -2px rgba(0, 0, 0, 0.03);
+  padding: 1.5rem;
+  position: sticky;
+  top: 24px;
+}
+
+.settings-sidebar-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 2rem 0; /* Increased margin */
+}
+
+.settings-nav-section {
+  margin-bottom: 2rem; /* Increased spacing between sections */
+}
+
+.settings-nav-section:last-child {
+  margin-bottom: 0;
+}
+
+.settings-nav-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem; /* Increased spacing */
+  padding-left: 0.25rem;
+}
+
+.settings-nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; /* Increased gap between items */
+}
+
+.settings-nav-item {
+  margin: 0;
+}
+
+.settings-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem; /* Increased padding */
+  border-radius: 8px;
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.settings-nav-link:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.settings-nav-link.active {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.settings-nav-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+}
+
+.settings-nav-link.active .settings-nav-icon {
+  opacity: 1;
+  color: #2563eb;
+}
+
+.settings-content {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+}

@@ -11,5 +11,12 @@ const (
 	ParseShipmentRequestURL = "/parse-shipment-request"
 	AddQuoteURL             = "/{id:[0-9]+}/quotes"
 	GetCarrierRatesURL      = "/{id:[0-9]+}/carrier-rates"
-	ApproveQuoteURL         = "/{id:[0-9]+}/approve-quote"
+	GetRequirementsURL      = "/{id:[0-9]+}/requirements"
+	GetActivityURL          = "/{id:[0-9]+}/activity"
+	GetDocumentsURL         = "/{id:[0-9]+}/documents"
+	CreateDocumentURL       = "/{id:[0-9]+}/documents"
+	UpdateDocumentStatusURL = "/{id:[0-9]+}/documents/{documentId:[0-9]+}/status"
+	DeleteDocumentURL       = "/{id:[0-9]+}/documents/{documentId:[0-9]+}"
 )
+
+

@@ -1,0 +1,478 @@
+/* QuotationCommercialRiskPanel.css - Task 19.6 LogisticsHQ Design System */
+
+.qcr-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.qcr-panel-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  gap: 10px;
+  color: #64748B;
+  font-size: 13px;
+}
+
+.qcr-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 14px;
+}
+
+.qcr-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.qcr-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qcr-header-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.qcr-icon-alert { color: #DC2626; }
+.qcr-icon-safe { color: #16A34A; }
+
+.qcr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.qcr-badge-risk {
+  background: #FEE2E2;
+  color: #B91C1C;
+}
+
+.qcr-badge-safe {
+  background: #ECFDF5;
+  color: #047857;
+}
+
+.qcr-header-sub {
+  font-size: 12.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+.qcr-btn-refresh {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.qcr-btn-refresh:hover {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1D4ED8;
+}
+
+/* Risks List */
+.qcr-risks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qcr-risk-banner {
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid transparent;
+}
+
+.qcr-risk-critical {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
+}
+
+.qcr-risk-warning {
+  background: #FFFBEB;
+  border-color: #FDE68A;
+  color: #92400E;
+}
+
+.qcr-risk-info {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+.qcr-risk-icon {
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.qcr-risk-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.qcr-risk-headline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qcr-risk-headline {
+  font-size: 13.5px;
+  font-weight: 800;
+}
+
+.qcr-severity-tag {
+  font-size: 10px;
+  font-weight: 850;
+  padding: 1px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.qcr-sev-critical { background: #DC2626; color: #FFFFFF; }
+.qcr-sev-warning { background: #D97706; color: #FFFFFF; }
+.qcr-sev-info { background: #2563EB; color: #FFFFFF; }
+
+.qcr-risk-desc {
+  font-size: 12.5px;
+  margin: 0;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.qcr-risk-action-text {
+  font-size: 12px;
+  margin-top: 2px;
+  opacity: 0.95;
+}
+
+.qcr-btn-resolve {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.qcr-btn-resolve:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* Replacement Candidates */
+.qcr-replacement-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
+.qcr-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qcr-section-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qcr-section-sub {
+  font-size: 12px;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+.qcr-candidates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.qcr-candidate-card {
+  background: #F8FAFC;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.qcr-candidate-card:hover {
+  border-color: #93C5FD;
+  background: #EFF6FF;
+}
+
+.qcr-candidate-card.is-selected {
+  border-color: #2563EB;
+  background: #EFF6FF;
+  box-shadow: 0 0 0 1px #2563EB;
+}
+
+.qcr-cand-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.qcr-cand-carrier {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0F172A;
+}
+
+.qcr-cand-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.qcr-cand-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.qcr-cand-price {
+  font-size: 15px;
+  font-weight: 850;
+  color: #0F172A;
+}
+
+.qcr-cand-transit {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: #64748B;
+}
+
+.qcr-cand-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.qcr-cand-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.qcr-tag-cheapest { background: #DCFCE7; color: #15803D; }
+.qcr-tag-fastest { background: #DBEAFE; color: #1E40AF; }
+.qcr-tag-best-value { background: #EDE9FE; color: #6D28D9; }
+
+/* Side-by-Side Impact Matrix */
+.qcr-impact-card {
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.qcr-impact-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.qcr-impact-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0F172A;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.qcr-impact-summary-pill {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.qcr-impact-matrix {
+  display: flex;
+  align-items: stretch;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .qcr-impact-matrix { flex-direction: column; }
+  .qcr-impact-arrow { transform: rotate(90deg); margin: 0 auto; }
+}
+
+.qcr-impact-col {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.qcr-impact-col.is-replacement {
+  border-color: #BFDBFE;
+  background: #FAFCFF;
+}
+
+.qcr-impact-col-header {
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid #F1F5F9;
+  padding-bottom: 6px;
+}
+
+.qcr-impact-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.qcr-impact-field-label {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.qcr-impact-field-val {
+  font-size: 13px;
+  font-weight: 650;
+  color: #0F172A;
+}
+
+.qcr-impact-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.qcr-impact-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.qcr-immutable-notice {
+  font-size: 12px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qcr-btn-replace {
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.24);
+  transition: all 0.15s ease;
+}
+
+.qcr-btn-replace:hover:not(:disabled) {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+}
+
+.qcr-locked-quote-notice {
+  font-size: 12px;
+  font-weight: 650;
+  color: #94A3B8;
+}
+
+.qcr-no-candidates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748B;
+  font-size: 12.5px;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border-radius: 8px;
+}
+
+.qcr-spin {
+  animation: qcrSpin 1s linear infinite;
+}
+
+@keyframes qcrSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

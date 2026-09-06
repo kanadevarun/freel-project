@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { importLeads } from '../../../services/leadsService';
 
@@ -20,6 +20,15 @@ export default function ImportLeadsModal({ onClose, onImportComplete }) {
   const [dragging, setDragging] = useState(false);          // Is the user dragging a file over?
   const [loading, setLoading] = useState(false);            // Is the upload in progress?
   const [result, setResult] = useState(null);               // The import result from backend
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
   const [error, setError] = useState('');                   // Any error message
   const fileInputRef = useRef(null);                        // Reference to the hidden file input
 

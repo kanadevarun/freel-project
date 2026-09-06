@@ -1,162 +1,255 @@
 package rates
 
-import "time"
-
-// RateSource identifies where a CanonicalRate originated.
-// The Quotation Engine treats all sources identically — this field is only
-// used for display, analytics, and priority ranking.
-type RateSource string
-
-const (
-	RateSourceSpotAPI     RateSource = "SPOT_API"
-	RateSourceContractPDF RateSource = "CONTRACT_PDF"
-	RateSourceManual      RateSource = "MANUAL"
-	RateSourceEmail       RateSource = "EMAIL"
+import (
+	"github.com/freel/backend/internal/carrier"
+	"github.com/freel/backend/internal/rates/spec"
+	"github.com/jmoiron/sqlx"
 )
 
-// ExtractionStatus tracks the validation state of a rate.
-// The Quotation Engine ONLY reads rates with status == ExtractionStatusConfirmed.
-type ExtractionStatus string
-
-const (
-	ExtractionStatusConfirmed     ExtractionStatus = "CONFIRMED"
-	ExtractionStatusPendingReview ExtractionStatus = "PENDING_REVIEW"
-	ExtractionStatusFlagged       ExtractionStatus = "FLAGGED"
-	ExtractionStatusRejected      ExtractionStatus = "REJECTED"
+// Re-export core types for backwards compatibility
+type (
+	Rate                   = spec.Rate
+	RateListItem           = spec.RateListItem
+	RateDetail             = spec.RateDetail
+	CarrierCoverageSummary = spec.CarrierCoverageSummary
+	RecentRateUpdate       = spec.RecentRateUpdate
+	RateSummaryKPIs        = spec.RateSummaryKPIs
+	ListRatesRequest       = spec.ListRatesRequest
+	RateFilter             = spec.ListRatesRequest
+	CreateRateRequest      = spec.CreateRateRequest
+	UpdateRateRequest      = spec.UpdateRateRequest
+	ArchiveRateRequest     = spec.ArchiveRateRequest
+	RateListResponse       = spec.ListRatesResponse
+	ListRatesResponse      = spec.ListRatesResponse
+	RateQuery              = spec.RateQuery
+	RateSearchResult       = spec.RateSearchResult
+	CanonicalRate          = spec.CanonicalRate
+	Surcharge              = spec.Surcharge
 )
 
-// SurchargeUnit defines how a surcharge amount is applied.
-type SurchargeUnit string
+// Legacy type aliases
+type RateStatus = string
+type RateType = string
+type RateSource = string
+type ExtractionStatus = string
+type SurchargeUnit = string
+type Service = BusinessLogic
+type Repository = Datalayer
 
-const (
-	SurchargeUnitPerTEU       SurchargeUnit = "PER_TEU"
-	SurchargeUnitPerContainer SurchargeUnit = "PER_CONTAINER"
-	SurchargeUnitPerShipment  SurchargeUnit = "PER_SHIPMENT"
-	SurchargeUnitPercent      SurchargeUnit = "PERCENT"
-)
-
-// Surcharge represents a single named additional charge on a rate.
-// Examples: BAF (Bunker Adjustment Factor), CAF (Currency Adjustment Factor),
-// PSS (Peak Season Surcharge), OHC (Origin Handling Charge).
-type Surcharge struct {
-	// Code is the normalized industry-standard charge code.
-	// e.g., "BAF", "CAF", "OHC", "DHC", "PSS", "WRS"
-	Code string `json:"code" db:"code"`
-
-	// Description is the human-readable charge name as it appears in the contract.
-	Description string `json:"description" db:"description"`
-
-	// Amount is the charge value in USD (normalized from original currency at ingestion).
-	Amount float64 `json:"amount" db:"amount"`
-
-	// Unit determines how the amount is applied.
-	Unit SurchargeUnit `json:"unit" db:"unit"`
-
-	// Included is true when this surcharge is already factored into OceanFreight
-	// (i.e., the carrier offers an "all-in" rate for this charge).
-	Included bool `json:"included" db:"included"`
+// NewRepository wraps NewDataLayer for backward compatibility in existing tests
+func NewRepository(db *sqlx.DB) Datalayer {
+	return NewDataLayer(db)
 }
 
-// CanonicalRate is the single unified rate object used across the entire platform.
-//
-// Both the Spot Rate engine (from carrier APIs) and the Contract Rate engine
-// (from AI-parsed PDFs) produce CanonicalRate objects. The Quotation Engine
-// reads ONLY CanonicalRate — it is completely blind to the original source.
-//
-// Invariants enforced at ingestion time:
-//   - All monetary fields are in USD.
-//   - OriginPort and DestinationPort are UN/LOCODE (5-char, e.g., "INNSA").
-//   - TotalBuyPrice = OceanFreight + OriginCharges + DestinationCharges
-//     (included surcharges are already baked into OceanFreight).
-//   - Only rows with ExtractionStatus == "CONFIRMED" are returned by SearchRates.
-type CanonicalRate struct {
-	ID     string `json:"id" db:"id"`
-	OrgID  int64  `json:"org_id" db:"org_id"`
-
-	// Source
-	Source        RateSource `json:"source" db:"source"`
-	SourceRef     string     `json:"source_ref" db:"source_ref"`
-	ContractDocID *string    `json:"contract_doc_id,omitempty" db:"contract_doc_id"`
-
-	// Route
-	OriginPort      string `json:"origin_port" db:"origin_port"`
-	DestinationPort string `json:"destination_port" db:"destination_port"`
-	ViaPort         string `json:"via_port,omitempty" db:"via_port"`
-	ServiceCode     string `json:"service_code,omitempty" db:"service_code"`
-
-	// Carrier
-	CarrierSCAC string `json:"carrier_scac" db:"carrier_scac"`
-	CarrierName string `json:"carrier_name" db:"carrier_name"`
-	VesselName  string `json:"vessel_name,omitempty" db:"vessel_name"`
-
-	// Equipment
-	EquipmentType string `json:"equipment_type" db:"equipment_type"`
-
-	// Pricing — all USD
-	OceanFreight       float64     `json:"ocean_freight" db:"ocean_freight"`
-	OriginCharges      float64     `json:"origin_charges" db:"origin_charges"`
-	DestinationCharges float64     `json:"destination_charges" db:"destination_charges"`
-	Surcharges         []Surcharge `json:"surcharges" db:"-"`
-	// SurchargesRaw is used for DB scan; Surcharges is the parsed form.
-	SurchargesRaw    []byte   `json:"-" db:"surcharges"`
-	TotalBuyPrice    float64  `json:"total_buy_price" db:"total_buy_price"`
-	CurrencyOriginal string   `json:"currency_original" db:"currency_original"`
-	ExchangeRateUsed float64  `json:"exchange_rate_used" db:"exchange_rate_used"`
-
-	// Included / excluded charge codes for display
-	IncludedCharges []string `json:"included_charges" db:"included_charges"`
-	ExcludedCharges []string `json:"excluded_charges" db:"excluded_charges"`
-
-	// Conditions
-	FreeDaysOrigin        int      `json:"free_days_origin" db:"free_days_origin"`
-	FreeDaysDestination   int      `json:"free_days_destination" db:"free_days_destination"`
-	TransitDays           *int     `json:"transit_days,omitempty" db:"transit_days"`
-	Incoterms             string   `json:"incoterms,omitempty" db:"incoterms"`
-	CommodityRestrictions []string `json:"commodity_restrictions" db:"commodity_restrictions"`
-	RoutingConditions     string   `json:"routing_conditions,omitempty" db:"routing_conditions"`
-
-	// Validity
-	ValidFrom  time.Time `json:"valid_from" db:"valid_from"`
-	ValidUntil time.Time `json:"valid_until" db:"valid_until"`
-
-	// Data quality
-	ConfidenceScore  int              `json:"confidence_score" db:"confidence_score"`
-	ExtractionStatus ExtractionStatus `json:"extraction_status" db:"extraction_status"`
-	ExtractedBy      string           `json:"extracted_by" db:"extracted_by"`
-	ReviewFlags      []string         `json:"review_flags,omitempty" db:"review_flags"`
-	ReviewedBy       *int64           `json:"reviewed_by,omitempty" db:"reviewed_by"`
-	ReviewedAt       *time.Time       `json:"reviewed_at,omitempty" db:"reviewed_at"`
-
-	// Operational
-	NauticalMiles int     `json:"nautical_miles,omitempty" db:"nautical_miles"`
-	CO2PerTEU     float64 `json:"co2_per_teu,omitempty" db:"co2_per_teu"`
-
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+// NewService wraps NewBusinessLogic for backward compatibility in existing tests
+func NewService(dl Datalayer, normalizer SpotNormalizer, carrierSvc carrier.Service) BusinessLogic {
+	return NewBusinessLogic(dl, normalizer, carrierSvc)
 }
 
-// RateQuery is the input to rates.Service.SearchRates.
-// The Quotation Engine and the Pricing Agent both use this struct.
-type RateQuery struct {
-	OrgID           int64
-	OriginPort      string     // UN/LOCODE preferred; port_normalizer handles aliases
-	DestinationPort string     // UN/LOCODE preferred
-	EquipmentType   string     // "40GP" | "40HC" | "20GP" | "REEFER" — defaults to "40GP" if empty
-	TargetDate      *time.Time // If set, only rates valid on this date are returned
-	CarrierSCACs    []string   // Optional whitelist; empty = all carriers
-	Sources         []RateSource // Optional whitelist; empty = all sources (spot + contract)
-	MaxResults      int          // 0 = default of 20
-	Incoterms       string
+// ── Task 19.6: Rate Lifecycle Intelligence Types ──────────────────────────────
+
+type RateLifecycleEvent struct {
+	ID             int64       `db:"id"              json:"id"`
+	OrgID          int64       `db:"org_id"          json:"org_id"`
+	RateID         *int64      `db:"rate_id"         json:"rate_id,omitempty"`
+	ContractID     *int64      `db:"contract_id"     json:"contract_id,omitempty"`
+	EventType      string      `db:"event_type"      json:"event_type"`
+	PreviousStatus string      `db:"previous_status" json:"previous_status,omitempty"`
+	CurrentStatus  string      `db:"current_status"  json:"current_status"`
+	Description    string      `db:"description"     json:"description"`
+	MetadataJSON   string      `db:"metadata"        json:"-"`
+	Metadata       interface{} `db:"-"               json:"metadata,omitempty"`
+	CreatedAt      string      `db:"created_at"      json:"created_at"`
 }
 
-// RateSearchResult is the full response from rates.Service.SearchRates.
-// The recommended rate is at index RecommendedIdx.
-type RateSearchResult struct {
-	Rates              []CanonicalRate `json:"rates"`
-	TotalCount         int             `json:"total_count"`
-	SpotRateCount      int             `json:"spot_rate_count"`
-	ContractRateCount  int             `json:"contract_rate_count"`
-	RecommendedIdx     int             `json:"recommended_idx"`
-	OverallReasoning   string          `json:"overall_reasoning"`
-	SearchedAt         time.Time       `json:"searched_at"`
+type RateLifecycleSummary struct {
+	TotalRates               int `json:"total_rates"`
+	ActiveRates              int `json:"active_rates"`
+	ExpiringSoonRates        int `json:"expiring_soon_rates"`
+	ExpiredRates             int `json:"expired_rates"`
+	SupersededRates          int `json:"superseded_rates"`
+	TotalContracts           int `json:"total_contracts"`
+	ActiveContracts          int `json:"active_contracts"`
+	ExpiringContracts        int `json:"expiring_contracts"`
+	ExpiredContracts         int `json:"expired_contracts"`
+	ContractsRequiringRenewal int `json:"contracts_requiring_renewal"`
+	QuotationsAtRisk         int `json:"quotations_at_risk"`
 }
+
+type RateAttentionItem struct {
+	RateID             int64   `db:"rate_id"             json:"rate_id"`
+	CarrierName        string  `db:"carrier_name"        json:"carrier_name"`
+	CarrierCode        string  `db:"carrier_code"        json:"carrier_code"`
+	RateType           string  `db:"rate_type"           json:"rate_type"`
+	VersionNumber      int     `db:"version_number"      json:"version_number"`
+	Origin             string  `db:"origin_port"         json:"origin"`
+	Destination        string  `db:"destination_port"    json:"destination"`
+	TransportMode      string  `db:"transport_mode"      json:"transport_mode"`
+	EquipmentType      string  `db:"equipment_type"      json:"equipment_type"`
+	Currency           string  `db:"currency"            json:"currency"`
+	BaseAmount         float64 `db:"base_amount"         json:"base_amount"`
+	ValidFrom          *string `db:"valid_from"          json:"valid_from,omitempty"`
+	ValidUntil         *string `db:"valid_until"         json:"valid_until,omitempty"`
+	Status             string  `db:"status"              json:"status"`
+	DaysRemaining      int     `db:"days_remaining"      json:"days_remaining"`
+	AttentionBucket    string  `db:"attention_bucket"    json:"attention_bucket"` // 'EXPIRED', 'EXPIRING_7D', 'EXPIRING_30D', 'SUPERSEDED'
+	AffectedQuotesCount int    `db:"affected_quotes"     json:"affected_quotes_count"`
+	ContractCode       string  `db:"contract_code"       json:"contract_code,omitempty"`
+}
+
+type ContractAttentionItem struct {
+	ContractID         int64   `db:"contract_id"         json:"contract_id"`
+	CarrierName        string  `db:"carrier_name"        json:"carrier_name"`
+	ContractCode       string  `db:"contract_code"       json:"contract_code"`
+	Title              string  `db:"contract_title"      json:"title"`
+	StartDate          *string `db:"start_date"          json:"start_date,omitempty"`
+	EndDate            *string `db:"end_date"            json:"end_date,omitempty"`
+	Status             string  `db:"status"              json:"status"`
+	RenewalStatus      string  `db:"renewal_status"      json:"renewal_status"`
+	DaysRemaining      int     `db:"days_remaining"      json:"days_remaining"`
+	LinkedRatesCount   int     `db:"linked_rates_count"  json:"linked_rates_count"`
+	AffectedQuotesCount int    `db:"affected_quotes"     json:"affected_quotes_count"`
+}
+
+
+// ── Task 19.7: Rate Analytics & Procurement Intelligence Types ─────────────────
+
+// CurrencyValue is a currency-safe amount pair. Analytics never sum across currencies.
+type CurrencyValue struct {
+	Currency string  `json:"currency"`
+	Amount   float64 `json:"amount"`
+}
+
+// RateAnalyticsOverview provides 17 management-level KPIs across all rate management domains.
+type RateAnalyticsOverview struct {
+	// Rate counts
+	TotalRates        int `db:"total_rates"         json:"total_rates"`
+	ActiveRates       int `db:"active_rates"        json:"active_rates"`
+	ExpiringSoonRates int `db:"expiring_soon_rates" json:"expiring_soon_rates"`
+	ExpiredRates      int `db:"expired_rates"       json:"expired_rates"`
+	SupersededRates   int `db:"superseded_rates"    json:"superseded_rates"`
+	DraftRates        int `db:"draft_rates"         json:"draft_rates"`
+
+	// Contract counts
+	TotalContracts            int `db:"total_contracts"              json:"total_contracts"`
+	ActiveContracts           int `db:"active_contracts"             json:"active_contracts"`
+	ContractsRequiringRenewal int `db:"contracts_requiring_renewal"  json:"contracts_requiring_renewal"`
+
+	// Coverage
+	TotalLanesCovered int `db:"total_lanes_covered" json:"total_lanes_covered"`
+	TotalCarriers     int `db:"total_carriers"      json:"total_carriers"`
+
+	// Spot sourcing
+	TotalSpotRequests    int `db:"total_spot_requests"     json:"total_spot_requests"`
+	SpotRequestsResponded int `db:"spot_requests_responded" json:"spot_requests_responded"`
+	SpotRequestsSelected  int `db:"spot_requests_selected"  json:"spot_requests_selected"`
+	SpotRequestsExpired   int `db:"spot_requests_expired"   json:"spot_requests_expired"`
+
+	// Quotation integration
+	QuoteToRateSelectionCount    int `db:"quote_rate_selection_count"   json:"quote_to_rate_selection_count"`
+	QuotationCommercialRiskCount int `db:"quotation_risk_count"         json:"quotation_commercial_risk_count"`
+}
+
+// RateTrendDataPoint is a single-day snapshot of rate activity for time-series charts.
+type RateTrendDataPoint struct {
+	Date               string `db:"date"                 json:"date"`
+	RatesCreated       int    `db:"rates_created"        json:"rates_created"`
+	RatesActivated     int    `db:"rates_activated"      json:"rates_activated"`
+	RatesExpired       int    `db:"rates_expired"        json:"rates_expired"`
+	RatesSuperseded    int    `db:"rates_superseded"     json:"rates_superseded"`
+	ContractsCreated   int    `db:"contracts_created"    json:"contracts_created"`
+	SpotRequestsCreated int   `db:"spot_requests_created" json:"spot_requests_created"`
+	SpotRequestsSelected int  `db:"spot_requests_selected" json:"spot_requests_selected"`
+}
+
+// CarrierRatePerformance captures per-carrier analytics for the leaderboard.
+type CarrierRatePerformance struct {
+	CarrierName        string  `db:"carrier_name"          json:"carrier_name"`
+	CarrierCode        string  `db:"carrier_code"          json:"carrier_code"`
+	TotalRates         int     `db:"total_rates"           json:"total_rates"`
+	ActiveRates        int     `db:"active_rates"          json:"active_rates"`
+	ExpiringRates      int     `db:"expiring_rates"        json:"expiring_rates"`
+	ExpiredRates       int     `db:"expired_rates"         json:"expired_rates"`
+	LanesCovered       int     `db:"lanes_covered"         json:"lanes_covered"`
+	ContractsCount     int     `db:"contracts_count"       json:"contracts_count"`
+	SpotResponsesCount int     `db:"spot_responses_count"  json:"spot_responses_count"`
+	SpotSelections     int     `db:"spot_selections"       json:"spot_selections"`
+	SelectionRate      float64 `db:"-"                     json:"selection_rate"`      // computed, not stored
+	AverageTransitDays float64 `db:"avg_transit_days"      json:"average_transit_days"`
+	// RateHealthStatus is one of: HEALTHY, ATTENTION, CRITICAL
+	RateHealthStatus string `db:"-" json:"rate_health_status"`
+}
+
+// LaneRatePerformance captures per-lane analytics with currency-safe price grouping.
+type LaneRatePerformance struct {
+	Origin          string          `db:"origin_port"       json:"origin"`
+	Destination     string          `db:"destination_port"  json:"destination"`
+	TransportMode   string          `db:"transport_mode"    json:"transport_mode"`
+	ServiceType     string          `db:"service_type"      json:"service_type"`
+	EquipmentType   string          `db:"equipment_type"    json:"equipment_type"`
+	AvailableRates  int             `db:"available_rates"   json:"available_rates"`
+	ActiveRates     int             `db:"active_rates"      json:"active_rates"`
+	CarrierCount    int             `db:"carrier_count"     json:"carrier_count"`
+	SpotRequestCount int            `db:"spot_request_count" json:"spot_request_count"`
+	SelectedRateCount int           `db:"selected_rate_count" json:"selected_rate_count"`
+	// CurrencyBreakdown groups min/avg/max prices per currency — never mixed.
+	CurrencyBreakdown []LaneCurrencyBreakdown `db:"-" json:"currency_breakdown"`
+	// CoverageStatus: COVERED, LIMITED, UNCOVERED
+	CoverageStatus string `db:"-" json:"coverage_status"`
+}
+
+// LaneCurrencyBreakdown holds min/avg/max for a single currency on a lane.
+type LaneCurrencyBreakdown struct {
+	Currency    string  `db:"currency"     json:"currency"`
+	CheapestRate float64 `db:"cheapest_rate" json:"cheapest_rate"`
+	AverageRate  float64 `db:"average_rate"  json:"average_rate"`
+	HighestRate  float64 `db:"highest_rate"  json:"highest_rate"`
+}
+
+// RateLifecycleAnalytics is a status-distribution count breakdown.
+type RateLifecycleAnalytics struct {
+	Active                    int `db:"active_count"          json:"active"`
+	ExpiringSoon              int `db:"expiring_soon_count"   json:"expiring_soon"`
+	Expired                   int `db:"expired_count"         json:"expired"`
+	Superseded                int `db:"superseded_count"      json:"superseded"`
+	Archived                  int `db:"archived_count"        json:"archived"`
+	Draft                     int `db:"draft_count"           json:"draft"`
+	TotalRates                int `db:"-"                     json:"total_rates"`
+	ContractRenewalRequired   int `db:"contract_renewal_count" json:"contract_renewal_required"`
+	CommercialRiskEvents      int `db:"risk_events_count"     json:"commercial_risk_events"`
+}
+
+// SpotSourcingPerformance captures the spot request-to-selection funnel.
+type SpotSourcingPerformance struct {
+	TotalRequests             int     `db:"total_requests"              json:"total_requests"`
+	AwaitingResponses         int     `db:"awaiting_responses"          json:"awaiting_responses"`
+	FullyResponded            int     `db:"fully_responded"             json:"fully_responded"`
+	Selected                  int     `db:"selected"                    json:"selected"`
+	Expired                   int     `db:"expired"                     json:"expired"`
+	Cancelled                 int     `db:"cancelled"                   json:"cancelled"`
+	AverageResponsesPerRequest float64 `db:"avg_responses_per_request"   json:"average_responses_per_request"`
+	SelectionRate             float64 `db:"-"                           json:"selection_rate"`  // computed
+	ResponseRate              float64 `db:"-"                           json:"response_rate"`   // computed
+	// CarrierParticipation top 5 spot responders
+	CarrierParticipation []SpotCarrierParticipation `db:"-" json:"carrier_participation"`
+}
+
+// SpotCarrierParticipation summarises a carrier's spot market activity.
+type SpotCarrierParticipation struct {
+	CarrierName    string `db:"carrier_name"     json:"carrier_name"`
+	ResponsesCount int    `db:"responses_count"  json:"responses_count"`
+	SelectionsCount int   `db:"selections_count" json:"selections_count"`
+}
+
+// CommercialImpactInsight is a deterministic, rule-based intelligence card.
+type CommercialImpactInsight struct {
+	Category          string `json:"category"`
+	Severity          string `json:"severity"` // INFO, WARNING, CRITICAL, SUCCESS
+	Headline          string `json:"headline"`
+	Description       string `json:"description"`
+	MetricValue       string `json:"metric_value"`
+	RecommendedAction string `json:"recommended_action"`
+	RelatedEntityType string `json:"related_entity_type,omitempty"` // "rate", "contract", "lane", "spot_request", "quotation"
+	RelatedEntityID   int64  `json:"related_entity_id,omitempty"`
+}
+

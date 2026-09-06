@@ -162,6 +162,16 @@
   font-weight: 600;
 }
 
+.sidebar-nav-link.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-nav-link.locked:hover {
+  background-color: transparent;
+  color: #94A3B8;
+}
+
 .sidebar-item-icon {
   flex-shrink: 0;
   color: inherit;

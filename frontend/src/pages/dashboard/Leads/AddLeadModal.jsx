@@ -1,27 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { createLead } from '../../../services/leadsService';
+import LocationPickerMap from '../../../components/dashboard/LocationPickerMap';
 
 /**
  * AddLeadModal — A clean popup form to manually add a new lead.
  *
- * Simple meaning: When the user clicks the "+ Add Lead" button, this form
- * slides in. They fill in the company name, contact, email, and source,
- * then hit "Add Lead". Our backend creates the record and immediately kicks off
- * the background AI worker to score the new lead.
- *
- * @param {{ onClose: () => void, onLeadAdded: () => void }}
+ * @param {{ onClose: () => void, onLeadAdded: () => void, users: Array }}
  */
-export default function AddLeadModal({ onClose, onLeadAdded }) {
+export default function AddLeadModal({ onClose, onLeadAdded, users = [] }) {
   const [form, setForm] = useState({
     company_name: '',
     contact_name: '',
     email: '',
+    phone: '',
     source: '',
     notes: '',
+    location: '',
+    assigned_to: '',
+    tags: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Close modal on Escape key press
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   // Update a single field in the form state
   function handleChange(e) {
@@ -40,7 +49,12 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
     setError('');
 
     try {
-      await createLead(form);
+      const payload = {
+        ...form,
+        assigned_to: form.assigned_to ? Number(form.assigned_to) : null,
+        tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      };
+      await createLead(payload);
       onLeadAdded(); // tell parent to refresh the table
       onClose();
     } catch (err) {
@@ -53,7 +67,7 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
   return (
     <div className="leads-modal-overlay" onClick={onClose}>
       {/* Stop click from propagating to the overlay (which would close the modal) */}
-      <div className="leads-modal" onClick={e => e.stopPropagation()}>
+      <div className="leads-modal wide-modal" onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div className="modal-header">
@@ -69,8 +83,8 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
         )}
 
         {/* Form */}
-        <form className="leads-form" onSubmit={handleSubmit}>
-          <div className="form-group">
+        <form className="leads-form grid-form" onSubmit={handleSubmit}>
+          <div className="form-group span-2">
             <label>Company Name *</label>
             <input
               type="text"
@@ -82,30 +96,40 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Contact Name</label>
-              <input
-                type="text"
-                name="contact_name"
-                value={form.contact_name}
-                onChange={handleChange}
-                placeholder="e.g. John Doe"
-              />
-            </div>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                placeholder="john@company.com"
-              />
-            </div>
+          <div className="form-group span-1">
+            <label>Contact Name</label>
+            <input
+              type="text"
+              name="contact_name"
+              value={form.contact_name}
+              onChange={handleChange}
+              placeholder="e.g. John Doe"
+            />
           </div>
 
-          <div className="form-group">
+          <div className="form-group span-1">
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="john@company.com"
+            />
+          </div>
+
+          <div className="form-group span-1">
+            <label>Phone</label>
+            <input
+              type="text"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="e.g. +1 (555) 0199"
+            />
+          </div>
+
+          <div className="form-group span-1">
             <label>Lead Source</label>
             <select name="source" value={form.source} onChange={handleChange}>
               <option value="">Select source...</option>
@@ -119,17 +143,38 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="form-group span-2">
+            <label>Tags (comma-separated)</label>
+            <input
+              type="text"
+              name="tags"
+              value={form.tags}
+              onChange={handleChange}
+              placeholder="e.g. Urgent, High Value, Ocean Freight"
+            />
+          </div>
+
+          <div className="form-group span-3">
+            <label>Location</label>
+            <LocationPickerMap
+              value={form.location}
+              onChange={(val) => setForm(prev => ({ ...prev, location: val }))}
+              placeholder="Search society, city, port, or address..."
+            />
+          </div>
+
+          <div className="form-group span-3 grid-notes">
             <label>Notes</label>
             <textarea
               name="notes"
               value={form.notes}
               onChange={handleChange}
               placeholder="Any quick notes about this lead..."
+              rows={3}
             />
           </div>
 
-          <div className="modal-actions">
+          <div className="modal-actions span-3" style={{ marginTop: 8 }}>
             <button type="button" className="leads-btn leads-btn-ghost" onClick={onClose}>
               Cancel
             </button>
@@ -147,4 +192,5 @@ export default function AddLeadModal({ onClose, onLeadAdded }) {
 AddLeadModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onLeadAdded: PropTypes.func.isRequired,
+  users: PropTypes.array,
 };

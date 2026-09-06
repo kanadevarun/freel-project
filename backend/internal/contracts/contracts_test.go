@@ -26,13 +26,13 @@ func TestContractLifecycle(t *testing.T) {
 	// Clean up tables to prevent test pollution and paging issues
 	_, _ = db.Exec("DELETE FROM rate_entries")
 	_, _ = db.Exec("DELETE FROM contract_documents")
-	_, _ = db.Exec("INSERT INTO carriers (scac, name) VALUES ('MAEU', 'Maersk Line') ON DUPLICATE KEY UPDATE name = VALUES(name)")
-	_, _ = db.Exec("INSERT INTO organizations (id, name, created_at, updated_at) VALUES (1, 'Test Freight Forwarder', NOW(), NOW()) ON DUPLICATE KEY UPDATE name = VALUES(name)")
-	_, _ = db.Exec("INSERT INTO users (id, cognito_sub, email, created_at, updated_at) VALUES (1, 'test-sub-1', 'test@example.com', NOW(), NOW()) ON DUPLICATE KEY UPDATE email = VALUES(email)")
+	_, _ = db.Exec("INSERT IGNORE INTO carriers (scac, name) VALUES ('MAEU', 'Maersk Line')")
+	_, _ = db.Exec("INSERT IGNORE INTO organizations (id, name, created_at, updated_at) VALUES (1, 'Test Freight Forwarder', NOW(), NOW())")
+	_, _ = db.Exec("INSERT IGNORE INTO users (id, cognito_sub, email, first_name, last_name, created_at, updated_at) VALUES (1000, 'test-sub-1', 'test@example.com', 'Test', 'User', NOW(), NOW())")
 
 	ctx := context.Background()
 	orgID := int64(1) // seeded organization
-	userID := int64(1)
+	userID := int64(1000)
 
 	// 2. Initialize dependencies
 	localFilesSvc := files.NewLocalService("./uploads", "http://localhost:8080/uploads")

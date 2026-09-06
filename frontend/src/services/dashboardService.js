@@ -6,10 +6,16 @@ import api from './api';
 export const dashboardService = {
   /**
    * Fetch the full Mission Control payload:
-   * { stats, approval_queue, ai_status }
+   * { stats, pipeline, shipment_status, invoice_summary, approval_queue, attention_items, date_range, ai_status }
    */
-  getMissionControl: async () => {
-    return api.get('/api/v1/dashboard/mission-control');
+  getMissionControl: async (params = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.startDate) searchParams.set('start_date', params.startDate);
+    if (params.endDate) searchParams.set('end_date', params.endDate);
+    if (params.preset) searchParams.set('preset', params.preset);
+    const queryString = searchParams.toString();
+    const url = queryString ? `/api/v1/dashboard/mission-control?${queryString}` : '/api/v1/dashboard/mission-control';
+    return api.get(url);
   },
 
   /**

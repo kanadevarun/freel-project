@@ -42,7 +42,6 @@ import LoginPage from './pages/auth/Login/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPassword/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPassword/ResetPasswordPage';
 import CallbackPage from './pages/auth/Callback/CallbackPage';
-import OnboardingPage from './pages/auth/Onboarding/OnboardingPage';
 import AcceptInvitePage from './pages/auth/AcceptInvite/AcceptInvitePage';
 import PublicOnlyRoute from './routes/PublicOnlyRoute';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -50,22 +49,33 @@ import AppShell from './layouts/AppShell/AppShell';
 import DashboardHome from './pages/dashboard/Home/DashboardHome';
 import ReportsPage from './pages/dashboard/Reports/ReportsPage';
 import UsersPage from './pages/dashboard/Settings/UsersPage';
+import CompanyProfilePage from './pages/dashboard/Settings/CompanyProfilePage';
+import WorkspaceSettingsPage from './pages/dashboard/Settings/WorkspaceSettingsPage';
+import EmailSettingsPage from './pages/dashboard/Settings/EmailSettingsPage';
 import RolesPage from './pages/dashboard/Settings/RolesPage';
+import CarrierIntegrationsPage from './pages/dashboard/Settings/CarrierIntegrationsPage';
+import AuditLogsPage from './pages/dashboard/Settings/AuditLogsPage';
 import LeadsPage from './pages/dashboard/Leads/LeadsPage';
 import OutreachPage from './pages/dashboard/Outreach/OutreachPage';
 import RFQPage from './pages/dashboard/RFQ/RFQPage';
+import RFQDetailPage from './pages/dashboard/RFQ/RFQDetailPage';
+import BookingsPage from './pages/dashboard/Bookings/BookingsPage';
+import BookingDetailPage from './pages/dashboard/Bookings/BookingDetailPage';
 import ShipmentsPage from './pages/dashboard/Shipments/ShipmentsPage';
 import ShipmentDetail from './pages/dashboard/Shipments/ShipmentDetail';
 import ContractsPage from './pages/dashboard/Contracts/ContractsPage';
+import ContractDocumentsPage from './pages/dashboard/Contracts/ContractDocumentsPage';
 import RateManagementPage from './pages/dashboard/RateManagement/RateManagementPage';
 import QuotationsPage from './pages/dashboard/Quotations/QuotationsPage';
 import TrackingPage from './pages/dashboard/Tracking/TrackingPage';
+import TrackingDetailPage from './pages/dashboard/Tracking/TrackingDetailPage';
 import ApprovalsPage from './pages/dashboard/Approvals/ApprovalsPage';
 import InvoicesPage from './pages/dashboard/Finance/InvoicesPage';
-import PaymentsPage from './pages/dashboard/Finance/PaymentsPage';
 import CustomersPage from './pages/dashboard/Customers/CustomersPage';
+import CustomerDetailsPage from './pages/dashboard/Customers/CustomerDetailsPage';
 import DocumentsPage from './pages/dashboard/Documents/DocumentsPage';
-import TemplatesPage from './pages/dashboard/Templates/TemplatesPage';
+import SettingsLayout from './layouts/SettingsLayout/SettingsLayout';
+import SubscriptionPage from './pages/dashboard/Settings/SubscriptionPage';
 
 /** Branded workspace placeholder for modules inside the Freight OS AppShell */
 function WorkspacePlaceholder({ title, emoji, section = 'Operations', note = 'This module is currently being connected to your freight workflow.' }) {
@@ -180,11 +190,10 @@ import './App.css';
  * RootRedirect — intelligent root route behavior.
  */
 function RootRedirect() {
-  const { isBooting, isAuthenticated, onboardingCompleted } = useAuth();
+  const { isBooting, isAuthenticated } = useAuth();
   if (isBooting) return <div className="boot-screen"><div className="auth-spinner" /></div>;
 
   if (isAuthenticated) {
-    if (!onboardingCompleted) return <Navigate to="/onboarding" replace />;
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -282,36 +291,37 @@ export default function App() {
                 <Route path="/auth/callback" element={<CallbackPage />} />
               </Route>
 
-            {/* ── DEMO ROUTE ── */}
-            <Route path="/demo-onboarding" element={<OnboardingPage />} />
-
             {/* ── PRIVATE PROTECTED ROUTES ── */}
             <Route element={<ProtectedRoute />}>
-              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route element={<AppShell />}>
                 {/* ── 1. OPERATIONS ── */}
                 <Route path="/dashboard" element={<DashboardHome />} />
                 <Route path="/dashboard/leads" element={<LeadsPage />} />
                 <Route path="/dashboard/rfqs" element={<RFQPage />} />
+                <Route path="/dashboard/rfqs/:id" element={<RFQDetailPage />} />
                 <Route path="/dashboard/shipments" element={<ShipmentsPage />} />
                 <Route path="/dashboard/shipments/:id" element={<ShipmentDetail />} />
-                <Route path="/dashboard/bookings" element={<ShipmentsPage mode="bookings" defaultStatus="BOOKED" />} />
+                <Route path="/dashboard/bookings" element={<BookingsPage />} />
+                <Route path="/dashboard/bookings/:bookingId" element={<BookingDetailPage />} />
                 <Route path="/dashboard/tracking" element={<TrackingPage />} />
+                <Route path="/dashboard/tracking/:shipmentId" element={<TrackingDetailPage />} />
 
                 {/* ── 2. COMMERCIAL ── */}
                 <Route path="/dashboard/quotations" element={<QuotationsPage />} />
                 <Route path="/dashboard/rate-management" element={<RateManagementPage />} />
                 <Route path="/dashboard/contracts" element={<ContractsPage />} />
+                <Route path="/dashboard/contract-documents" element={<ContractDocumentsPage />} />
+                <Route path="/dashboard/customers" element={<CustomersPage />} />
+                <Route path="/dashboard/customers/:id" element={<CustomerDetailsPage />} />
                 <Route path="/dashboard/companies" element={<CustomersPage />} />
 
                 {/* ── 3. DOCUMENTS ── */}
                 <Route path="/dashboard/documents" element={<DocumentsPage />} />
-                <Route path="/dashboard/templates" element={<TemplatesPage />} />
                 <Route path="/dashboard/approvals" element={<ApprovalsPage />} />
 
                 {/* ── 4. FINANCE ── */}
                 <Route path="/dashboard/invoices" element={<InvoicesPage />} />
-                <Route path="/dashboard/payments" element={<PaymentsPage />} />
+                <Route path="/dashboard/payments" element={<Navigate to="/dashboard/invoices" replace />} />
                 <Route path="/dashboard/reports" element={<ReportsPage />} />
 
                 {/* ── 5. OUTREACH & TOOLS ── */}
@@ -321,8 +331,31 @@ export default function App() {
                 <Route path="/dashboard/calculators" element={<WorkspacePlaceholder section="Tools" title="Freight Calculators" emoji="🧮" note="CBM, Volumetric Weight, and Duty calculators." />} />
 
                 {/* ── 6. ADMIN & SETTINGS ── */}
-                <Route path="/dashboard/users" element={<UsersPage />} />
-                <Route path="/dashboard/settings" element={<RolesPage />} />
+                <Route path="/dashboard/settings" element={<SettingsLayout />}>
+                  <Route index element={<Navigate to="roles" replace />} />
+                  
+                  {/* SETTINGS */}
+                  <Route path="company-profile" element={<CompanyProfilePage />} />
+                  <Route path="company" element={<Navigate to="company-profile" replace />} />
+                  <Route path="workspace" element={<WorkspaceSettingsPage />} />
+                  
+                  {/* TEAM & ACCESS */}
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="roles" element={<RolesPage />} />
+                  
+                  {/* SECURITY */}
+                  <Route path="audit-logs" element={<AuditLogsPage />} />
+                  
+                  {/* INTEGRATIONS */}
+                  <Route path="carrier-integrations" element={<CarrierIntegrationsPage />} />
+                  <Route path="email-settings" element={<EmailSettingsPage />} />
+                  {/* BILLING */}
+                  <Route path="subscription" element={<SubscriptionPage />} />
+                  <Route path="billing-invoices" element={<WorkspacePlaceholder section="Billing" title="Billing & Invoices" emoji="🧾" note="View past invoices." />} />
+                </Route>
+
+                {/* Legacy redirect for UsersPage if it was accessed directly */}
+                <Route path="/dashboard/users" element={<Navigate to="/dashboard/settings/users" replace />} />
 
                 {/* ── 7. PERMISSION & 404 FALLBACKS WITHIN WORKSPACE ── */}
                 <Route path="/dashboard/unauthorized" element={<WorkspacePlaceholder section="Security" title="Unauthorized" emoji="🚫" note="You do not have permission to access this module. Please contact your organization administrator." />} />

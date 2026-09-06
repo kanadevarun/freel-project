@@ -54,6 +54,21 @@ func (mr *MockRepositoryMockRecorder) AddUserToOrg(ctx, member any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddUserToOrg", reflect.TypeOf((*MockRepository)(nil).AddUserToOrg), ctx, member)
 }
 
+// CountActiveSuperAdmins mocks base method.
+func (m *MockRepository) CountActiveSuperAdmins(ctx context.Context, orgID int64) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountActiveSuperAdmins", ctx, orgID)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountActiveSuperAdmins indicates an expected call of CountActiveSuperAdmins.
+func (mr *MockRepositoryMockRecorder) CountActiveSuperAdmins(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountActiveSuperAdmins", reflect.TypeOf((*MockRepository)(nil).CountActiveSuperAdmins), ctx, orgID)
+}
+
 // CreateInvitation mocks base method.
 func (m *MockRepository) CreateInvitation(ctx context.Context, inv *Invitation) error {
 	m.ctrl.T.Helper()
@@ -84,17 +99,17 @@ func (mr *MockRepositoryMockRecorder) CreateUser(ctx, user any) *gomock.Call {
 }
 
 // DeleteInvitation mocks base method.
-func (m *MockRepository) DeleteInvitation(ctx context.Context, id int64) error {
+func (m *MockRepository) DeleteInvitation(ctx context.Context, orgID, id int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteInvitation", ctx, id)
+	ret := m.ctrl.Call(m, "DeleteInvitation", ctx, orgID, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteInvitation indicates an expected call of DeleteInvitation.
-func (mr *MockRepositoryMockRecorder) DeleteInvitation(ctx, id any) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DeleteInvitation(ctx, orgID, id any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInvitation", reflect.TypeOf((*MockRepository)(nil).DeleteInvitation), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteInvitation", reflect.TypeOf((*MockRepository)(nil).DeleteInvitation), ctx, orgID, id)
 }
 
 // GetInvitationByToken mocks base method.
@@ -110,6 +125,21 @@ func (m *MockRepository) GetInvitationByToken(ctx context.Context, token string)
 func (mr *MockRepositoryMockRecorder) GetInvitationByToken(ctx, token any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInvitationByToken", reflect.TypeOf((*MockRepository)(nil).GetInvitationByToken), ctx, token)
+}
+
+// GetMemberRoleName mocks base method.
+func (m *MockRepository) GetMemberRoleName(ctx context.Context, orgID, userID int64) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMemberRoleName", ctx, orgID, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMemberRoleName indicates an expected call of GetMemberRoleName.
+func (mr *MockRepositoryMockRecorder) GetMemberRoleName(ctx, orgID, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMemberRoleName", reflect.TypeOf((*MockRepository)(nil).GetMemberRoleName), ctx, orgID, userID)
 }
 
 // GetUserByEmail mocks base method.

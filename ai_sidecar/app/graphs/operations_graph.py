@@ -20,7 +20,6 @@ Ops team is alerted via has_critical_exception flag in the callback.
 
 import os
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.state.operations_state import OperationsAgentState
 from app.agents.ops_parse_node import ops_parse_node
@@ -44,19 +43,10 @@ ops_builder.add_edge("update_milestones", "detect_exceptions")
 ops_builder.add_edge("detect_exceptions", "ops_action")
 ops_builder.add_edge("ops_action", END)
 
-# ── Checkpointer setup ────────────────────────────────────────────────────────
+from langgraph.checkpoint.memory import MemorySaver
 
-def get_db_url() -> str:
-    url = os.getenv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable")
-    if "host.docker.internal" in url:
-        url = url.replace("host.docker.internal", "localhost")
-    return url
-
-db_url = get_db_url()
-_saver_context = PostgresSaver.from_conn_string(db_url)
-saver = _saver_context.__enter__()
-saver.setup()
-print("[AI Sidecar Ops] Successfully initialized PostgresSaver checkpointer for OperationsAgent.")
+saver = MemorySaver()
+print("[AI Sidecar Ops] Successfully initialized MemorySaver checkpointer for OperationsAgent.")
 
 # Compile the Operations Graph
 operations_graph = ops_builder.compile(

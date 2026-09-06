@@ -16,7 +16,7 @@ func (s *Server) setupMiddleware() {
 	// Basic CORS setup
 	s.router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{s.cfg.FrontendURL, s.cfg.FrontendProdURL},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Correlation-ID"},
 		ExposedHeaders:   []string{"Link", "X-Correlation-ID"},
 		AllowCredentials: true,

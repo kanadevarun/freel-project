@@ -2,12 +2,13 @@ package rbac
 
 // Role names
 const (
-	RoleSuperAdmin = "SUPER_ADMIN"
-	RoleSales      = "SALES"
-	RolePricing    = "PRICING"
-	RoleOperations = "OPERATIONS"
-	RoleFinance    = "FINANCE"
-	RoleCustomer   = "CUSTOMER"
+	RoleSuperAdmin   = "SUPER_ADMIN"
+	RoleSales        = "SALES"
+	RolePricing      = "PRICING"
+	RoleOperations   = "OPERATIONS"
+	RoleFinance      = "FINANCE"
+	RoleDocumentation = "DOCUMENTATION"
+	RoleHR           = "HR"
 )
 
 // Resource names
@@ -17,6 +18,11 @@ const (
 	ResourceOpportunities = "OPPORTUNITIES"
 	ResourceRFQs          = "RFQS"
 	ResourceOutreach      = "OUTREACH"
+	ResourceShipments     = "SHIPMENTS"
+	ResourceDocuments     = "DOCUMENTS"
+	ResourceFinance       = "FINANCE"
+	ResourceUsers         = "USERS"
+	ResourceSettings      = "SETTINGS"
 	ResourceDashboard     = "DASHBOARD"
 )
 

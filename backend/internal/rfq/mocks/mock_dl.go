@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	spec "github.com/freel/backend/internal/rfq/spec"
 	gomock "go.uber.org/mock/gomock"
@@ -53,6 +54,34 @@ func (m *MockDatalayer) ApproveQuote(ctx context.Context, rfqID, quoteID int32) 
 func (mr *MockDatalayerMockRecorder) ApproveQuote(ctx, rfqID, quoteID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveQuote", reflect.TypeOf((*MockDatalayer)(nil).ApproveQuote), ctx, rfqID, quoteID)
+}
+
+// ConvertLead mocks base method.
+func (m *MockDatalayer) ConvertLead(ctx context.Context, orgID int32, leadID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ConvertLead", ctx, orgID, leadID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ConvertLead indicates an expected call of ConvertLead.
+func (mr *MockDatalayerMockRecorder) ConvertLead(ctx, orgID, leadID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvertLead", reflect.TypeOf((*MockDatalayer)(nil).ConvertLead), ctx, orgID, leadID)
+}
+
+// CreateAITask mocks base method.
+func (m *MockDatalayer) CreateAITask(ctx context.Context, orgID int64, entityType, entityID, taskType string, payload map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAITask", ctx, orgID, entityType, entityID, taskType, payload)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateAITask indicates an expected call of CreateAITask.
+func (mr *MockDatalayerMockRecorder) CreateAITask(ctx, orgID, entityType, entityID, taskType, payload any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAITask", reflect.TypeOf((*MockDatalayer)(nil).CreateAITask), ctx, orgID, entityType, entityID, taskType, payload)
 }
 
 // CreateQuote mocks base method.
@@ -127,6 +156,36 @@ func (mr *MockDatalayerMockRecorder) GetRFQByID(ctx, orgID, rfqID any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQByID", reflect.TypeOf((*MockDatalayer)(nil).GetRFQByID), ctx, orgID, rfqID)
 }
 
+// GetRFQByLeadID mocks base method.
+func (m *MockDatalayer) GetRFQByLeadID(ctx context.Context, orgID int32, leadID int64) (*spec.RFQ, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQByLeadID", ctx, orgID, leadID)
+	ret0, _ := ret[0].(*spec.RFQ)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQByLeadID indicates an expected call of GetRFQByLeadID.
+func (mr *MockDatalayerMockRecorder) GetRFQByLeadID(ctx, orgID, leadID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQByLeadID", reflect.TypeOf((*MockDatalayer)(nil).GetRFQByLeadID), ctx, orgID, leadID)
+}
+
+// GetRFQTimeline mocks base method.
+func (m *MockDatalayer) GetRFQTimeline(ctx context.Context, orgID, rfqID int32, leadID *int64) ([]spec.TimelineEvent, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQTimeline", ctx, orgID, rfqID, leadID)
+	ret0, _ := ret[0].([]spec.TimelineEvent)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQTimeline indicates an expected call of GetRFQTimeline.
+func (mr *MockDatalayerMockRecorder) GetRFQTimeline(ctx, orgID, rfqID, leadID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQTimeline", reflect.TypeOf((*MockDatalayer)(nil).GetRFQTimeline), ctx, orgID, rfqID, leadID)
+}
+
 // ListRFQs mocks base method.
 func (m *MockDatalayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int) ([]spec.RFQ, int, error) {
 	m.ctrl.T.Helper()
@@ -171,17 +230,419 @@ func (mr *MockDatalayerMockRecorder) UpdateStage(ctx, orgID, rfqID, stage any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStage", reflect.TypeOf((*MockDatalayer)(nil).UpdateStage), ctx, orgID, rfqID, stage)
 }
 
-// CreateAITask mocks base method.
-func (m *MockDatalayer) CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error {
+// CreateActivity mocks base method.
+func (m *MockDatalayer) CreateActivity(ctx context.Context, orgID int32, entityType string, entityID int64, action, description, actor string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAITask", ctx, orgID, entityType, entityID, taskType, payload)
+	ret := m.ctrl.Call(m, "CreateActivity", ctx, orgID, entityType, entityID, action, description, actor)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// CreateAITask indicates an expected call of CreateAITask.
-func (mr *MockDatalayerMockRecorder) CreateAITask(ctx, orgID, entityType, entityID, taskType, payload any) *gomock.Call {
+// CreateActivity indicates an expected call of CreateActivity.
+func (mr *MockDatalayerMockRecorder) CreateActivity(ctx, orgID, entityType, entityID, action, description, actor any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAITask", reflect.TypeOf((*MockDatalayer)(nil).CreateAITask), ctx, orgID, entityType, entityID, taskType, payload)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateActivity", reflect.TypeOf((*MockDatalayer)(nil).CreateActivity), ctx, orgID, entityType, entityID, action, description, actor)
 }
+
+// GetRFQDocuments mocks base method.
+func (m *MockDatalayer) GetRFQDocuments(ctx context.Context, orgID, rfqID int32) ([]spec.RFQDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQDocuments", ctx, orgID, rfqID)
+	ret0, _ := ret[0].([]spec.RFQDocument)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQDocuments indicates an expected call of GetRFQDocuments.
+func (mr *MockDatalayerMockRecorder) GetRFQDocuments(ctx, orgID, rfqID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQDocuments", reflect.TypeOf((*MockDatalayer)(nil).GetRFQDocuments), ctx, orgID, rfqID)
+}
+
+// GetRFQDocumentByID mocks base method.
+func (m *MockDatalayer) GetRFQDocumentByID(ctx context.Context, orgID, rfqID int32, documentID int64) (*spec.RFQDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQDocumentByID", ctx, orgID, rfqID, documentID)
+	ret0, _ := ret[0].(*spec.RFQDocument)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQDocumentByID indicates an expected call of GetRFQDocumentByID.
+func (mr *MockDatalayerMockRecorder) GetRFQDocumentByID(ctx, orgID, rfqID, documentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQDocumentByID", reflect.TypeOf((*MockDatalayer)(nil).GetRFQDocumentByID), ctx, orgID, rfqID, documentID)
+}
+
+// CreateRFQDocument mocks base method.
+func (m *MockDatalayer) CreateRFQDocument(ctx context.Context, orgID int32, doc *spec.RFQDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRFQDocument", ctx, orgID, doc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateRFQDocument indicates an expected call of CreateRFQDocument.
+func (mr *MockDatalayerMockRecorder) CreateRFQDocument(ctx, orgID, doc any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRFQDocument", reflect.TypeOf((*MockDatalayer)(nil).CreateRFQDocument), ctx, orgID, doc)
+}
+
+// UpdateRFQDocument mocks base method.
+func (m *MockDatalayer) UpdateRFQDocument(ctx context.Context, orgID int32, doc *spec.RFQDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRFQDocument", ctx, orgID, doc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRFQDocument indicates an expected call of UpdateRFQDocument.
+func (mr *MockDatalayerMockRecorder) UpdateRFQDocument(ctx, orgID, doc any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRFQDocument", reflect.TypeOf((*MockDatalayer)(nil).UpdateRFQDocument), ctx, orgID, doc)
+}
+
+// UpdateRFQDocumentStatus mocks base method.
+func (m *MockDatalayer) UpdateRFQDocumentStatus(ctx context.Context, orgID, rfqID int32, documentID int64, status, reviewer string, rejectionReason *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRFQDocumentStatus", ctx, orgID, rfqID, documentID, status, reviewer, rejectionReason)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRFQDocumentStatus indicates an expected call of UpdateRFQDocumentStatus.
+func (mr *MockDatalayerMockRecorder) UpdateRFQDocumentStatus(ctx, orgID, rfqID, documentID, status, reviewer, rejectionReason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRFQDocumentStatus", reflect.TypeOf((*MockDatalayer)(nil).UpdateRFQDocumentStatus), ctx, orgID, rfqID, documentID, status, reviewer, rejectionReason)
+}
+
+// DeleteRFQDocument mocks base method.
+func (m *MockDatalayer) DeleteRFQDocument(ctx context.Context, orgID, rfqID int32, documentID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRFQDocument", ctx, orgID, rfqID, documentID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRFQDocument indicates an expected call of DeleteRFQDocument.
+func (mr *MockDatalayerMockRecorder) DeleteRFQDocument(ctx, orgID, rfqID, documentID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRFQDocument", reflect.TypeOf((*MockDatalayer)(nil).DeleteRFQDocument), ctx, orgID, rfqID, documentID)
+}
+
+// GetRFQQuotes mocks base method.
+func (m *MockDatalayer) GetRFQQuotes(ctx context.Context, orgID, rfqID int32) ([]spec.RFQQuote, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQQuotes", ctx, orgID, rfqID)
+	ret0, _ := ret[0].([]spec.RFQQuote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQQuotes indicates an expected call of GetRFQQuotes.
+func (mr *MockDatalayerMockRecorder) GetRFQQuotes(ctx, orgID, rfqID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQQuotes", reflect.TypeOf((*MockDatalayer)(nil).GetRFQQuotes), ctx, orgID, rfqID)
+}
+
+// GetRFQQuoteByID mocks base method.
+func (m *MockDatalayer) GetRFQQuoteByID(ctx context.Context, orgID, rfqID int32, quoteID int64) (*spec.RFQQuote, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQQuoteByID", ctx, orgID, rfqID, quoteID)
+	ret0, _ := ret[0].(*spec.RFQQuote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQQuoteByID indicates an expected call of GetRFQQuoteByID.
+func (mr *MockDatalayerMockRecorder) GetRFQQuoteByID(ctx, orgID, rfqID, quoteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQQuoteByID", reflect.TypeOf((*MockDatalayer)(nil).GetRFQQuoteByID), ctx, orgID, rfqID, quoteID)
+}
+
+// CreateRFQQuote mocks base method.
+func (m *MockDatalayer) CreateRFQQuote(ctx context.Context, orgID int32, quote *spec.RFQQuote) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRFQQuote", ctx, orgID, quote)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateRFQQuote indicates an expected call of CreateRFQQuote.
+func (mr *MockDatalayerMockRecorder) CreateRFQQuote(ctx, orgID, quote any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRFQQuote", reflect.TypeOf((*MockDatalayer)(nil).CreateRFQQuote), ctx, orgID, quote)
+}
+
+// UpdateRFQQuote mocks base method.
+func (m *MockDatalayer) UpdateRFQQuote(ctx context.Context, orgID int32, quote *spec.RFQQuote) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRFQQuote", ctx, orgID, quote)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRFQQuote indicates an expected call of UpdateRFQQuote.
+func (mr *MockDatalayerMockRecorder) UpdateRFQQuote(ctx, orgID, quote any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRFQQuote", reflect.TypeOf((*MockDatalayer)(nil).UpdateRFQQuote), ctx, orgID, quote)
+}
+
+// UpdateRFQQuoteStatus mocks base method.
+func (m *MockDatalayer) UpdateRFQQuoteStatus(ctx context.Context, orgID, rfqID int32, quoteID int64, status string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRFQQuoteStatus", ctx, orgID, rfqID, quoteID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRFQQuoteStatus indicates an expected call of UpdateRFQQuoteStatus.
+func (mr *MockDatalayerMockRecorder) UpdateRFQQuoteStatus(ctx, orgID, rfqID, quoteID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRFQQuoteStatus", reflect.TypeOf((*MockDatalayer)(nil).UpdateRFQQuoteStatus), ctx, orgID, rfqID, quoteID, status)
+}
+
+// RecommendRFQQuote mocks base method.
+func (m *MockDatalayer) RecommendRFQQuote(ctx context.Context, orgID, rfqID int32, quoteID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecommendRFQQuote", ctx, orgID, rfqID, quoteID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecommendRFQQuote indicates an expected call of RecommendRFQQuote.
+func (mr *MockDatalayerMockRecorder) RecommendRFQQuote(ctx, orgID, rfqID, quoteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecommendRFQQuote", reflect.TypeOf((*MockDatalayer)(nil).RecommendRFQQuote), ctx, orgID, rfqID, quoteID)
+}
+
+// ApproveRFQQuote mocks base method.
+func (m *MockDatalayer) ApproveRFQQuote(ctx context.Context, orgID, rfqID int32, quoteID int64, approver string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApproveRFQQuote", ctx, orgID, rfqID, quoteID, approver)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApproveRFQQuote indicates an expected call of ApproveRFQQuote.
+func (mr *MockDatalayerMockRecorder) ApproveRFQQuote(ctx, orgID, rfqID, quoteID, approver any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApproveRFQQuote", reflect.TypeOf((*MockDatalayer)(nil).ApproveRFQQuote), ctx, orgID, rfqID, quoteID, approver)
+}
+
+// SelectRFQQuoteForCustomer mocks base method.
+func (m *MockDatalayer) SelectRFQQuoteForCustomer(ctx context.Context, orgID, rfqID int32, quoteID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SelectRFQQuoteForCustomer", ctx, orgID, rfqID, quoteID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SelectRFQQuoteForCustomer indicates an expected call of SelectRFQQuoteForCustomer.
+func (mr *MockDatalayerMockRecorder) SelectRFQQuoteForCustomer(ctx, orgID, rfqID, quoteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SelectRFQQuoteForCustomer", reflect.TypeOf((*MockDatalayer)(nil).SelectRFQQuoteForCustomer), ctx, orgID, rfqID, quoteID)
+}
+
+// DeleteRFQQuote mocks base method.
+func (m *MockDatalayer) DeleteRFQQuote(ctx context.Context, orgID, rfqID int32, quoteID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteRFQQuote", ctx, orgID, rfqID, quoteID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteRFQQuote indicates an expected call of DeleteRFQQuote.
+func (mr *MockDatalayerMockRecorder) DeleteRFQQuote(ctx, orgID, rfqID, quoteID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteRFQQuote", reflect.TypeOf((*MockDatalayer)(nil).DeleteRFQQuote), ctx, orgID, rfqID, quoteID)
+}
+
+// GetRFQBookings mocks base method.
+func (m *MockDatalayer) GetRFQBookings(ctx context.Context, orgID, rfqID int32) ([]spec.RFQBooking, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQBookings", ctx, orgID, rfqID)
+	ret0, _ := ret[0].([]spec.RFQBooking)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQBookings indicates an expected call of GetRFQBookings.
+func (mr *MockDatalayerMockRecorder) GetRFQBookings(ctx, orgID, rfqID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQBookings", reflect.TypeOf((*MockDatalayer)(nil).GetRFQBookings), ctx, orgID, rfqID)
+}
+
+// GetRFQBookingByID mocks base method.
+func (m *MockDatalayer) GetRFQBookingByID(ctx context.Context, orgID, rfqID int32, bookingID int64) (*spec.RFQBooking, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQBookingByID", ctx, orgID, rfqID, bookingID)
+	ret0, _ := ret[0].(*spec.RFQBooking)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQBookingByID indicates an expected call of GetRFQBookingByID.
+func (mr *MockDatalayerMockRecorder) GetRFQBookingByID(ctx, orgID, rfqID, bookingID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQBookingByID", reflect.TypeOf((*MockDatalayer)(nil).GetRFQBookingByID), ctx, orgID, rfqID, bookingID)
+}
+
+// CreateRFQBooking mocks base method.
+func (m *MockDatalayer) CreateRFQBooking(ctx context.Context, orgID int32, booking *spec.RFQBooking) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateRFQBooking", ctx, orgID, booking)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateRFQBooking indicates an expected call of CreateRFQBooking.
+func (mr *MockDatalayerMockRecorder) CreateRFQBooking(ctx, orgID, booking any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateRFQBooking", reflect.TypeOf((*MockDatalayer)(nil).CreateRFQBooking), ctx, orgID, booking)
+}
+
+// UpdateRFQBookingStatus mocks base method.
+func (m *MockDatalayer) UpdateRFQBookingStatus(ctx context.Context, orgID, rfqID int32, bookingID int64, status string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateRFQBookingStatus", ctx, orgID, rfqID, bookingID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateRFQBookingStatus indicates an expected call of UpdateRFQBookingStatus.
+func (mr *MockDatalayerMockRecorder) UpdateRFQBookingStatus(ctx, orgID, rfqID, bookingID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRFQBookingStatus", reflect.TypeOf((*MockDatalayer)(nil).UpdateRFQBookingStatus), ctx, orgID, rfqID, bookingID, status)
+}
+
+// GetRFQShipments mocks base method.
+func (m *MockDatalayer) GetRFQShipments(ctx context.Context, orgID, rfqID int32) ([]spec.RFQShipment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRFQShipments", ctx, orgID, rfqID)
+	ret0, _ := ret[0].([]spec.RFQShipment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRFQShipments indicates an expected call of GetRFQShipments.
+func (mr *MockDatalayerMockRecorder) GetRFQShipments(ctx, orgID, rfqID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRFQShipments", reflect.TypeOf((*MockDatalayer)(nil).GetRFQShipments), ctx, orgID, rfqID)
+}
+
+// GetBookingsWorkspace mocks base method.
+func (m *MockDatalayer) GetBookingsWorkspace(ctx context.Context, orgID int32, filter spec.BookingListFilter) ([]spec.BookingWorkspaceItem, spec.BookingKPIs, int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBookingsWorkspace", ctx, orgID, filter)
+	ret0, _ := ret[0].([]spec.BookingWorkspaceItem)
+	ret1, _ := ret[1].(spec.BookingKPIs)
+	ret2, _ := ret[2].(int)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+func (mr *MockDatalayerMockRecorder) GetBookingsWorkspace(ctx, orgID, filter any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBookingsWorkspace", reflect.TypeOf((*MockDatalayer)(nil).GetBookingsWorkspace), ctx, orgID, filter)
+}
+
+// GetBookingWorkspaceDetail mocks base method.
+func (m *MockDatalayer) GetBookingWorkspaceDetail(ctx context.Context, orgID int32, bookingID int64) (*spec.BookingDetailResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBookingWorkspaceDetail", ctx, orgID, bookingID)
+	ret0, _ := ret[0].(*spec.BookingDetailResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockDatalayerMockRecorder) GetBookingWorkspaceDetail(ctx, orgID, bookingID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBookingWorkspaceDetail", reflect.TypeOf((*MockDatalayer)(nil).GetBookingWorkspaceDetail), ctx, orgID, bookingID)
+}
+
+// GetBookingByIDOnly mocks base method.
+func (m *MockDatalayer) GetBookingByIDOnly(ctx context.Context, orgID int32, bookingID int64) (*spec.RFQBooking, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBookingByIDOnly", ctx, orgID, bookingID)
+	ret0, _ := ret[0].(*spec.RFQBooking)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockDatalayerMockRecorder) GetBookingByIDOnly(ctx, orgID, bookingID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBookingByIDOnly", reflect.TypeOf((*MockDatalayer)(nil).GetBookingByIDOnly), ctx, orgID, bookingID)
+}
+
+// UpdateBookingStatusDirect mocks base method.
+func (m *MockDatalayer) UpdateBookingStatusDirect(ctx context.Context, orgID int32, bookingID int64, status string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateBookingStatusDirect", ctx, orgID, bookingID, status)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (mr *MockDatalayerMockRecorder) UpdateBookingStatusDirect(ctx, orgID, bookingID, status any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateBookingStatusDirect", reflect.TypeOf((*MockDatalayer)(nil).UpdateBookingStatusDirect), ctx, orgID, bookingID, status)
+}
+
+// GetEligibleRFQsForBooking mocks base method.
+func (m *MockDatalayer) GetEligibleRFQsForBooking(ctx context.Context, orgID int32) ([]spec.EligibleBookingRFQ, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEligibleRFQsForBooking", ctx, orgID)
+	ret0, _ := ret[0].([]spec.EligibleBookingRFQ)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockDatalayerMockRecorder) GetEligibleRFQsForBooking(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEligibleRFQsForBooking", reflect.TypeOf((*MockDatalayer)(nil).GetEligibleRFQsForBooking), ctx, orgID)
+}
+
+// CreateShipmentFromBookingTx mocks base method.
+func (m *MockDatalayer) CreateShipmentFromBookingTx(ctx context.Context, orgID int32, bookingID int64, req spec.CreateShipmentFromBookingRequest, creator string) (*spec.RFQShipment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateShipmentFromBookingTx", ctx, orgID, bookingID, req, creator)
+	ret0, _ := ret[0].(*spec.RFQShipment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockDatalayerMockRecorder) CreateShipmentFromBookingTx(ctx, orgID, bookingID, req, creator any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateShipmentFromBookingTx", reflect.TypeOf((*MockDatalayer)(nil).CreateShipmentFromBookingTx), ctx, orgID, bookingID, req, creator)
+}
+
+// GetUniqueCarriersForBookings mocks base method.
+func (m *MockDatalayer) GetUniqueCarriersForBookings(ctx context.Context, orgID int32) ([]spec.BookingCarrierInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUniqueCarriersForBookings", ctx, orgID)
+	ret0, _ := ret[0].([]spec.BookingCarrierInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockDatalayerMockRecorder) GetUniqueCarriersForBookings(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUniqueCarriersForBookings", reflect.TypeOf((*MockDatalayer)(nil).GetUniqueCarriersForBookings), ctx, orgID)
+}
+
+// UpdateCarrierBookingResult mocks base method.
+func (m *MockDatalayer) UpdateCarrierBookingResult(ctx context.Context, orgID int32, bookingID int64, carrierRef, carrierStatus string, confirmationRef, carrierError *string, bookedAt *time.Time, vesselName, voyageNum *string, etd, eta *time.Time, newStatus string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCarrierBookingResult", ctx, orgID, bookingID, carrierRef, carrierStatus, confirmationRef, carrierError, bookedAt, vesselName, voyageNum, etd, eta, newStatus)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (mr *MockDatalayerMockRecorder) UpdateCarrierBookingResult(ctx, orgID, bookingID, carrierRef, carrierStatus, confirmationRef, carrierError, bookedAt, vesselName, voyageNum, etd, eta, newStatus any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCarrierBookingResult", reflect.TypeOf((*MockDatalayer)(nil).UpdateCarrierBookingResult), ctx, orgID, bookingID, carrierRef, carrierStatus, confirmationRef, carrierError, bookedAt, vesselName, voyageNum, etd, eta, newStatus)
+}
+
+
+
 

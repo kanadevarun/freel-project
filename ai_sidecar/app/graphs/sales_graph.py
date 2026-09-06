@@ -1,6 +1,5 @@
 import os
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.state.sales_state import SalesAgentState
 from app.agents.email_parser_agent import (
@@ -33,7 +32,7 @@ def route_by_intent(state: SalesAgentState) -> str:
     """
     intent = state.get("intent", "QUESTION")
     print(f"[Sales Graph Router] Intent classified as: {intent}")
-    if intent == "RFQ_REQUEST":
+    if intent in ["RFQ_REQUEST", "FOLLOW_UP"]:
         return "merge_context"
     return "callback"
 
@@ -83,18 +82,10 @@ sales_builder.add_edge("callback", END)
 
 # ── Checkpointer setup ─────────────────────────────────────────────────────
 
-def get_db_url() -> str:
-    url = os.getenv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable")
-    if "host.docker.internal" in url:
-        url = url.replace("host.docker.internal", "localhost")
-    return url
+from langgraph.checkpoint.memory import MemorySaver
 
-# Initialize database-backed checkpointer
-db_url = get_db_url()
-_saver_context = PostgresSaver.from_conn_string(db_url)
-saver = _saver_context.__enter__()
-saver.setup()
-print("[AI Sidecar Sales] Successfully initialized PostgresSaver checkpointer.")
+saver = MemorySaver()
+print("[AI Sidecar Sales] Successfully initialized MemorySaver checkpointer.")
 
 # Compile the Sales Graph
 sales_graph = sales_builder.compile(

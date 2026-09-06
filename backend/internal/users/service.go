@@ -5,9 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/freel/backend/internal/audit"
+	"github.com/freel/backend/internal/audit/domain"
 	"github.com/freel/backend/internal/notifications"
+	"github.com/freel/backend/internal/rbac"
 )
 
 // Service defines the business logic operations for the users module.
@@ -88,6 +92,9 @@ func (s *serviceImpl) InviteUser(ctx context.Context, orgID int64, req InviteUse
 	// will trigger an error, preventing duplicate active invites.
 	err := s.repo.CreateInvitation(ctx, invitation)
 	if err != nil {
+		if strings.Contains(err.Error(), "Duplicate entry") {
+			return fmt.Errorf("INVITATION_ALREADY_EXISTS: An invitation has already been sent to this email address.")
+		}
 		return fmt.Errorf("failed to create invitation record: %w", err)
 	}
 
@@ -98,6 +105,16 @@ func (s *serviceImpl) InviteUser(ctx context.Context, orgID int64, req InviteUse
 		// Log the error. Ideally, we might want to clean up the invitation here or enqueue a retry.
 		return fmt.Errorf("failed to send invitation email: %w", err)
 	}
+
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		Action:       domain.ActionInvite,
+		Module:       domain.ModuleUsers,
+		ResourceType: "USER",
+		ResourceName: req.Email,
+		Description:  fmt.Sprintf("Invited user %s", req.Email),
+		Result:       domain.ResultSuccess,
+	})
 
 	return nil
 }
@@ -123,31 +140,100 @@ func (s *serviceImpl) ListInvitations(ctx context.Context, orgID int64) ([]Invit
 
 // CancelInvitation deletes a pending invitation.
 func (s *serviceImpl) CancelInvitation(ctx context.Context, orgID, inviteID int64) error {
-	// Normally we would verify the invite actually belongs to orgID before deleting.
-	// We'll trust the repository to handle deletion cleanly for now.
-	err := s.repo.DeleteInvitation(ctx, inviteID)
+	err := s.repo.DeleteInvitation(ctx, orgID, inviteID)
 	if err != nil {
 		return fmt.Errorf("failed to cancel invitation: %w", err)
 	}
+
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		Action:       domain.ActionDelete,
+		Module:       domain.ModuleUsers,
+		ResourceType: "INVITATION",
+		ResourceID:   fmt.Sprintf("%d", inviteID),
+		Description:  fmt.Sprintf("Cancelled invitation #%d", inviteID),
+		Result:       domain.ResultSuccess,
+	})
+
 	return nil
 }
 
 // UpdateRole modifies the role assigned to a specific user within the organization.
 // It maps the HTTP request payload directly to the repository update method.
 func (s *serviceImpl) UpdateRole(ctx context.Context, orgID, userID int64, req UpdateRoleRequest) error {
-	err := s.repo.UpdateMemberRole(ctx, orgID, userID, req.RoleID)
+	// 1. Safety check: Protect the last SUPER_ADMIN
+	currentRole, err := s.repo.GetMemberRoleName(ctx, orgID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check current role: %w", err)
+	}
+
+	if currentRole == rbac.RoleSuperAdmin {
+		// Is this the *only* SUPER_ADMIN?
+		superAdminCount, err := s.repo.CountActiveSuperAdmins(ctx, orgID)
+		if err != nil {
+			return fmt.Errorf("failed to check super admin count: %w", err)
+		}
+		if superAdminCount <= 1 {
+			// This is the last SUPER_ADMIN (or 0 due to some anomaly). Prevent changing their role.
+			// We return an error that will map to a 403/409 (handled generically for now, but msg is clear)
+			return fmt.Errorf("Cannot change the role of the last SUPER_ADMIN. The organization must have at least one active SUPER_ADMIN.")
+		}
+	}
+
+	// 2. Perform the update
+	err = s.repo.UpdateMemberRole(ctx, orgID, userID, req.RoleID)
 	if err != nil {
 		return fmt.Errorf("failed to update user role: %w", err)
 	}
+
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		Action:       domain.ActionRoleChanged,
+		Module:       domain.ModuleRolesPermissions,
+		ResourceType: "USER",
+		ResourceID:   fmt.Sprintf("%d", userID),
+		Description:  fmt.Sprintf("Changed user #%d role from %s", userID, currentRole),
+		Before:       map[string]interface{}{"role": currentRole},
+		After:        map[string]interface{}{"role_id": req.RoleID},
+		Result:       domain.ResultSuccess,
+	})
+
 	return nil
 }
 
 // RemoveUser deletes the association between a user and an organization.
 // It does not delete the user account entirely, only their access to this specific organization.
 func (s *serviceImpl) RemoveUser(ctx context.Context, orgID, userID int64) error {
-	err := s.repo.RemoveMember(ctx, orgID, userID)
+	// 1. Safety check: Protect the last SUPER_ADMIN
+	currentRole, err := s.repo.GetMemberRoleName(ctx, orgID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check current role before removal: %w", err)
+	}
+
+	if currentRole == rbac.RoleSuperAdmin {
+		superAdminCount, err := s.repo.CountActiveSuperAdmins(ctx, orgID)
+		if err != nil {
+			return fmt.Errorf("failed to check super admin count: %w", err)
+		}
+		if superAdminCount <= 1 {
+			return fmt.Errorf("Cannot remove the last SUPER_ADMIN from the organization")
+		}
+	}
+
+	err = s.repo.RemoveMember(ctx, orgID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to remove user from organization: %w", err)
 	}
+
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		Action:       domain.ActionDelete,
+		Module:       domain.ModuleUsers,
+		ResourceType: "USER",
+		ResourceID:   fmt.Sprintf("%d", userID),
+		Description:  fmt.Sprintf("Removed user #%d from organization", userID),
+		Result:       domain.ResultSuccess,
+	})
+
 	return nil
 }

@@ -20,6 +20,10 @@ import (
 // ── Test Setup ───────────────────────────────────────────────────────────────
 
 // newServiceWithMocks creates a new RFQ service with a mocked repository and event bus.
+type mockEntitlementService struct{}
+func (m *mockEntitlementService) CheckEntitlement(ctx context.Context, orgID int64, metricName string) error { return nil }
+func (m *mockEntitlementService) IncrementUsage(ctx context.Context, orgID int64, metricName string, amount int) error { return nil }
+
 func newServiceWithMocks(t *testing.T) (rfq.BusinessLogic, *mocks.MockDatalayer, events.Bus) {
 	ctrl := gomock.NewController(t)
 	mockRepo := mocks.NewMockDatalayer(ctrl)
@@ -41,7 +45,7 @@ func newServiceWithMocks(t *testing.T) (rfq.BusinessLogic, *mocks.MockDatalayer,
 	aiGateway := ai.NewGateway(mockProviders)
 	promptManager := ai.NewPromptManager()
 
-	svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager)
+	svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager, &mockEntitlementService{})
 	return svc, mockRepo, eventBus
 }
 
@@ -173,7 +177,7 @@ func TestService_ParseShipmentRequest(t *testing.T) {
 		aiGateway := ai.NewGateway(mockProviders)
 		promptManager := ai.NewPromptManager()
 
-		svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager)
+		svc := rfq.NewBusinessLogic(mockRepo, eventBus, rateSvc, aiGateway, promptManager, &mockEntitlementService{})
 
 		resp, err := svc.ParseShipmentRequest(context.Background(), "Please quote from Nhava Sheva to Hamburg FOB, weight 15 Tons, 30 CBM")
 		require.NoError(t, err)
@@ -198,5 +202,110 @@ type customMockProvider struct {
 
 func (p *customMockProvider) GenerateCompletion(ctx context.Context, prompt string) (string, error) {
 	return p.response, nil
+}
+
+func TestService_GetRFQ_And_Timeline(t *testing.T) {
+	t.Run("GetRFQ retrieves RFQ with items, customer details, and lead linkage", func(t *testing.T) {
+		svc, mockRepo, _ := newServiceWithMocks(t)
+		leadID := int64(171)
+		custEmail := "client@globalexports.com"
+		weight := 12500.0
+		vol := 28.0
+
+		expectedRFQ := &spec.RFQ{
+			ID:            101,
+			OrgID:         1,
+			RFQNumber:     "RFQ-20260827-001",
+			CustomerID:    42,
+			CustomerName:  "Global Exports Ltd",
+			CustomerEmail: &custEmail,
+			Stage:         spec.StageRFQCreated,
+			LeadID:        &leadID,
+			Items: []spec.RFQItem{
+				{
+					ID:          1,
+					RFQID:       101,
+					Description: "Steel Components",
+					Quantity:    1,
+					WeightKG:    &weight,
+					VolumeCBM:   &vol,
+				},
+			},
+		}
+
+		mockRepo.EXPECT().GetRFQByID(gomock.Any(), int32(1), int32(101)).Return(expectedRFQ, nil).Times(1)
+
+		res, err := svc.GetRFQ(context.Background(), 1, 101)
+		require.NoError(t, err)
+		require.NotNil(t, res)
+		assert.Equal(t, "RFQ-20260827-001", res.RFQNumber)
+		assert.Equal(t, "Global Exports Ltd", res.CustomerName)
+		assert.Equal(t, int64(171), *res.LeadID)
+		assert.Len(t, res.Items, 1)
+	})
+
+	t.Run("GetTimeline returns chronological events across Lead and RFQ", func(t *testing.T) {
+		svc, mockRepo, _ := newServiceWithMocks(t)
+		leadID := int64(171)
+
+		expectedRFQ := &spec.RFQ{
+			ID:        101,
+			OrgID:     1,
+			RFQNumber: "RFQ-20260827-001",
+			LeadID:    &leadID,
+		}
+
+		timelineEvents := []spec.TimelineEvent{
+			{
+				ID:          "act-1",
+				EntityType:  "LEAD",
+				EntityID:    171,
+				Category:    "LEAD",
+				Action:      "CREATED",
+				Description: "Lead created from customer inquiry",
+				Actor:       "System",
+				Timestamp:   time.Now().Add(-2 * time.Hour),
+			},
+			{
+				ID:          "inter-1",
+				EntityType:  "LEAD",
+				EntityID:    171,
+				Category:    "EMAIL",
+				Action:      "EMAIL_INBOUND",
+				Description: "INBOUND: Quote for 40ft container",
+				Actor:       "Customer",
+				Timestamp:   time.Now().Add(-1 * time.Hour),
+			},
+			{
+				ID:          "act-2",
+				EntityType:  "LEAD",
+				EntityID:    171,
+				Category:    "AI",
+				Action:      "AI_PARSED",
+				Description: "AI extracted shipment details (Origin: Mumbai, Destination: Hamburg)",
+				Actor:       "Email Parser AI",
+				Timestamp:   time.Now().Add(-45 * time.Minute),
+			},
+			{
+				ID:          "act-3",
+				EntityType:  "RFQ",
+				EntityID:    101,
+				Category:    "RFQ",
+				Action:      "RFQ_CREATED",
+				Description: "RFQ RFQ-20260827-001 created from Lead #171",
+				Actor:       "System",
+				Timestamp:   time.Now().Add(-30 * time.Minute),
+			},
+		}
+
+		mockRepo.EXPECT().GetRFQByID(gomock.Any(), int32(1), int32(101)).Return(expectedRFQ, nil).Times(1)
+		mockRepo.EXPECT().GetRFQTimeline(gomock.Any(), int32(1), int32(101), &leadID).Return(timelineEvents, nil).Times(1)
+
+		events, err := svc.GetTimeline(context.Background(), 1, 101)
+		require.NoError(t, err)
+		assert.Len(t, events, 4)
+		assert.Equal(t, "CREATED", events[0].Action)
+		assert.Equal(t, "RFQ_CREATED", events[3].Action)
+	})
 }
 

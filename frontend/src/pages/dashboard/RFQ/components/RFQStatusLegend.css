@@ -1,0 +1,306 @@
+/* ── RFQ Status Legend & Workflow Intelligence Component ─────────────────── */
+
+.rfq-legend-card {
+  margin-top: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.02),
+    0 2px 4px -2px rgba(0, 0, 0, 0.02),
+    0 0 0 1px rgba(241, 245, 249, 0.6);
+  overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.rfq-legend-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 
+    0 10px 15px -3px rgba(15, 23, 42, 0.04),
+    0 4px 6px -4px rgba(15, 23, 42, 0.02);
+}
+
+.rfq-legend-card.collapsed {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.rfq-legend-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.8));
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease;
+}
+
+.rfq-legend-card:not(.collapsed) .rfq-legend-header {
+  border-bottom-color: #f1f5f9;
+}
+
+.rfq-legend-header:hover {
+  background: linear-gradient(to right, #ffffff, #f1f5f9);
+}
+
+.rfq-legend-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rfq-legend-icon-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+
+.rfq-legend-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rfq-legend-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rfq-legend-main-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.rfq-legend-count-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 7px;
+  border-radius: 9999px;
+}
+
+.rfq-legend-main-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.rfq-legend-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rfq-legend-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rfq-legend-toggle-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+/* ── Body ───────────────────────────────────────────────────────────────── */
+.rfq-legend-body {
+  padding: 18px 20px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Progression Track ───────────────────────────────────────────────────── */
+.rfq-stages-track {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.rfq-stage-item {
+  flex: 1;
+  min-width: 175px;
+  background: #ffffff;
+  border: 1.5px solid var(--stage-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.rfq-stage-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px var(--stage-glow);
+  border-color: var(--stage-accent);
+}
+
+.rfq-stage-item.active-filter {
+  background: var(--stage-bg);
+  border-color: var(--stage-accent);
+  box-shadow: 0 0 0 3px var(--stage-glow);
+}
+
+.stage-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.stage-step-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}
+
+.stage-count-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  border: 1px solid;
+  background: #ffffff;
+}
+
+.stage-count-badge.has-items {
+  font-weight: 700;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.stage-item-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stage-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stage-title-text {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.stage-desc-text {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.stage-action-target {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  align-items: center;
+}
+
+.action-text {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--stage-accent);
+  line-height: 1.2;
+}
+
+.stage-flow-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+@media (max-width: 1100px) {
+  .stage-flow-arrow {
+    display: none;
+  }
+}
+
+/* ── Footer Bar ─────────────────────────────────────────────────────────── */
+.rfq-legend-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.legend-footer-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.73rem;
+  color: #475569;
+}
+
+.legend-footer-tip strong {
+  color: #0f172a;
+}
+
+.btn-clear-stage-filter {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-clear-stage-filter:hover {
+  background: #dbeafe;
+  color: #1e40af;
+}

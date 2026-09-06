@@ -12,7 +12,6 @@ import {
   ScrollText,
   Users,
   Folder,
-  FileCode2,
   CheckSquare,
   CreditCard,
   DollarSign,
@@ -21,6 +20,7 @@ import {
   Settings,
   ChevronDown,
   Zap,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRBAC } from '../../context/RBACContext';
@@ -35,17 +35,17 @@ const NAV_GROUPS = [
       { path: '/dashboard/leads', label: 'Leads', Icon: Target, badgeKey: 'open_leads', module: 'LEADS', action: 'READ' },
       { path: '/dashboard/rfqs', label: 'RFQs', Icon: FileText, badgeKey: 'open_rfqs', module: 'RFQS', action: 'READ' },
       { path: '/dashboard/shipments', label: 'Shipments', Icon: Ship, badgeKey: 'active_shipments', module: 'SHIPMENTS', action: 'READ' },
-      { path: '/dashboard/bookings', label: 'Bookings', Icon: Package, badgeKey: 'booked_shipments' },
-      { path: '/dashboard/tracking', label: 'Tracking', Icon: MapPin },
+      { path: '/dashboard/bookings', label: 'Bookings', Icon: Package, badgeKey: 'booked_shipments', module: 'SHIPMENTS', action: 'READ' },
+      { path: '/dashboard/tracking', label: 'Tracking', Icon: MapPin, module: 'SHIPMENTS', action: 'READ' },
     ],
   },
   {
     section: 'COMMERCIAL',
     items: [
-      { path: '/dashboard/quotations', label: 'Quotations', Icon: FileSpreadsheet },
-      { path: '/dashboard/rate-management', label: 'Rate Management', Icon: BarChart3 },
-      { path: '/dashboard/contracts', label: 'Contracts', Icon: ScrollText },
-      { path: '/dashboard/companies', label: 'Customers', Icon: Users, module: 'COMPANIES', action: 'READ' },
+      { path: '/dashboard/quotations', label: 'Quotations', Icon: FileSpreadsheet, module: 'OPPORTUNITIES', action: 'READ' },
+      { path: '/dashboard/rate-management', label: 'Rate Management', Icon: BarChart3, module: 'RFQS', action: 'READ' },
+      { path: '/dashboard/contracts', label: 'Contracts', Icon: ScrollText, module: 'DOCUMENTS', action: 'READ' },
+      { path: '/dashboard/customers', label: 'Customers', Icon: Users, module: 'COMPANIES', action: 'READ' },
       { path: '/dashboard/outreach', label: 'Outreach', Icon: Zap, module: 'OUTREACH', action: 'READ' },
     ],
   },
@@ -53,23 +53,20 @@ const NAV_GROUPS = [
     section: 'DOCUMENTS',
     items: [
       { path: '/dashboard/documents', label: 'Documents', Icon: Folder, module: 'DOCUMENTS', action: 'READ' },
-      { path: '/dashboard/templates', label: 'Templates', Icon: FileCode2 },
-      { path: '/dashboard/approvals', label: 'Approvals', Icon: CheckSquare },
+      { path: '/dashboard/approvals', label: 'Approvals', Icon: CheckSquare, module: 'DOCUMENTS', action: 'READ' },
     ],
   },
   {
     section: 'FINANCE',
     items: [
-      { path: '/dashboard/invoices', label: 'Invoices', Icon: CreditCard },
-      { path: '/dashboard/payments', label: 'Payments', Icon: DollarSign },
-      { path: '/dashboard/reports', label: 'Reports', Icon: TrendingUp, module: 'DASHBOARD', action: 'READ' },
+      { path: '/dashboard/invoices', label: 'Invoices', Icon: CreditCard, module: 'FINANCE', action: 'READ', sensitive: true },
+      { path: '/dashboard/reports', label: 'Reports', Icon: TrendingUp, module: 'DASHBOARD', action: 'READ', sensitive: true },
     ],
   },
   {
     section: 'ADMIN',
     items: [
-      { path: '/dashboard/users', label: 'Users', Icon: UserCheck, module: 'USERS', action: 'READ' },
-      { path: '/dashboard/settings', label: 'Settings', Icon: Settings, module: 'SETTINGS', action: 'READ' },
+      { path: '/dashboard/settings', label: 'Settings', Icon: Settings, module: 'SETTINGS', action: 'READ', sensitive: true },
     ],
   },
 ];
@@ -129,9 +126,12 @@ export default function Sidebar() {
       {/* ── Nav Groups ── */}
       <nav className="sidebar-nav-scroll">
         {NAV_GROUPS.map((group) => {
-          const visibleItems = group.items.filter((item) => {
-            if (!item.module || !item.action) return true;
-            return can(item.module, item.action);
+          const visibleItems = group.items.map((item) => {
+            const hasAccess = (!item.module || !item.action) ? true : can(item.module, item.action);
+            return { ...item, hasAccess };
+          }).filter((item) => {
+            if (item.sensitive && !item.hasAccess) return false;
+            return true;
           });
 
           if (visibleItems.length === 0) return null;
@@ -142,6 +142,17 @@ export default function Sidebar() {
               <div className="sidebar-group-list">
                 {visibleItems.map((item) => {
                   const ItemIcon = item.Icon;
+                  
+                  if (!item.hasAccess) {
+                    return (
+                      <div key={item.path} className="sidebar-nav-link locked" title="Upgrade or request permissions to access">
+                        <ItemIcon size={16} strokeWidth={1.75} className="sidebar-item-icon" />
+                        <span className="sidebar-item-label">{item.label}</span>
+                        <Lock size={14} className="sidebar-lock-icon" style={{ marginLeft: 'auto', color: '#94A3B8' }} />
+                      </div>
+                    );
+                  }
+
                   return (
                     <NavLink
                       key={item.path}
@@ -162,21 +173,6 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* ── Bottom User Profile ── */}
-      <div className="sidebar-footer-profile" onClick={handleLogout} title="Click to logout">
-        <div className="sidebar-user-avatar">
-          {user?.avatar_url ? (
-            <img src={user.avatar_url} alt={resolvedName} className="avatar-img" />
-          ) : (
-            <span className="avatar-initials">{resolvedName.charAt(0).toUpperCase()}</span>
-          )}
-        </div>
-        <div className="sidebar-user-details">
-          <div className="sidebar-user-name">{resolvedName}</div>
-          <div className="sidebar-user-role">{displayRole}</div>
-        </div>
-        <ChevronDown size={14} className="sidebar-user-chevron" />
-      </div>
     </aside>
   );
 }

@@ -1,0 +1,1 @@
+ALTER TABLE lead_interactions ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'SENT';

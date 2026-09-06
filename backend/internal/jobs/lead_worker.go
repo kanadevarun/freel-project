@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/freel/backend/internal/ai"
 	"github.com/freel/backend/internal/common/events"
@@ -146,8 +147,18 @@ func (w *leadWorker) handleLeadCreated(event events.Event) {
 		ResearchReport string `json:"research_report"`
 	}
 	
+	cleanedResponse := strings.TrimSpace(aiResponseStr)
+	if strings.HasPrefix(cleanedResponse, "```json") {
+		cleanedResponse = strings.TrimPrefix(cleanedResponse, "```json")
+		cleanedResponse = strings.TrimSuffix(cleanedResponse, "```")
+	} else if strings.HasPrefix(cleanedResponse, "```") {
+		cleanedResponse = strings.TrimPrefix(cleanedResponse, "```")
+		cleanedResponse = strings.TrimSuffix(cleanedResponse, "```")
+	}
+	cleanedResponse = strings.TrimSpace(cleanedResponse)
+
 	var result aiResult
-	if err := json.Unmarshal([]byte(aiResponseStr), &result); err != nil {
+	if err := json.Unmarshal([]byte(cleanedResponse), &result); err != nil {
 		log.Printf("Lead Worker Error: Failed to parse AI response JSON: %v. Raw Response: %s", err, aiResponseStr)
 		// Default to something safe if the AI hallucinated invalid JSON
 		result.Score = 0
@@ -155,7 +166,7 @@ func (w *leadWorker) handleLeadCreated(event events.Event) {
 	}
 
 	// 8. Update the Lead in the database with the new AI Score and Report!
-	status := "QUALIFIED" // Let's assume if we scored it, it's qualified. Real logic could threshold this (e.g. > 50).
+	status := "NEW"
 	if result.Score < 50 {
 		status = "REJECTED"
 	}

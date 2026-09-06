@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider/types"
 	"github.com/freel/backend/internal/config"
+	"github.com/freel/backend/internal/rbac"
 	"github.com/freel/backend/internal/utils"
 	"github.com/jmoiron/sqlx"
 )
@@ -133,48 +134,7 @@ func (s *Service) VerifyEmail(ctx context.Context, req VerifyEmailRequest) error
 	return nil
 }
 
-func (s *Service) ensureDefaultPermissions(ctx context.Context, tx *sqlx.Tx) error {
-	defaultPermissions := []struct {
-		Resource    string
-		Action      string
-		Description string
-	}{
-		{"DASHBOARD", "READ", "Read dashboard and mission control metrics"},
-		{"LEADS", "READ", "Read leads pipeline"},
-		{"LEADS", "WRITE", "Create and edit leads"},
-		{"RFQS", "READ", "Read RFQ management"},
-		{"RFQS", "WRITE", "Create and manage RFQs"},
-		{"OUTREACH", "READ", "Read email outreach campaigns"},
-		{"OUTREACH", "WRITE", "Create and send email outreach"},
-		{"COMPANIES", "READ", "Read company directory"},
-		{"COMPANIES", "WRITE", "Create and manage companies"},
-		{"ROUTES", "READ", "Read route optimization"},
-		{"CONTRACTS", "READ", "Read contracts intelligence"},
-		{"CONTRACTS", "WRITE", "Upload and manage contracts"},
-		{"SHIPMENTS", "READ", "Read shipment operations"},
-		{"SHIPMENTS", "WRITE", "Manage shipment operations"},
-		{"DOCUMENTS", "READ", "Read compliance documents"},
-		{"DOCUMENTS", "WRITE", "Upload and manage documents"},
-		{"FINANCE", "READ", "Read finance invoices and billing"},
-		{"FINANCE", "WRITE", "Approve and manage invoices"},
-		{"USERS", "READ", "Read team users"},
-		{"USERS", "WRITE", "Invite and manage team users"},
-		{"SETTINGS", "READ", "Read workspace settings"},
-		{"SETTINGS", "WRITE", "Update workspace settings"},
-	}
 
-	for _, p := range defaultPermissions {
-		_, err := tx.ExecContext(ctx, `
-			INSERT INTO permissions (resource, action, description, created_at)
-			VALUES (?, ?, ?, NOW())
-			ON DUPLICATE KEY UPDATE description = VALUES(description)
-		`, p.Resource, p.Action, p.Description)
-		if err != nil {
-			return fmt.Errorf("ensure permission %s:%s: %w", p.Resource, p.Action, err)
-		}
-	}
-	return nil
-}
 
 func (s *Service) provisionTenantIfMissing(ctx context.Context, cognitoSub, email, fullName, companyName string) error {
 	log.Printf("[PROVISION] Starting MySQL onboarding for email=%s, cognito_sub=%s, company=%s", email, cognitoSub, companyName)
@@ -202,7 +162,7 @@ func (s *Service) provisionTenantIfMissing(ctx context.Context, cognitoSub, emai
 
 	// 1. Ensure system permissions are defined
 	log.Printf("[PROVISION] Ensuring system permissions...")
-	if err := s.ensureDefaultPermissions(ctx, tx); err != nil {
+	if err := rbac.NewService(s.db, nil).SeedSystemPermissions(ctx); err != nil {
 		log.Printf("[PROVISION ERROR] step=ensure_permissions error=%v", err)
 		return err
 	}
@@ -252,17 +212,10 @@ func (s *Service) provisionTenantIfMissing(ctx context.Context, cognitoSub, emai
 	}
 	log.Printf("[PROVISION] Organization created: id=%d", orgID)
 
-	// 5. Create internal Company entity
-	log.Printf("[PROVISION] Creating company entity: org_id=%d, name=%s", orgID, companyName)
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO companies (org_id, name, created_at, updated_at)
-		VALUES (?, ?, NOW(), NOW())
-	`, orgID, companyName)
-	if err != nil {
-		log.Printf("[PROVISION ERROR] step=create_company error=%v", err)
-		return fmt.Errorf("create company: %w", err)
-	}
-	log.Printf("[PROVISION] Company created: org_id=%d", orgID)
+	// Step 5 (REMOVED): Previously created a separate 'companies' row here.
+	// Now organizations table IS the company — no duplicate entry needed.
+	log.Printf("[PROVISION] Organization is the company record: id=%d, name=%s", orgID, companyName)
+
 
 	// 6. Create SUPER_ADMIN role for the new org
 	log.Printf("[PROVISION] Creating SUPER_ADMIN role for org_id=%d", orgID)
@@ -311,6 +264,14 @@ func (s *Service) provisionTenantIfMissing(ctx context.Context, cognitoSub, emai
 	if err := tx.Commit(); err != nil {
 		log.Printf("[PROVISION ERROR] step=commit_tx error=%v", err)
 		return fmt.Errorf("commit tx: %w", err)
+	}
+
+	// 7. Seed remaining default roles using the RBAC service
+	log.Printf("[PROVISION] Seeding remaining default roles for org_id=%d", orgID)
+	if err := rbac.NewService(s.db, nil).SeedDefaultRolesForOrg(ctx, orgID); err != nil {
+		log.Printf("[PROVISION ERROR] step=seed_roles error=%v", err)
+		// We don't return an error here so that the user can still log in,
+		// but the failure is logged.
 	}
 
 	log.Printf("[PROVISION] Provisioning completed successfully for user_id=%d, org_id=%d", userID, orgID)
@@ -614,6 +575,33 @@ type AcceptInviteRequest struct {
 	FullName string `json:"full_name"`
 }
 
+type ValidateInviteResponse struct {
+	Email    string `json:"email" db:"email"`
+	OrgName  string `json:"org_name" db:"org_name"`
+	RoleName string `json:"role_name" db:"role_name"`
+}
+
+func (s *Service) ValidateInvite(ctx context.Context, token string) (*ValidateInviteResponse, error) {
+	if token == "" {
+		return nil, errors.New("token is required")
+	}
+
+	var res ValidateInviteResponse
+	query := `
+		SELECT i.email, o.name as org_name, r.name as role_name 
+		FROM invitations i
+		JOIN organizations o ON i.org_id = o.id
+		JOIN roles r ON i.role_id = r.id
+		WHERE i.token = ? AND i.expires_at > NOW()
+	`
+	err := s.db.GetContext(ctx, &res, query, token)
+	if err != nil {
+		return nil, errors.New("invalid or expired invitation token")
+	}
+
+	return &res, nil
+}
+
 func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) error {
 	if req.Token == "" || req.Password == "" || req.FullName == "" {
 		return errors.New("token, password, and full name are required")
@@ -627,12 +615,16 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		ExpiresAt string `db:"expires_at"`
 	}
 
-	err := s.db.GetContext(ctx, &inv, `SELECT id, org_id, role_id, email, expires_at FROM invitations WHERE token = ?`, req.Token)
+	err := s.db.GetContext(ctx, &inv, `SELECT id, org_id, role_id, email, expires_at FROM invitations WHERE token = ? AND expires_at > NOW()`, req.Token)
 	if err != nil {
 		return errors.New("invalid or expired invitation token")
 	}
 
 	secretHash := ComputeSecretHash(s.cfg.CognitoClientSecret, inv.Email, s.cfg.CognitoClientID)
+
+	// Fetch Organization Name for Cognito Custom Attribute if required
+	var orgName string
+	_ = s.db.GetContext(ctx, &orgName, `SELECT name FROM organizations WHERE id = ?`, inv.OrgID)
 
 	signUpInput := &cognitoidentityprovider.SignUpInput{
 		ClientId:   &s.cfg.CognitoClientID,
@@ -642,12 +634,39 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		UserAttributes: []types.AttributeType{
 			{Name: stringPtr("email"), Value: &inv.Email},
 			{Name: stringPtr("name"), Value: &req.FullName},
+			{Name: stringPtr("custom:company_name"), Value: &orgName},
 		},
 	}
 
 	_, err = s.client.SignUp(ctx, signUpInput)
 	if err != nil {
-		return fmt.Errorf("failed to register user in identity provider: %w", err)
+		// If user already exists in cognito, we might still want to link them to the org
+		// For simplicity, we assume they are new or fail. To be robust, we'd check if error is UsernameExistsException.
+		if !strings.Contains(err.Error(), "UsernameExistsException") {
+			return fmt.Errorf("failed to register user in identity provider: %w", err)
+		}
+	} else {
+		// Automatically confirm the user and mark email as verified since they used an invitation link
+		if s.cfg.CognitoUserPoolID != "" {
+			_, confirmErr := s.client.AdminConfirmSignUp(ctx, &cognitoidentityprovider.AdminConfirmSignUpInput{
+				UserPoolId: &s.cfg.CognitoUserPoolID,
+				Username:   &inv.Email,
+			})
+			if confirmErr != nil {
+				log.Printf("[AUTH ERROR] AdminConfirmSignUp failed for invited user %s: %v", inv.Email, confirmErr)
+			}
+			
+			_, updateErr := s.client.AdminUpdateUserAttributes(ctx, &cognitoidentityprovider.AdminUpdateUserAttributesInput{
+				UserPoolId: &s.cfg.CognitoUserPoolID,
+				Username:   &inv.Email,
+				UserAttributes: []types.AttributeType{
+					{Name: stringPtr("email_verified"), Value: stringPtr("true")},
+				},
+			})
+			if updateErr != nil {
+				log.Printf("[AUTH ERROR] AdminUpdateUserAttributes failed for invited user %s: %v", inv.Email, updateErr)
+			}
+		}
 	}
 
 	tx, err := s.db.BeginTxx(ctx, nil)
@@ -656,6 +675,7 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 	}
 	defer tx.Rollback()
 
+	// Insert or update User record
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO users (cognito_sub, email, first_name)
 		VALUES (?, ?, ?)
@@ -671,16 +691,18 @@ func (s *Service) AcceptInvite(ctx context.Context, req AcceptInviteRequest) err
 		return fmt.Errorf("failed to get user record id: %w", err)
 	}
 
+	// Add membership
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO org_members (org_id, user_id, role_id, status)
-		VALUES (?, ?, ?, 'ACTIVE')
-		ON DUPLICATE KEY UPDATE role_id = VALUES(role_id)
+		INSERT INTO org_members (org_id, user_id, role_id, status, created_at, updated_at)
+		VALUES (?, ?, ?, 'ACTIVE', NOW(), NOW())
+		ON DUPLICATE KEY UPDATE role_id = VALUES(role_id), status = 'ACTIVE'
 	`, inv.OrgID, userID, inv.RoleID)
 
 	if err != nil {
 		return fmt.Errorf("failed to assign user to organization: %w", err)
 	}
 
+	// Invalidate token
 	_, err = tx.ExecContext(ctx, `DELETE FROM invitations WHERE id = ?`, inv.ID)
 	if err != nil {
 		return fmt.Errorf("failed to clean up invitation: %w", err)

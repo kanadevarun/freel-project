@@ -1,0 +1,599 @@
+.ws-page {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.ws-header {
+  margin-bottom: 24px;
+}
+
+.ws-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.ws-subtitle {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.ws-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.ws-tab {
+  padding: 8px 24px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #4b5563;
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ws-tab:hover {
+  background-color: #f9fafb;
+}
+
+.ws-tab.active {
+  background-color: #3b82f6;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.ws-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.ws-grid {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.ws-main-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ws-side-col {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.ws-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0;
+  
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+.ws-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafafa;
+}
+
+.ws-card-title-wrap {
+  flex: 1;
+}
+
+.ws-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ws-card-desc {
+  font-size: 0.8125rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+.ws-card-body {
+  padding: 0 24px;
+}
+
+.ws-field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ws-field:last-child {
+  border-bottom: none;
+}
+
+.ws-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+  width: 40%;
+}
+
+.ws-field-content {
+  width: 60%;
+  max-width: 380px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ws-value {
+  font-size: 0.875rem;
+  color: #0f172a;
+  font-weight: 500;
+  width: 100%;
+}
+
+.ws-value-small {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.ws-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  color: #111827;
+  background-color: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+.ws-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.14);
+}
+
+.ws-input:disabled {
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.ws-copy-btn {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ws-copy-btn:hover {
+  background: #f3f4f6;
+}
+
+/* ── Custom Dropdown ─────────────────────────────────────────────────────── */
+.ws-custom-dropdown {
+  position: relative;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ws-custom-dropdown.disabled {
+  cursor: default;
+}
+
+.ws-custom-dropdown-selected {
+  width: 100%;
+  height: 38px;
+  padding: 0 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 0.875rem;
+  color: #111827;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  transition: border-color 0.14s, box-shadow 0.14s;
+}
+
+.ws-custom-dropdown-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  text-align: left;
+}
+
+.ws-custom-dropdown:not(.disabled) .ws-custom-dropdown-selected:hover {
+  border-color: #9ca3af;
+}
+
+.ws-custom-dropdown.disabled .ws-custom-dropdown-selected {
+  background: #f9fafb;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+
+.ws-custom-dropdown-selected .placeholder {
+  color: #9ca3af;
+}
+
+.ws-custom-dropdown-selected svg {
+  color: #6b7280;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.ws-custom-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin: 4px 0 0 0;
+  padding: 0;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ws-custom-dropdown-list li {
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: #111827;
+  transition: background-color 0.1s;
+  cursor: pointer;
+}
+
+.ws-custom-dropdown-list li:hover {
+  background-color: #f1f5f9;
+}
+
+.ws-custom-dropdown-list li.selected {
+  background-color: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* ── Toggles ─────────────────────────────────────────────────────────────── */
+.ws-toggle-group {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.ws-toggle-btn {
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ws-toggle-btn.active {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.ws-toggle-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* ── Actions List ────────────────────────────────────────────────────────── */
+.ws-action-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-action-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  background: #fff;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ws-action-item:last-child {
+  border-bottom: none;
+}
+
+.ws-action-item:hover {
+  background: #f8fafc;
+}
+
+.ws-action-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ws-action-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #e2e8f0;
+}
+
+.ws-action-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ws-action-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.ws-action-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.ws-action-arrow {
+  color: #cbd5e1;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.ws-action-item:hover .ws-action-arrow {
+  color: #94a3b8;
+  transform: translateX(2px);
+}
+
+/* ── Tip Card ────────────────────────────────────────────────────────────── */
+.ws-tip-card {
+  background: #f5f3ff;
+  border: 1px solid #ede9fe;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.ws-tip-card svg {
+  color: #8b5cf6;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ws-tip-text {
+  font-size: 0.875rem;
+  color: #5b21b6;
+  line-height: 1.5;
+  margin: 0;
+  font-weight: 500;
+}
+
+/* ── Bottom Banner ───────────────────────────────────────────────────────── */
+.ws-save-banner {
+  position: fixed;
+  bottom: 0;
+  left: 250px;
+  right: 0;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 16px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.ws-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.ws-banner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.ws-banner-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.ws-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.ws-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-btn-ghost {
+  background: transparent;
+  color: #64748b;
+}
+
+.ws-btn-ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.ws-btn-primary {
+  background: #3b82f6;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+}
+
+.ws-btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .ws-grid { grid-template-columns: 1fr; }
+  .ws-save-banner { left: 0; }
+}
+
+@media (max-width: 640px) {
+  .ws-row-2, .ws-row-3 { grid-template-columns: 1fr; }
+  .ws-tabs { flex-wrap: wrap; }
+}
+
+/* ── Activity Table ──────────────────────────────────────────────────────── */
+.ws-main-row-2-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 768px) {
+  .ws-main-row-2-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ws-activity-table {
+  width: 100%;
+  font-size: 0.8125rem;
+}
+
+.ws-activity-header {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.2fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ws-activity-row {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1.2fr 1fr 1fr 1fr;
+  gap: 16px;
+  padding: 16px 0;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ws-activity-row:last-child {
+  border-bottom: none;
+}
+
+.ws-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+/* ── Switch Toggle (Checkboxes) ─────────────────────────────────────────── */
+.ws-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.ws-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.ws-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #cbd5e1;
+  transition: .2s;
+  border-radius: 24px;
+}
+.ws-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+input:checked + .ws-toggle-slider {
+  background-color: #3b82f6;
+}
+input:checked + .ws-toggle-slider:before {
+  transform: translateX(20px);
+}
+input:disabled + .ws-toggle-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

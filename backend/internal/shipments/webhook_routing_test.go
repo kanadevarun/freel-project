@@ -2,7 +2,6 @@ package shipments_test
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -81,12 +80,18 @@ func TestWebhookRoutingTenantSafety(t *testing.T) {
 	t.Setenv("CARRIER_MSC_BASE_URL_8881", "https://api.msc.com/org-a")
 	t.Setenv("CARRIER_MSC_CAPABILITIES_8881", "TRACKING") // MSC does not have WEBHOOK capability
 
-	// Instantiate the handler
+	// Instantiate using the new Endpoints pattern (matching rfq/leads convention)
 	repo := shipments.NewRepository(db)
 	svc := shipments.NewService(repo, db, nil, "http://localhost:8080")
-	handler := shipments.NewHandler(svc)
+	endpoints := shipments.NewAllShipmentsEndpoints(svc)
 
-	// Setup helper to perform request
+	// Mount carrier webhook routes on a test chi router
+	testRouter := chi.NewRouter()
+	shipments.AddCarrierWebhookHandlers(testRouter, endpoints, svc)
+	testServer := httptest.NewServer(testRouter)
+	defer testServer.Close()
+
+	// Setup helper to perform request against the test server
 	performWebhookRequest := func(carrier string, integrationID string, payload []byte, signature string) *httptest.ResponseRecorder {
 		req, _ := http.NewRequest("POST", fmt.Sprintf("/webhooks/carriers/%s/%s", carrier, integrationID), bytes.NewReader(payload))
 		req.Header.Set("Content-Type", "application/json")
@@ -94,14 +99,8 @@ func TestWebhookRoutingTenantSafety(t *testing.T) {
 			req.Header.Set("X-Mock-Signature", signature)
 		}
 
-		// Inject chi routing params
-		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("carrier", carrier)
-		rctx.URLParams.Add("integration_id", integrationID)
-		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
-
 		rr := httptest.NewRecorder()
-		handler.InboundWebhook(rr, req)
+		testRouter.ServeHTTP(rr, req)
 		return rr
 	}
 
@@ -174,18 +173,14 @@ func TestWebhookRoutingTenantSafety(t *testing.T) {
 
 	// 8. Strict Production Check (Integration ID is required in production)
 	t.Setenv("APP_ENV", "production")
+
 	reqProd, _ := http.NewRequest("POST", "/webhooks/carriers/MAEU", bytes.NewReader(payloadA))
 	reqProd.Header.Set("Content-Type", "application/json")
 	reqProd.Header.Set("X-Mock-Signature", sigA)
-
-	rctxProd := chi.NewRouteContext()
-	rctxProd.URLParams.Add("carrier", "MAEU")
-	reqProd = reqProd.WithContext(context.WithValue(reqProd.Context(), chi.RouteCtxKey, rctxProd))
-
 	rrProd := httptest.NewRecorder()
-	handler.InboundWebhook(rrProd, reqProd)
+	testRouter.ServeHTTP(rrProd, reqProd)
 	assert.Equal(t, http.StatusBadRequest, rrProd.Code)
-	
+
 	var prodBody map[string]interface{}
 	_ = json.Unmarshal(rrProd.Body.Bytes(), &prodBody)
 	assert.Equal(t, "MISSING_INTEGRATION_ID", prodBody["error"].(map[string]interface{})["code"])

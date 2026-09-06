@@ -1,0 +1,15 @@
+-- Migration: 041_rfq_quotes_commercial_lifecycle.sql
+-- Purpose: Add commercial decision intelligence and quote lifecycle fields to rfq_quotes.
+
+ALTER TABLE rfq_quotes
+ADD COLUMN IF NOT EXISTS quote_reference VARCHAR(100) NULL,
+ADD COLUMN IF NOT EXISTS carrier_id VARCHAR(50) NULL,
+ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'USD',
+ADD COLUMN IF NOT EXISTS valid_from DATETIME NULL,
+ADD COLUMN IF NOT EXISTS valid_until DATETIME NULL,
+ADD COLUMN IF NOT EXISTS etd DATETIME NULL,
+ADD COLUMN IF NOT EXISTS eta DATETIME NULL,
+ADD COLUMN IF NOT EXISTS notes TEXT NULL,
+ADD COLUMN IF NOT EXISTS approved_by VARCHAR(255) NULL,
+ADD COLUMN IF NOT EXISTS approved_at DATETIME NULL,
+ADD COLUMN IF NOT EXISTS charges JSON NULL;

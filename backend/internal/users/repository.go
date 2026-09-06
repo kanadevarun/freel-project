@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/freel/backend/internal/rbac"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -20,9 +21,9 @@ type Repository interface {
 	// It returns the invitation if found, or an error if no matching record exists.
 	GetInvitationByToken(ctx context.Context, token string) (*Invitation, error)
 
-	// DeleteInvitation removes an invitation record from the database by its ID.
+	// DeleteInvitation removes an invitation record from the database by its ID and orgID.
 	// This is typically called after an invitation is successfully accepted or explicitly canceled.
-	DeleteInvitation(ctx context.Context, id int64) error
+	DeleteInvitation(ctx context.Context, orgID, id int64) error
 
 	// ListInvitations retrieves all pending invitations for a given organization.
 	ListInvitations(ctx context.Context, orgID int64) ([]InvitationResponse, error)
@@ -48,6 +49,12 @@ type Repository interface {
 
 	// AddUserToOrg creates a new membership record linking a user to an organization with a specific role.
 	AddUserToOrg(ctx context.Context, member *OrgMember) error
+
+	// CountActiveSuperAdmins returns the number of active users with the SUPER_ADMIN role in an organization.
+	CountActiveSuperAdmins(ctx context.Context, orgID int64) (int, error)
+
+	// GetMemberRoleName returns the name of the role currently assigned to a user in an organization.
+	GetMemberRoleName(ctx context.Context, orgID, userID int64) (string, error)
 }
 
 // repositoryImpl is the concrete implementation of the Repository interface using sqlx.
@@ -92,10 +99,10 @@ func (r *repositoryImpl) GetInvitationByToken(ctx context.Context, token string)
 	return &inv, nil
 }
 
-// DeleteInvitation removes an invitation from the 'invitations' table by its primary key ID.
-func (r *repositoryImpl) DeleteInvitation(ctx context.Context, id int64) error {
-	query := `DELETE FROM invitations WHERE id = ?`
-	_, err := r.db.ExecContext(ctx, query, id)
+// DeleteInvitation removes an invitation from the 'invitations' table by its primary key ID and orgID.
+func (r *repositoryImpl) DeleteInvitation(ctx context.Context, orgID, id int64) error {
+	query := `DELETE FROM invitations WHERE id = ? AND org_id = ?`
+	_, err := r.db.ExecContext(ctx, query, id, orgID)
 	if err != nil {
 		return fmt.Errorf("failed to delete invitation: %w", err)
 	}
@@ -226,4 +233,39 @@ func (r *repositoryImpl) AddUserToOrg(ctx context.Context, member *OrgMember) er
 		return fmt.Errorf("failed to get member ID: %w", err)
 	}
 	return nil
+}
+
+// CountActiveSuperAdmins returns the number of active SUPER_ADMIN users in the organization.
+func (r *repositoryImpl) CountActiveSuperAdmins(ctx context.Context, orgID int64) (int, error) {
+	query := `
+		SELECT COUNT(*) 
+		FROM org_members om
+		JOIN roles r ON r.id = om.role_id
+		WHERE om.org_id = ? AND r.name = ? AND om.status = 'ACTIVE'
+	`
+	var count int
+	err := r.db.GetContext(ctx, &count, query, orgID, rbac.RoleSuperAdmin)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count active super admins: %w", err)
+	}
+	return count, nil
+}
+
+// GetMemberRoleName retrieves the current role name for a specific user in an organization.
+func (r *repositoryImpl) GetMemberRoleName(ctx context.Context, orgID, userID int64) (string, error) {
+	query := `
+		SELECT r.name 
+		FROM org_members om
+		JOIN roles r ON r.id = om.role_id
+		WHERE om.org_id = ? AND om.user_id = ?
+	`
+	var roleName string
+	err := r.db.GetContext(ctx, &roleName, query, orgID, userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("member not found in organization")
+		}
+		return "", fmt.Errorf("failed to get member role name: %w", err)
+	}
+	return roleName, nil
 }

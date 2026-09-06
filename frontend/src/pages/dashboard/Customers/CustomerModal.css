@@ -1,0 +1,497 @@
+/* =========================================================
+   CUSTOMER MODAL
+========================================================= */
+
+.cust-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+
+/* =========================================================
+   MODAL CONTAINER
+========================================================= */
+
+.cust-modal-container {
+  width: 100%;
+  max-width: 920px;
+  max-height: calc(100vh - 48px);
+
+  display: flex;
+  flex-direction: column;
+
+  overflow: hidden;
+
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.20),
+    0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.cust-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  padding: 22px 28px;
+
+  background:
+    linear-gradient(180deg,
+      #ffffff 0%,
+      #f8fafc 100%);
+
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cust-modal-header h2 {
+  margin: 0 0 6px;
+
+  color: #172033;
+
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.cust-modal-header p {
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.cust-modal-close {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid transparent;
+  border-radius: 8px;
+
+  background: transparent;
+  color: #94a3b8;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.cust-modal-close:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.cust-modal-error {
+  margin: 18px 28px 0;
+  padding: 12px 14px;
+
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+
+  background: #fef2f2;
+  color: #b91c1c;
+
+  font-size: 13px;
+  font-weight: 500;
+}
+
+
+/* =========================================================
+   MODAL BODY
+========================================================= */
+
+.cust-modal-body {
+  flex: 1;
+
+  padding: 24px 28px;
+
+  overflow-y: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 24px;
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   FORM SECTION
+========================================================= */
+
+.cust-form-section {
+  padding: 20px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  background: #ffffff;
+
+  border: 1px solid #e8edf3;
+  border-radius: 12px;
+
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.cust-section-title {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  padding-bottom: 14px;
+
+  border-bottom: 1px solid #edf1f5;
+
+  color: #253047;
+
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.cust-section-title svg {
+  color: #3b82f6;
+}
+
+
+/* =========================================================
+   FORM GRID
+========================================================= */
+
+.cust-form-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 18px 20px;
+}
+
+.cust-form-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  min-width: 0;
+}
+
+.cust-form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+
+/* =========================================================
+   LABELS
+========================================================= */
+
+.cust-form-field label {
+  color: #526075;
+
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+
+  text-transform: uppercase;
+  letter-spacing: 0.055em;
+}
+
+
+/* =========================================================
+   INPUTS
+========================================================= */
+
+.cust-form-field input,
+.cust-form-field select {
+  width: 100%;
+  height: 42px;
+
+  padding: 0 13px;
+
+  border: 1px solid #d5dde8;
+  border-radius: 8px;
+
+  outline: none;
+
+  background: #ffffff;
+  color: #1e293b;
+
+  font-size: 14px;
+  font-weight: 400;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.cust-form-field input::placeholder {
+  color: #9aa7b8;
+}
+
+.cust-form-field input:hover,
+.cust-form-field select:hover {
+  border-color: #b8c4d3;
+}
+
+.cust-form-field input:focus,
+.cust-form-field select:focus {
+  border-color: #3b82f6;
+
+  box-shadow:
+    0 0 0 3px rgba(59, 130, 246, 0.10);
+
+  background: #ffffff;
+}
+
+
+/* =========================================================
+   SELECT
+========================================================= */
+
+.cust-form-field select {
+  cursor: pointer;
+}
+
+
+/* =========================================================
+   NUMBER INPUT
+========================================================= */
+
+.cust-form-field input[type="number"] {
+  appearance: textfield;
+}
+
+.cust-form-field input[type="number"]::-webkit-inner-spin-button,
+.cust-form-field input[type="number"]::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.cust-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 10px;
+
+  margin: 0 -28px -24px;
+
+  padding: 16px 28px;
+
+  position: sticky;
+  bottom: -24px;
+
+  background: rgba(255, 255, 255, 0.97);
+
+  border-top: 1px solid #e8edf3;
+
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+
+/* =========================================================
+   BUTTONS
+========================================================= */
+
+.btn-cancel,
+.btn-submit {
+  height: 40px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 18px;
+
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.btn-cancel {
+  border: 1px solid #d5dde8;
+
+  background: #ffffff;
+  color: #475569;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #c3ceda;
+  color: #1e293b;
+}
+
+
+.btn-submit {
+  min-width: 140px;
+
+  border: 1px solid #2563eb;
+
+  background: #2563eb;
+  color: #ffffff;
+
+  box-shadow:
+    0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+
+  box-shadow:
+    0 6px 14px rgba(37, 99, 235, 0.24);
+}
+
+.btn-submit:active:not(:disabled),
+.btn-cancel:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-submit:disabled,
+.btn-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+
+/* =========================================================
+   SCROLLBAR
+========================================================= */
+
+.cust-modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cust-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.cust-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.cust-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 768px) {
+  .cust-modal-backdrop {
+    padding: 12px;
+  }
+
+  .cust-modal-container {
+    max-height: calc(100vh - 24px);
+    border-radius: 12px;
+  }
+
+  .cust-modal-header {
+    padding: 18px 20px;
+  }
+
+  .cust-modal-body {
+    padding: 18px 20px;
+    gap: 18px;
+  }
+
+  .cust-form-section {
+    padding: 16px;
+  }
+
+  .cust-form-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .cust-form-field.full-width {
+    grid-column: auto;
+  }
+
+  .cust-modal-footer {
+    margin: 0 -20px -18px;
+    padding: 14px 20px;
+    bottom: -18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cust-modal-header h2 {
+    font-size: 18px;
+  }
+
+  .cust-modal-header p {
+    font-size: 12px;
+    max-width: 270px;
+  }
+
+  .cust-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .btn-cancel,
+  .btn-submit {
+    width: 100%;
+  }
+}

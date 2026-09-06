@@ -1,648 +1,393 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Check,
   ArrowRight,
-  Ship,
+  UserPlus,
+  Users,
+  UserCheck,
   FileText,
-  DollarSign,
-  Scale,
-  Handshake,
-  MapPin,
-  TrendingUp,
+  FileSpreadsheet,
+  Ship,
+  Upload,
+  Play,
+  Lightbulb,
+  Briefcase,
   Layers,
-  Sparkles,
-  Send,
-  FileCheck,
-  CheckCircle2,
+  ShieldCheck,
+  CreditCard,
   ChevronRight,
 } from 'lucide-react';
-import { useAuth } from '../../../context/AuthContext';
 import './NewFFDashboard.css';
 
-export default function NewFFDashboard() {
+export default function NewFFDashboard({ data, user }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const stats = data?.stats || {};
 
-  const [aiQuestion, setAiQuestion] = useState('');
-  const [aiResponse, setAiResponse] = useState(null);
-
-  // 6-step Journey Checklist state
-  const journeySteps = [
-    {
-      id: 'account',
-      title: 'Create your account',
-      desc: 'Completed',
-      status: 'completed',
-    },
-    {
-      id: 'email',
-      title: 'Verify your email',
-      desc: 'Completed',
-      status: 'completed',
-    },
+  // 6 Dynamic Onboarding Steps driven directly by backend database records
+  const onboardingSteps = [
     {
       id: 'profile',
-      title: 'Complete company profile',
-      desc: 'In progress',
-      status: 'current',
-      link: '/dashboard/settings',
+      title: 'Complete your company profile',
+      subtitle: 'Set up your company details and preferences',
+      completed: true, // Organization account initialized upon registration
+      actionText: 'Completed',
+      actionUrl: '/dashboard/settings/company-profile',
     },
     {
-      id: 'operations',
-      title: 'Configure freight operations',
-      desc: 'Tell LogisticsHQ how your freight business operates',
-      status: 'pending',
-      number: 4,
-      link: '/dashboard/rate-management',
+      id: 'customer',
+      title: 'Add your first customer',
+      subtitle: 'Add a customer to start your operations',
+      completed: (stats.total_customers || 0) > 0,
+      actionText: (stats.total_customers || 0) > 0 ? 'Completed' : 'Add Customer',
+      actionUrl: '/dashboard/customers',
+    },
+    {
+      id: 'lead',
+      title: 'Create your first lead',
+      subtitle: 'Capture a potential business opportunity',
+      completed: (stats.total_leads || stats.open_leads || 0) > 0,
+      actionText: (stats.total_leads || stats.open_leads || 0) > 0 ? 'Completed' : 'Create Lead',
+      actionUrl: '/dashboard/leads',
     },
     {
       id: 'rfq',
-      title: 'Submit your first RFQ',
-      desc: 'Start your first freight request / carrier sourcing workflow',
-      status: 'pending',
-      number: 5,
-      link: '/dashboard/rfqs',
+      title: 'Create or receive your first RFQ',
+      subtitle: 'Manage customer requests for quotes',
+      completed: (stats.total_rfqs || stats.open_rfqs || 0) > 0,
+      actionText: (stats.total_rfqs || stats.open_rfqs || 0) > 0 ? 'Completed' : 'Create RFQ',
+      actionUrl: '/dashboard/rfqs',
     },
     {
       id: 'quotation',
-      title: 'Receive your first quotation',
-      desc: 'Review carrier responses and compare options',
-      status: 'pending',
-      number: 6,
-      link: '/dashboard/quotations',
+      title: 'Create your first quotation',
+      subtitle: 'Send a quotation to your customer',
+      completed: (stats.total_quotations || stats.active_quotations || 0) > 0,
+      actionText: (stats.total_quotations || stats.active_quotations || 0) > 0 ? 'Completed' : 'Create Quotation',
+      actionUrl: '/dashboard/quotations',
+    },
+    {
+      id: 'shipment',
+      title: 'Create your first shipment',
+      subtitle: 'Book and manage your first shipment',
+      completed: (stats.total_shipments || stats.active_shipments || 0) > 0,
+      actionText: (stats.total_shipments || stats.active_shipments || 0) > 0 ? 'Completed' : 'Create Shipment',
+      actionUrl: '/dashboard/shipments',
     },
   ];
 
-  // Calculate real progress
-  const completedCount = journeySteps.filter((s) => s.status === 'completed').length;
-  const progressPercent = Math.round((completedCount / journeySteps.length) * 100);
+  const completedCount = onboardingSteps.filter((s) => s.completed).length;
 
-  // How Freel Works steps for Freight Forwarders
-  const howItWorksSteps = [
+  const quickActions = [
     {
-      number: '01',
-      title: 'Create or receive requirement',
-      desc: 'Share or parse shipment details from email, chat, or form',
-      Icon: FileText,
-      themeClass: 'theme-blue',
+      title: 'Add Customer',
+      subtitle: 'Add a new customer',
+      icon: <Users size={18} className="text-blue-600" />,
+      bgColor: '#EFF6FF',
+      url: '/dashboard/customers',
     },
     {
-      number: '02',
-      title: 'Create an RFQ',
-      desc: 'Source competitive rates from your carrier network',
-      Icon: DollarSign,
-      themeClass: 'theme-emerald',
+      title: 'Create Lead',
+      subtitle: 'Create a new lead',
+      icon: <UserCheck size={18} className="text-emerald-600" />,
+      bgColor: '#ECFDF5',
+      url: '/dashboard/leads',
     },
     {
-      number: '03',
-      title: 'Receive & compare quotes',
-      desc: 'Compare carrier rates, transit time, and margin targets',
-      Icon: Scale,
-      themeClass: 'theme-amber',
+      title: 'Create RFQ',
+      subtitle: 'Create or enter RFQ',
+      icon: <FileText size={18} className="text-purple-600" />,
+      bgColor: '#F3E8FF',
+      url: '/dashboard/rfqs',
     },
     {
-      number: '04',
-      title: 'Send customer quotation',
-      desc: 'Confirm the best rate and dispatch quotation to customer',
-      Icon: Handshake,
-      themeClass: 'theme-indigo',
+      title: 'Create Quotation',
+      subtitle: 'Create a new quotation',
+      icon: <FileSpreadsheet size={18} className="text-amber-600" />,
+      bgColor: '#FEF3C7',
+      url: '/dashboard/quotations',
     },
     {
-      number: '05',
-      title: 'Book & track shipment',
-      desc: 'Real-time milestone visibility and exception management',
-      Icon: MapPin,
-      themeClass: 'theme-purple',
+      title: 'Create Shipment',
+      subtitle: 'Book a new shipment',
+      icon: <Ship size={18} className="text-indigo-600" />,
+      bgColor: '#E0E7FF',
+      url: '/dashboard/shipments',
+    },
+    {
+      title: 'Upload Document',
+      subtitle: 'Upload important docs',
+      icon: <Upload size={18} className="text-rose-600" />,
+      bgColor: '#FFE4E6',
+      url: '/dashboard/documents',
     },
   ];
 
-  // News & Updates
-  const newsItems = [
+  const atAGlanceMetrics = [
     {
-      id: 1,
-      Icon: Layers,
-      title: 'New feature: RFQ templates',
-      desc: 'Save time by using templates for frequent shipments.',
-      time: '2d ago',
-      colorClass: 'news-blue',
+      title: 'Leads',
+      count: stats.open_leads || 0,
+      label: (stats.open_leads || 0) > 0 ? `${stats.open_leads} active` : 'No leads yet',
+      icon: <Users size={14} className="text-blue-600" />,
+      color: '#EFF6FF',
     },
     {
-      id: 2,
-      Icon: TrendingUp,
-      title: 'Market update: Ocean freight rates',
-      desc: 'Latest trends and rate insights for August 2026.',
-      time: '3d ago',
-      colorClass: 'news-emerald',
+      title: 'RFQs',
+      count: stats.open_rfqs || 0,
+      label: (stats.open_rfqs || 0) > 0 ? `${stats.open_rfqs} active` : 'No RFQs yet',
+      icon: <FileText size={14} className="text-purple-600" />,
+      color: '#F3E8FF',
     },
     {
-      id: 3,
-      Icon: FileText,
-      title: 'Documentation made easy',
-      desc: 'Upload once, use across all shipments.',
-      time: '5d ago',
-      colorClass: 'news-indigo',
+      title: 'Quotations',
+      count: stats.active_quotations || 0,
+      label: (stats.active_quotations || 0) > 0 ? `${stats.active_quotations} active` : 'No quotations yet',
+      icon: <FileSpreadsheet size={14} className="text-amber-600" />,
+      color: '#FEF3C7',
+    },
+    {
+      title: 'Shipments',
+      count: stats.active_shipments || 0,
+      label: (stats.active_shipments || 0) > 0 ? `${stats.active_shipments} active` : 'No shipments yet',
+      icon: <Ship size={14} className="text-indigo-600" />,
+      color: '#E0E7FF',
+    },
+    {
+      title: 'Invoices',
+      count: stats.total_invoices ? `$${(stats.outstanding_amount || 0).toLocaleString()}` : '$0',
+      label: (stats.total_invoices || 0) > 0 ? `${stats.total_invoices} active` : 'No invoices yet',
+      icon: <CreditCard size={14} className="text-emerald-600" />,
+      color: '#ECFDF5',
     },
   ];
 
-  // AI Starter Prompts
-  const starterPrompts = [
-    'How do I create my first RFQ?',
-    'What information should I collect from my customer?',
-    'How do I add a carrier?',
-    'How do I compare carrier quotes?',
-    'What documents do I need for my first shipment?',
+  const valueProps = [
+    {
+      icon: <Briefcase size={20} className="text-blue-600" />,
+      bgColor: '#EFF6FF',
+      title: 'Win More Business',
+      desc: 'Manage leads, RFQs and quotations efficiently',
+    },
+    {
+      icon: <Layers size={20} className="text-emerald-600" />,
+      bgColor: '#ECFDF5',
+      title: 'Operate Smoothly',
+      desc: 'Book shipments, manage docs and track progress',
+    },
+    {
+      icon: <ShieldCheck size={20} className="text-purple-600" />,
+      bgColor: '#F3E8FF',
+      title: 'Stay in Control',
+      desc: 'Get real-time visibility and important alerts',
+    },
+    {
+      icon: <CreditCard size={20} className="text-amber-600" />,
+      bgColor: '#FEF3C7',
+      title: 'Get Paid Faster',
+      desc: 'Create invoices and track payments easily',
+    },
   ];
-
-  const handlePromptClick = (prompt) => {
-    setAiQuestion(prompt);
-    if (prompt.includes('create my first RFQ')) {
-      setAiResponse(
-        'To create your first RFQ, navigate to RFQ Management or click "Create New RFQ". You can specify origins, destinations, container sizes (20GP, 40HC), and cargo weights, or paste an inquiry email for automatic extraction.'
-      );
-    } else if (prompt.includes('information should I collect')) {
-      setAiResponse(
-        'Essential details from your shipper: Origin & Destination ports/addresses, Incoterms (e.g. FOB, CIF, DDP), Cargo description, Gross Weight (kg), Volume (CBM), and Ready date.'
-      );
-    } else if (prompt.includes('add a carrier')) {
-      setAiResponse(
-        'Go to Commercial > Rate Management to connect carrier APIs or upload contract rate sheets with ocean carriers (Maersk, MSC, CMA CGM, Hapag-Lloyd) and air cargo partners.'
-      );
-    } else if (prompt.includes('compare carrier quotes')) {
-      setAiResponse(
-        'When carrier quotes arrive, LogisticsHQ automatically normalizes surcharges (BAF, CAF, THC), calculates your profit margin, and ranks options by price and transit speed.'
-      );
-    } else {
-      setAiResponse(
-        'Standard shipment documents include: House Bill of Lading (HBL), Commercial Invoice, Packing List, Certificate of Origin, and Customs Export Declaration.'
-      );
-    }
-  };
-
-  const handleAiSubmit = (e) => {
-    e.preventDefault();
-    if (!aiQuestion.trim()) return;
-    handlePromptClick(aiQuestion);
-  };
 
   return (
-    <div className="new-ff-dashboard animate-fade-in-up">
-      {/* ── SECTION 1: WORKSPACE PROFILE HERO ── */}
-      <section className="onboarding-hero-card" aria-label="Workspace Readiness">
-        <div className="hero-progress-ring-wrapper">
-          <svg className="progress-ring-svg" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="heroProgressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#2563EB" />
-                <stop offset="100%" stopColor="#4F46E5" />
-              </linearGradient>
-            </defs>
-            <circle className="progress-ring-bg" cx="50" cy="50" r="38" />
-            <circle
-              className="progress-ring-fill"
-              cx="50"
-              cy="50"
-              r="38"
-              style={{
-                strokeDasharray: '238.76',
-                strokeDashoffset: `${238.76 - (238.76 * progressPercent) / 100}`,
-              }}
-            />
-          </svg>
-          <div className="progress-ring-center">
-            <span className="progress-ring-number">{progressPercent}%</span>
-          </div>
-        </div>
+    <div className="new-user-dashboard animate-fade-in-up">
+      {/* ── 1. WELCOME HERO BANNER (Matching dashboardUiNewUser.png) ── */}
+      <div className="nu-hero-card">
+        <div className="nu-hero-left">
+          <h2 className="nu-hero-title">
+            👋 Welcome to <span className="nu-brand-highlight">LogisticsHQ</span>, {user?.first_name || user?.company_name || 'John'}! 👋
+          </h2>
+          <p className="nu-hero-subtitle">Let's get your freight operations set up and running.</p>
+          <p className="nu-hero-subtext">Complete the steps below to unlock the full power of LogisticsHQ.</p>
 
-        <div className="hero-content">
-          <div className="hero-badge">WORKSPACE SETUP</div>
-          <h2 className="hero-heading">Complete your company profile</h2>
-          <p className="hero-subtext">
-            Add your company details so LogisticsHQ can personalize your freight workspace, invoice headers, and automated rate calculations.
-          </p>
-          <button
-            className="btn-complete-profile"
-            onClick={() => navigate('/dashboard/settings')}
-          >
-            Complete Profile <ArrowRight size={14} />
-          </button>
-        </div>
-
-        <div className="hero-readiness-pane">
-          <div className="readiness-card">
-            <div className="readiness-header">
-              <span className="readiness-title">Workspace Readiness</span>
-              <span className="readiness-status-tag">2 of 4 Ready</span>
-            </div>
-            <div className="readiness-list">
-              <div className="readiness-item done">
-                <CheckCircle2 size={13} className="item-icon-done" />
-                <span>Company Name</span>
-              </div>
-              <div className="readiness-item done">
-                <CheckCircle2 size={13} className="item-icon-done" />
-                <span>Workspace Email</span>
-              </div>
-              <div className="readiness-item current">
-                <ArrowRight size={13} className="item-icon-current" />
-                <span>Operational Hub</span>
-              </div>
-              <div className="readiness-item pending">
-                <span className="item-dot-pending" />
-                <span>Carrier Contracts</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECTION 2: 3-COLUMN MIDDLE ROW ── */}
-      <section className="new-ff-middle-grid" aria-label="Freight Operations Journey">
-        {/* Column 1: Get started with LogisticsHQ (Journey Timeline) */}
-        <div className="ff-card journey-card">
-          <div className="card-header-block">
-            <h3 className="card-block-title">Get started with LogisticsHQ</h3>
-            <p className="card-block-subtitle">Follow these simple steps to kickstart your freight operations.</p>
-          </div>
-
-          <div className="journey-steps-timeline">
-            {journeySteps.map((step, index) => {
-              const isLast = index === journeySteps.length - 1;
-              if (step.status === 'completed') {
-                return (
-                  <div key={step.id} className="timeline-step-row completed">
-                    <div className="timeline-col-indicator">
-                      <div className="step-badge completed-badge">
-                        <Check size={11} strokeWidth={3} />
-                      </div>
-                      {!isLast && <div className="timeline-connector-line completed" />}
-                    </div>
-                    <div className="step-content">
-                      <div className="step-title">{step.title}</div>
-                      <div className="step-meta">{step.desc}</div>
-                    </div>
-                  </div>
-                );
-              }
-              if (step.status === 'current') {
-                return (
-                  <div
-                    key={step.id}
-                    className="timeline-step-row current"
-                    onClick={() => navigate(step.link)}
-                  >
-                    <div className="timeline-col-indicator">
-                      <div className="step-badge current-badge">
-                        <span className="current-dot" />
-                      </div>
-                      {!isLast && <div className="timeline-connector-line" />}
-                    </div>
-                    <div className="step-content">
-                      <div className="step-title">{step.title}</div>
-                      <div className="step-meta in-progress-text">{step.desc}</div>
-                    </div>
-                    <ChevronRight size={14} className="step-arrow" />
-                  </div>
-                );
-              }
-              return (
-                <div
-                  key={step.id}
-                  className="timeline-step-row pending"
-                  onClick={() => step.link && navigate(step.link)}
-                >
-                  <div className="timeline-col-indicator">
-                    <div className="step-badge pending-badge">{step.number}</div>
-                    {!isLast && <div className="timeline-connector-line" />}
-                  </div>
-                  <div className="step-content">
-                    <div className="step-title">{step.title}</div>
-                    <div className="step-meta">{step.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Column 2: Center Primary Action Card (Create Your First RFQ - Main Focal Point) */}
-        <div className="ff-card action-center-card">
-          <div className="action-illustration-wrapper">
-            <svg
-              className="logistics-hero-svg"
-              viewBox="0 0 220 130"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Origin & Destination Nodes */}
-              <circle cx="28" cy="65" r="7" fill="#EFF6FF" stroke="#3B82F6" strokeWidth="2" />
-              <circle cx="28" cy="65" r="3" fill="#2563EB" />
-              <text x="28" y="86" fontSize="8" fontWeight="700" fill="#64748B" textAnchor="middle">Origin</text>
-
-              <circle cx="192" cy="65" r="7" fill="#EFF6FF" stroke="#10B981" strokeWidth="2" />
-              <circle cx="192" cy="65" r="3" fill="#059669" />
-              <text x="192" y="86" fontSize="8" fontWeight="700" fill="#64748B" textAnchor="middle">Dest</text>
-
-              {/* Connecting dashed freight route curve */}
-              <path
-                d="M35 65 C 65 30, 95 100, 130 65 C 150 45, 170 55, 185 65"
-                stroke="#93C5FD"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-              />
-
-              {/* Water wave base */}
-              <path
-                d="M50 102 C 75 96, 100 108, 125 102 C 145 97, 160 106, 175 102"
-                stroke="#DBEAFE"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-
-              {/* Cargo Ship Hull */}
-              <path
-                d="M70 94 L82 62 L144 62 L156 94 Z"
-                fill="url(#hullGradient)"
-                stroke="#1E293B"
-                strokeWidth="1.8"
-                strokeLinejoin="round"
-              />
-              <path d="M70 94 L156 94" stroke="#0F172A" strokeWidth="2.5" strokeLinecap="round" />
-
-              {/* Bridge / Cabin */}
-              <rect x="128" y="44" width="18" height="18" rx="2" fill="#FFFFFF" stroke="#1E293B" strokeWidth="1.4" />
-              <rect x="131" y="47" width="12" height="4" rx="1" fill="#3B82F6" />
-              <line x1="137" y1="36" x2="137" y2="44" stroke="#64748B" strokeWidth="1.8" strokeLinecap="round" />
-
-              {/* Containers */}
-              <rect x="86" y="48" width="13" height="14" rx="1" fill="#2563EB" stroke="#1E293B" strokeWidth="1.2" />
-              <rect x="100" y="48" width="13" height="14" rx="1" fill="#10B981" stroke="#1E293B" strokeWidth="1.2" />
-              <rect x="114" y="48" width="13" height="14" rx="1" fill="#F59E0B" stroke="#1E293B" strokeWidth="1.2" />
-              <rect x="93" y="34" width="13" height="14" rx="1" fill="#6366F1" stroke="#1E293B" strokeWidth="1.2" />
-              <rect x="107" y="34" width="13" height="14" rx="1" fill="#0284C7" stroke="#1E293B" strokeWidth="1.2" />
-
-              {/* Gradients */}
-              <defs>
-                <linearGradient id="hullGradient" x1="70" y1="62" x2="156" y2="94" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#1E293B" />
-                  <stop offset="1" stopColor="#0F172A" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-
-          <h3 className="action-center-title">Create Your First RFQ</h3>
-          <p className="action-center-subtitle">
-            Tell us where you're shipping from, where you're shipping to, and what you're shipping to source competitive rates.
-          </p>
-
-          <button
-            className="btn-create-rfq-hero"
-            onClick={() => navigate('/dashboard/rfqs')}
-          >
-            Create New RFQ <ArrowRight size={15} />
-          </button>
-        </div>
-
-        {/* Column 3: How LogisticsHQ Works (5-Step Stepper) */}
-        <div className="ff-card how-it-works-card">
-          <div className="card-header-block">
-            <h3 className="card-block-title">How LogisticsHQ works</h3>
-            <p className="card-block-subtitle">5-step automated freight workflow</p>
-          </div>
-
-          <div className="stepper-timeline">
-            {howItWorksSteps.map((step, index) => {
-              const IconComp = step.Icon;
-              return (
-                <div key={step.number} className="stepper-step">
-                  <div className="stepper-left">
-                    <div className={`stepper-icon-bubble ${step.themeClass}`}>
-                      <IconComp size={13} />
-                    </div>
-                    {index < howItWorksSteps.length - 1 && <div className="stepper-line" />}
-                  </div>
-                  <div className="stepper-right">
-                    <div className="stepper-num-tag">{step.number}</div>
-                    <div className="stepper-step-title">{step.title}</div>
-                    <div className="stepper-step-desc">{step.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ── SECTION 3: 4-COLUMN LOWER ROW (3 Empty States + News & Updates) ── */}
-      <section className="new-ff-lower-grid" aria-label="Workspace Status & Updates">
-        {/* Card 1: Your RFQs */}
-        <div className="ff-card empty-widget-card">
-          <div className="empty-widget-header-row">
-            <div className="empty-widget-icon-box">
-              <FileText size={16} className="widget-svg-icon" />
-            </div>
-            <span className="empty-stat-count-badge">0</span>
-          </div>
-          <h4 className="empty-widget-title">Your RFQs</h4>
-          <p className="empty-widget-text">
-            You haven't created any RFQs yet. Start by creating your first request for quotation.
-          </p>
-          <button
-            className="btn-empty-outline"
-            onClick={() => navigate('/dashboard/rfqs')}
-          >
-            Create RFQ <ArrowRight size={12} />
-          </button>
-        </div>
-
-        {/* Card 2: Quotations */}
-        <div className="ff-card empty-widget-card">
-          <div className="empty-widget-header-row">
-            <div className="empty-widget-icon-box">
-              <DollarSign size={16} className="widget-svg-icon" />
-            </div>
-            <span className="empty-stat-count-badge">0</span>
-          </div>
-          <h4 className="empty-widget-title">Quotations</h4>
-          <p className="empty-widget-text">
-            No quotations received yet. Once carriers respond to your RFQs, you'll see them here.
-          </p>
-          <button
-            className="btn-empty-outline"
-            onClick={() => navigate('/dashboard/quotations')}
-          >
-            View RFQs <ArrowRight size={12} />
-          </button>
-        </div>
-
-        {/* Card 3: Shipments */}
-        <div className="ff-card empty-widget-card">
-          <div className="empty-widget-header-row">
-            <div className="empty-widget-icon-box">
-              <Ship size={16} className="widget-svg-icon" />
-            </div>
-            <span className="empty-stat-count-badge">0</span>
-          </div>
-          <h4 className="empty-widget-title">Shipments</h4>
-          <p className="empty-widget-text">
-            No shipments yet. Once you book a shipment, track it in real time here.
-          </p>
-          <button
-            className="btn-empty-outline"
-            onClick={() => navigate('/dashboard/shipments')}
-          >
-            Explore Shipments <ArrowRight size={12} />
-          </button>
-        </div>
-
-        {/* Card 4: News & Updates */}
-        <div className="ff-card news-widget-card">
-          <div className="news-header-flex">
-            <h4 className="news-title">News & Updates</h4>
-            <span className="news-view-all" onClick={() => navigate('/dashboard/market-insights')}>
-              View all
+          <div className="nu-hero-btn-row">
+            <button className="nu-btn-primary" onClick={() => navigate('/dashboard/rfqs')}>
+              <Play size={13} fill="currentColor" /> Watch Getting Started Video
+            </button>
+            <span className="nu-link-secondary" onClick={() => navigate('/dashboard/settings')}>
+              Learn More →
             </span>
           </div>
+        </div>
 
-          <div className="news-items-list">
-            {newsItems.map((news) => {
-              const NewsIcon = news.Icon;
-              return (
-                <div key={news.id} className="news-row-item">
-                  <div className={`news-icon-circle ${news.colorClass}`}>
-                    <NewsIcon size={12} />
-                  </div>
-                  <div className="news-body">
-                    <div className="news-item-title">{news.title}</div>
-                    <div className="news-item-desc">{news.desc}</div>
-                  </div>
-                  <div className="news-item-time">{news.time}</div>
+        <div className="nu-hero-right">
+          <svg className="nu-hero-illustration-svg" viewBox="0 0 420 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="cloudGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#E2E8F0" stopOpacity="0.8" />
+                <stop offset="100%" stopColor="#CBD5E1" stopOpacity="0.2" />
+              </linearGradient>
+              <linearGradient id="screenGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#1E293B" />
+                <stop offset="100%" stopColor="#0F172A" />
+              </linearGradient>
+            </defs>
+
+            {/* Background Clouds */}
+            <path d="M40 70 Q55 50 75 60 Q95 45 120 60 Q145 55 155 75 Z" fill="url(#cloudGrad)" opacity="0.6" />
+            <path d="M280 50 Q300 35 325 45 Q350 30 375 48 Q395 40 405 60 Z" fill="url(#cloudGrad)" opacity="0.6" />
+
+            {/* Floating Dashboard Screen Mockup */}
+            <g transform="translate(130, 20)">
+              <rect width="180" height="110" rx="8" fill="url(#screenGrad)" stroke="#334155" strokeWidth="2" />
+              {/* Screen Header */}
+              <rect x="10" y="8" width="160" height="14" rx="3" fill="#1E293B" />
+              <circle cx="20" cy="15" r="3" fill="#EF4444" />
+              <circle cx="28" cy="15" r="3" fill="#F59E0B" />
+              <circle cx="36" cy="15" r="3" fill="#10B981" />
+              {/* Sidebar in mock */}
+              <rect x="10" y="26" width="22" height="74" rx="2" fill="#090D16" />
+              {/* Stat Cards in mock */}
+              <rect x="36" y="26" width="28" height="20" rx="3" fill="#3B82F6" opacity="0.25" />
+              <rect x="68" y="26" width="28" height="20" rx="3" fill="#10B981" opacity="0.25" />
+              <rect x="100" y="26" width="28" height="20" rx="3" fill="#8B5CF6" opacity="0.25" />
+              <rect x="132" y="26" width="34" height="20" rx="3" fill="#F59E0B" opacity="0.25" />
+              {/* Chart lines in mock */}
+              <rect x="36" y="52" width="70" height="48" rx="3" fill="#1E293B" />
+              <path d="M40 88 L52 75 L65 80 L80 65 L95 70" stroke="#3B82F6" strokeWidth="2" fill="none" />
+              <path d="M40 92 L52 85 L65 88 L80 78 L95 82" stroke="#10B981" strokeWidth="1.5" fill="none" />
+              {/* Bars in mock */}
+              <rect x="112" y="52" width="54" height="48" rx="3" fill="#1E293B" />
+              <rect x="116" y="80" width="8" height="16" rx="1" fill="#3B82F6" />
+              <rect x="128" y="70" width="8" height="26" rx="1" fill="#10B981" />
+              <rect x="140" y="60" width="8" height="36" rx="1" fill="#8B5CF6" />
+              <rect x="152" y="75" width="8" height="21" rx="1" fill="#F59E0B" />
+            </g>
+
+            {/* Crane Cable & Suspended Container */}
+            <line x1="365" y1="0" x2="365" y2="45" stroke="#64748B" strokeWidth="2" strokeDasharray="2 2" />
+            <g transform="translate(340, 45)">
+              <rect width="50" height="26" rx="3" fill="#2563EB" stroke="#1D4ED8" strokeWidth="1.5" />
+              <line x1="10" y1="2" x2="10" y2="24" stroke="#60A5FA" strokeWidth="1" />
+              <line x1="20" y1="2" x2="20" y2="24" stroke="#60A5FA" strokeWidth="1" />
+              <line x1="30" y1="2" x2="30" y2="24" stroke="#60A5FA" strokeWidth="1" />
+              <line x1="40" y1="2" x2="40" y2="24" stroke="#60A5FA" strokeWidth="1" />
+            </g>
+
+            {/* Stacked Cargo Boxes on Ground */}
+            <g transform="translate(345, 110)">
+              <rect x="0" y="20" width="22" height="22" rx="2" fill="#D97706" />
+              <line x1="0" y1="31" x2="22" y2="31" stroke="#B45309" strokeWidth="1" />
+              <rect x="26" y="22" width="18" height="20" rx="2" fill="#B45309" />
+              <rect x="12" y="0" width="20" height="20" rx="2" fill="#F59E0B" />
+              <line x1="12" y1="10" x2="32" y2="10" stroke="#D97706" strokeWidth="1" />
+            </g>
+
+            {/* Blue Freight Cargo Truck */}
+            <g transform="translate(10, 100)">
+              {/* Truck Container */}
+              <rect x="0" y="0" width="95" height="42" rx="3" fill="#1D4ED8" />
+              <line x1="15" y1="2" x2="15" y2="40" stroke="#3B82F6" strokeWidth="1" />
+              <line x1="30" y1="2" x2="30" y2="40" stroke="#3B82F6" strokeWidth="1" />
+              <line x1="45" y1="2" x2="45" y2="40" stroke="#3B82F6" strokeWidth="1" />
+              <line x1="60" y1="2" x2="60" y2="40" stroke="#3B82F6" strokeWidth="1" />
+              <line x1="75" y1="2" x2="75" y2="40" stroke="#3B82F6" strokeWidth="1" />
+              {/* Truck Cabin */}
+              <path d="M96 14 L118 14 L128 26 L128 42 L96 42 Z" fill="#0F172A" />
+              <rect x="102" y="18" width="16" height="12" rx="2" fill="#93C5FD" opacity="0.85" />
+              {/* Wheels */}
+              <circle cx="20" cy="44" r="7" fill="#0F172A" stroke="#94A3B8" strokeWidth="2" />
+              <circle cx="70" cy="44" r="7" fill="#0F172A" stroke="#94A3B8" strokeWidth="2" />
+              <circle cx="114" cy="44" r="7" fill="#0F172A" stroke="#94A3B8" strokeWidth="2" />
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      {/* ── 2. MIDDLE TWO-COLUMN GRID ── */}
+      <div className="nu-middle-grid">
+        {/* Left Column: Getting Started Checklist */}
+        <div className="nu-card nu-checklist-card">
+          <div className="nu-card-header">
+            <h3 className="nu-card-title">Getting Started Checklist</h3>
+            <span className="nu-progress-pill">{completedCount} of 6 completed</span>
+          </div>
+
+          <div className="nu-checklist-list">
+            {onboardingSteps.map((step) => (
+              <div key={step.id} className="nu-checklist-item">
+                <div className={`nu-check-circle ${step.completed ? 'completed' : ''}`}>
+                  {step.completed ? <Check size={12} strokeWidth={3} /> : <span className="nu-circle-inner" />}
                 </div>
-              );
-            })}
+                <div className="nu-item-text">
+                  <div className="nu-item-title">{step.title}</div>
+                  <div className="nu-item-subtitle">{step.subtitle}</div>
+                </div>
+                {step.completed ? (
+                  <span className="nu-badge-completed">✓ Completed</span>
+                ) : (
+                  <button className="nu-btn-action-outline" onClick={() => navigate(step.actionUrl)}>
+                    {step.actionText}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="nu-tip-footer">
+            <span className="tip-bulb-icon">💡</span>
+            <span><strong>Tip:</strong> You can always access these steps from the Help menu.</span>
           </div>
         </div>
-      </section>
 
-      {/* ── SECTION 4: CAPABILITIES GRID ── */}
-      <section className="ff-card capabilities-compact-card" aria-label="LogisticsHQ Capabilities">
-        <h4 className="cap-heading">What You Can Do With LogisticsHQ</h4>
-        <div className="cap-grid">
-          <div className="cap-item">
-            <div className="cap-icon-box blue">
-              <FileText size={15} />
-            </div>
-            <div className="cap-details">
-              <h5>RFQ Management</h5>
-              <p>Create and manage freight requests.</p>
-            </div>
-          </div>
-          <div className="cap-item">
-            <div className="cap-icon-box green">
-              <DollarSign size={15} />
-            </div>
-            <div className="cap-details">
-              <h5>Competitive Quotes</h5>
-              <p>Compare carrier rates and services.</p>
+        {/* Right Column: Quick Actions & At a Glance */}
+        <div className="nu-right-col">
+          {/* Quick Actions */}
+          <div className="nu-card nu-quick-actions-card">
+            <h3 className="nu-card-title">Quick Actions</h3>
+            <div className="nu-qa-grid">
+              {quickActions.map((qa, idx) => (
+                <div key={idx} className="nu-qa-tile" onClick={() => navigate(qa.url)}>
+                  <div className="nu-qa-icon" style={{ backgroundColor: qa.bgColor }}>
+                    {qa.icon}
+                  </div>
+                  <div className="nu-qa-details">
+                    <div className="nu-qa-title">{qa.title}</div>
+                    <div className="nu-qa-sub">{qa.subtitle}</div>
+                  </div>
+                  <ArrowRight size={13} className="nu-qa-arrow" />
+                </div>
+              ))}
             </div>
           </div>
-          <div className="cap-item">
-            <div className="cap-icon-box indigo">
-              <Ship size={15} />
-            </div>
-            <div className="cap-details">
-              <h5>Shipment Tracking</h5>
-              <p>Track shipments and milestones.</p>
-            </div>
-          </div>
-          <div className="cap-item">
-            <div className="cap-icon-box amber">
-              <FileCheck size={15} />
-            </div>
-            <div className="cap-details">
-              <h5>Document Management</h5>
-              <p>Manage freight and trade documents.</p>
-            </div>
-          </div>
-          <div className="cap-item">
-            <div className="cap-icon-box purple">
-              <TrendingUp size={15} />
-            </div>
-            <div className="cap-details">
-              <h5>Analytics & Reports</h5>
-              <p>Understand your freight operations.</p>
+
+          {/* At a Glance (No Data Yet) */}
+          <div className="nu-card nu-glance-card">
+            <h3 className="nu-card-title">At a Glance (No Data Yet)</h3>
+            <div className="nu-glance-grid">
+              {atAGlanceMetrics.map((m, idx) => (
+                <div key={idx} className="nu-glance-item">
+                  <div className="nu-glance-top">
+                    <span className="nu-glance-name">{m.title}</span>
+                    <span className="nu-glance-icon-box" style={{ backgroundColor: m.color }}>
+                      {m.icon}
+                    </span>
+                  </div>
+                  <div className="nu-glance-val">{m.count}</div>
+                  <div className="nu-glance-sub">{m.label}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── SECTION 5: FREIGHT AI ASSISTANT ── */}
-      <section className="ff-card new-ff-assistant-card" aria-label="Freight AI Assistant">
-        <div className="assistant-top-bar">
-          <div className="assistant-title-group">
-            <span className="sparkle-ai-glyph">✦</span>
-            <span className="assistant-main-title">Freight AI Assistant</span>
-            <span className="assistant-pill">BETA</span>
-          </div>
-          <span className="assistant-guide-text">Your AI copilot for freight operations.</span>
-        </div>
-
-        <div className="assistant-chips-container">
-          {starterPrompts.map((promptText, idx) => (
-            <button
-              key={idx}
-              className="assistant-prompt-btn"
-              onClick={() => handlePromptClick(promptText)}
-            >
-              {promptText}
-            </button>
+      {/* ── 3. BOTTOM HOW LOGISTICSHQ HELPS YOUR BUSINESS BANNER ── */}
+      <div className="nu-card nu-value-props-card">
+        <h3 className="nu-card-title" style={{ marginBottom: '14px' }}>How LogisticsHQ Helps Your Business</h3>
+        <div className="nu-value-grid">
+          {valueProps.map((vp, idx) => (
+            <div key={idx} className="nu-value-item">
+              <div className="nu-value-icon" style={{ backgroundColor: vp.bgColor }}>
+                {vp.icon}
+              </div>
+              <div className="nu-value-body">
+                <h4 className="nu-value-title">{vp.title}</h4>
+                <p className="nu-value-desc">{vp.desc}</p>
+              </div>
+            </div>
           ))}
         </div>
-
-        {aiResponse && (
-          <div className="assistant-response-card animate-fade-in-up">
-            <div className="response-header">
-              <Sparkles size={13} /> LogisticsHQ AI
-            </div>
-            <p className="response-body">{aiResponse}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleAiSubmit} className="assistant-query-form">
-          <input
-            type="text"
-            placeholder="Ask a question about your freight workflow..."
-            value={aiQuestion}
-            onChange={(e) => setAiQuestion(e.target.value)}
-            className="assistant-text-field"
-          />
-          <button type="submit" className="assistant-submit-btn" aria-label="Ask AI">
-            <Send size={13} />
-          </button>
-        </form>
-      </section>
-
-      {/* ── SECTION 6: FINAL CTA BANNER ── */}
-      <section className="final-cta-banner" aria-label="Final Call to Action">
-        <div className="cta-left">
-          <div className="cta-sparkle-icon">
-            <Sparkles size={18} />
-          </div>
-          <div className="cta-text-group">
-            <h4 className="cta-title">Ready to get your first shipment moving?</h4>
-            <p className="cta-subtitle">
-              Start with your first RFQ and let LogisticsHQ handle the workflow from there.
-            </p>
-          </div>
-        </div>
-        <button
-          className="btn-final-create-rfq"
-          onClick={() => navigate('/dashboard/rfqs')}
-        >
-          Create New RFQ <ArrowRight size={14} />
-        </button>
-      </section>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import os
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.checkpoint.memory import MemorySaver
 
 from app.state.pricing_state import PricingAgentState
 from app.agents.pricing_agent_node import pricing_agent_node, tools
@@ -37,19 +37,9 @@ pricing_builder.add_edge("tools", "agent")
 pricing_builder.add_edge("validate", "save")
 pricing_builder.add_edge("save", END)
 
-# Helper function to get database url
-def get_db_url() -> str:
-    url = os.getenv("DB_URL", "postgres://user:password@localhost:5432/freel?sslmode=disable")
-    if "host.docker.internal" in url:
-        url = url.replace("host.docker.internal", "localhost")
-    return url
-
-# Initialize database-backed checkpointer
-db_url = get_db_url()
-_saver_context = PostgresSaver.from_conn_string(db_url)
-saver = _saver_context.__enter__()
-saver.setup()
-print("[AI Sidecar Pricing] Successfully initialized PostgresSaver checkpointer.")
+# Initialize in-memory checkpointer
+saver = MemorySaver()
+print("[AI Sidecar Pricing] Successfully initialized MemorySaver checkpointer.")
 
 # Compile the Pricing Graph with an interrupt before the save node for manual reviews
 pricing_graph = pricing_builder.compile(

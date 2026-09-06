@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { rfqService } from '../../../services/rfqService';
 import UniversalTimeline from '../../../components/dashboard/UniversalTimeline';
@@ -12,9 +13,11 @@ import './RFQPage.css'; // Shared styles
  * Features a HubSpot-style layout: Details/Comms on Left, Timeline in Center, AI/Pricing on Right.
  */
 export default function RFQDetail({ rfqId, onClose }) {
+  const navigate = useNavigate();
   const [rfq, setRfq] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('NOTES'); // NOTES, EMAILS, FILES
+  const [isRequestExpanded, setIsRequestExpanded] = useState(true);
 
   const [timelineEvents, setTimelineEvents] = useState([]);
 
@@ -25,8 +28,27 @@ export default function RFQDetail({ rfqId, onClose }) {
         rfqService.getRFQ(rfqId),
         rfqService.getTimeline(rfqId)
       ]);
-      setRfq(rfqRes.data);
-      setTimelineEvents(timelineRes.data || []);
+      const fetchedRfq = rfqRes.data || rfqRes;
+      setRfq(fetchedRfq);
+      
+      let events = timelineRes.data || timelineRes || [];
+      // Ensure origin creation timeline marker is included (Part 6)
+      if (fetchedRfq && fetchedRfq.lead_id) {
+        const hasOriginEvent = events.some(e => e.action === 'RFQ_CREATED' || (e.description && e.description.includes('Created from customer email')));
+        if (!hasOriginEvent) {
+          events = [
+            {
+              id: 'origin-created-event',
+              action: 'RFQ_CREATED',
+              description: '✓ RFQ Created — Created from customer email conversation.',
+              timestamp: fetchedRfq.created_at || new Date().toISOString(),
+              actor: 'Email Parser AI'
+            },
+            ...events
+          ];
+        }
+      }
+      setTimelineEvents(events);
     } catch (error) {
       console.error('Failed to load RFQ:', error);
       toast.error('Failed to load details');
@@ -79,6 +101,103 @@ export default function RFQDetail({ rfqId, onClose }) {
           
           {/* Left Panel: Details & Comms */}
           <div className="layout-left">
+            {/* Part 1 — RFQ Origin Information */}
+            {rfq.lead_id && (
+              <div className="info-card origin-info-card" style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #cbd5e1',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                  Created from customer inquiry
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: '12.5px', marginBottom: '10px' }}>
+                  <div><span style={{ color: '#64748b' }}>Customer:</span> <strong style={{ color: '#0f172a' }}>{rfq.customer_name || rfq.customer_id || 'Inquiry Contact'}</strong></div>
+                  <div><span style={{ color: '#64748b' }}>Source:</span> <strong style={{ color: '#0f172a' }}>Email conversation</strong></div>
+                  <div><span style={{ color: '#64748b' }}>Lead:</span> <strong style={{ color: '#0f172a' }}>Lead #{rfq.lead_id}</strong></div>
+                </div>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    if (onClose) onClose();
+                    navigate(`/dashboard/leads?leadId=${rfq.lead_id}&tab=email`);
+                  }}
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    padding: '6px 12px',
+                    backgroundColor: '#eff6ff',
+                    color: '#2563eb',
+                    border: '1px solid #bfdbfe',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    width: '100%'
+                  }}
+                >
+                  [ View Lead Conversation → ]
+                </button>
+              </div>
+            )}
+
+            {/* Part 2 — Preserve Conversation Context in RFQ (Collapsible Customer Request) */}
+            <div className="info-card customer-request-card" style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              marginBottom: '16px'
+            }}>
+              <div 
+                onClick={() => setIsRequestExpanded(!isRequestExpanded)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+              >
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+                  Customer Request ({rfq.cargo_description || rfq.rfq_number})
+                </h3>
+                <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+                  {isRequestExpanded ? '▲ Hide' : '▼ Expand'}
+                </span>
+              </div>
+
+              {isRequestExpanded && (
+                <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: '12px' }}>
+                    <div><span style={{ color: '#64748b' }}>Origin:</span> <strong>{rfq.origin || 'N/A'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Destination:</span> <strong>{rfq.destination || 'N/A'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Cargo:</span> <strong>{rfq.cargo_description || 'General Cargo'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Ready Date:</span> <strong>{rfq.target_date || rfq.ready_date || 'N/A'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Weight:</span> <strong>{rfq.cargo_weight ? `${rfq.cargo_weight} kg` : 'N/A'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Volume:</span> <strong>{rfq.cargo_volume ? `${rfq.cargo_volume} CBM` : 'N/A'}</strong></div>
+                    <div><span style={{ color: '#64748b' }}>Incoterms:</span> <strong>{rfq.incoterms || 'FOB'}</strong></div>
+                  </div>
+                  {rfq.lead_id && (
+                    <div style={{ marginTop: '10px' }}>
+                      <button
+                        onClick={() => {
+                          if (onClose) onClose();
+                          navigate(`/dashboard/leads?leadId=${rfq.lead_id}&tab=email`);
+                        }}
+                        style={{
+                          fontSize: '11.5px',
+                          color: '#2563eb',
+                          background: 'none',
+                          border: 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        [ View email conversation ]
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="info-card">
               <h3>Shipment Details</h3>
               <div className="info-grid">

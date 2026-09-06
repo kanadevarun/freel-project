@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/freel/backend/internal/carrier"
+	"github.com/freel/backend/internal/rates/spec"
 	"github.com/google/uuid"
 )
 
@@ -28,11 +29,9 @@ var carrierSCACMap = map[string]string{
 // market prices and become stale quickly; 4 hours balances API cost vs. accuracy.
 const spotRateValidityHours = 4
 
-// SpotNormalizer converts a carrier.RichCarrierRate (the existing carrier
-// package's output) into a CanonicalRate for storage in rate_entries.
-// It is a pure function — no DB, no network, no side effects.
+// SpotNormalizer converts a carrier.RichCarrierRate into a spec.CanonicalRate.
 type SpotNormalizer interface {
-	Normalize(r carrier.RichCarrierRate, orgID int64, originPort, destinationPort string) CanonicalRate
+	Normalize(r carrier.RichCarrierRate, orgID int64, originPort, destinationPort string) spec.CanonicalRate
 }
 
 type spotNormalizer struct{}
@@ -54,7 +53,7 @@ func NewSpotNormalizer() SpotNormalizer {
 //     Spot rates expire quickly; the search will trigger a fresh fetch if stale.
 //   - confidence_score = 100 (API data is authoritative).
 //   - extraction_status = CONFIRMED (no human review needed for API data).
-func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, originPort, destinationPort string) CanonicalRate {
+func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, originPort, destinationPort string) spec.CanonicalRate {
 	now := time.Now().UTC()
 
 	scac, ok := carrierSCACMap[r.CarrierName]
@@ -67,21 +66,11 @@ func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, origi
 	dest := NormalizePort(destinationPort)
 
 	total := r.OceanFreight + r.OriginCharges + r.DestinationCharges
-
-	// Build the surcharge slice. For spot rates from our mock/real provider,
-	// origin and destination charges are presented as first-class line items
-	// rather than named surcharges. We surface them as OHC/DHC so the frontend
-	// charge breakdown accordion can display them correctly.
 	surcharges := buildSpotSurcharges(r)
-
-	// Equipment type: the mock provider doesn't carry equipment type today;
-	// default to 40GP (most common ocean container). Future API adapters will
-	// pass this explicitly.
 	equipmentType := "40GP"
-
 	transitDays := r.TransitDays
 
-	return CanonicalRate{
+	return spec.CanonicalRate{
 		ID:              uuid.NewString(),
 		OrgID:           orgID,
 		Source:          RateSourceSpotAPI,
@@ -103,9 +92,6 @@ func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, origi
 		CurrencyOriginal:   "USD",
 		ExchangeRateUsed:   1.0,
 
-		// Spot rates don't carry explicit included/excluded charge lists yet.
-		// Phase 2 (real API adapters) will populate these from the carrier's
-		// "all-in" vs "ex-works" rate breakdown.
 		IncludedCharges: []string{},
 		ExcludedCharges: []string{"Customs", "Inland Haulage", "D&D"},
 
@@ -116,15 +102,12 @@ func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, origi
 		CommodityRestrictions: []string{},
 		RoutingConditions:   "",
 
-		// Spot rates expire in spotRateValidityHours so SearchRates knows when
-		// to trigger a fresh fetch vs. use the cached DB value.
 		ValidFrom:  now,
 		ValidUntil: now.Add(spotRateValidityHours * time.Hour),
 
 		ConfidenceScore:  100, // API data = authoritative
 		ExtractionStatus: ExtractionStatusConfirmed,
 		ExtractedBy:      "spot-api",
-		ReviewFlags:      []string{},
 
 		NauticalMiles: r.NauticalMiles,
 		CO2PerTEU:     r.CO2Emissions,
@@ -135,21 +118,20 @@ func (n *spotNormalizer) Normalize(r carrier.RichCarrierRate, orgID int64, origi
 }
 
 // buildSpotSurcharges converts the origin/destination charge breakdown from a
-// carrier.RichCarrierRate into named Surcharge items. This makes the charge
-// breakdown consistent whether the rate came from an API or a contract PDF.
-func buildSpotSurcharges(r carrier.RichCarrierRate) []Surcharge {
-	var surcharges []Surcharge
+// carrier.RichCarrierRate into named Surcharge items.
+func buildSpotSurcharges(r carrier.RichCarrierRate) []spec.Surcharge {
+	var surcharges []spec.Surcharge
 	if r.OriginCharges > 0 {
-		surcharges = append(surcharges, Surcharge{
+		surcharges = append(surcharges, spec.Surcharge{
 			Code:        "OHC",
 			Description: "Origin Handling Charge",
 			Amount:      r.OriginCharges,
 			Unit:        SurchargeUnitPerContainer,
-			Included:    false, // shown separately in total_buy_price
+			Included:    false,
 		})
 	}
 	if r.DestinationCharges > 0 {
-		surcharges = append(surcharges, Surcharge{
+		surcharges = append(surcharges, spec.Surcharge{
 			Code:        "DHC",
 			Description: "Destination Handling Charge",
 			Amount:      r.DestinationCharges,

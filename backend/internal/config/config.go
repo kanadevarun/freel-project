@@ -7,6 +7,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const (
+	EnvMailboxEncryptionKey = "MAILBOX_ENCRYPTION_KEY"
+	EnvGoogleClientID       = "GOOGLE_CLIENT_ID"
+	EnvGoogleClientSecret   = "GOOGLE_CLIENT_SECRET"
+	EnvGoogleRedirectURI    = "GOOGLE_REDIRECT_URI"
+)
+
 type Config struct {
 	AppEnv              string
 	Port                string
@@ -19,6 +26,30 @@ type Config struct {
 	DatabaseURL         string
 	OpenAIAPIKey        string
 	GeminiAPIKey        string
+	AWSAccessKeyID      string
+	AWSSecretAccessKey  string
+	SESFromEmail        string
+	S3Bucket            string
+	AdminAPIKey         string
+
+	// Stripe
+	StripeSecretKey     string
+	StripeWebhookSecret string
+
+	// Notifications
+	MailProvider        string
+	SMTPHost            string
+	SMTPPort            string
+	SMTPUsername        string
+	SMTPPassword        string
+
+	// Connected Mailbox Encryption
+	MailboxEncryptionKey string
+
+	// Google OAuth Client Config
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURI  string
 }
 
 func LoadConfig() *Config {
@@ -53,6 +84,22 @@ func LoadConfig() *Config {
 		DatabaseURL:         getEnv("DB_URL", defaultMySQLDSN),
 		OpenAIAPIKey:        getEnv("OPENAI_API_KEY", ""),
 		GeminiAPIKey:        getEnv("GEMINI_API_KEY", ""),
+		AWSAccessKeyID:      os.Getenv("AWS_ACCESS_KEY_ID"),
+		AWSSecretAccessKey:  os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		SESFromEmail:        os.Getenv("SES_FROM_EMAIL"),
+		S3Bucket:            os.Getenv("S3_BUCKET"),
+		AdminAPIKey:         os.Getenv("ADMIN_API_KEY"),
+		MailProvider:        os.Getenv("MAIL_PROVIDER"),
+		SMTPHost:            os.Getenv("SMTP_HOST"),
+		SMTPPort:            os.Getenv("SMTP_PORT"),
+		SMTPUsername:        os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:        os.Getenv("SMTP_PASSWORD"),
+		StripeSecretKey:     os.Getenv("STRIPE_SECRET_KEY"),
+		StripeWebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		MailboxEncryptionKey: os.Getenv(EnvMailboxEncryptionKey),
+		GoogleClientID:     os.Getenv(EnvGoogleClientID),
+		GoogleClientSecret: os.Getenv(EnvGoogleClientSecret),
+		GoogleRedirectURI:  os.Getenv(EnvGoogleRedirectURI),
 	}
 
 	return cfg

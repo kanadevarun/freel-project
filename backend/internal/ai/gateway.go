@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log"
 )
 
 
@@ -36,10 +37,13 @@ func (g *gateway) ExecutePrompt(ctx context.Context, prompt string) (string, err
 	// provided in the .env file). If it exists, we run the prompt through Gemini.
 	// If it succeeds, we return the answer immediately.
 	if geminiProv, exists := g.providers["gemini"]; exists && geminiProv != nil {
+		log.Println("[AI Gateway] Attempting Google Gemini (primary provider)...")
 		res, err := geminiProv.GenerateCompletion(ctx, prompt)
 		if err == nil {
+			log.Println("[AI Gateway] Google Gemini completion succeeded.")
 			return res, nil
 		}
+		log.Printf("[AI Gateway] Google Gemini completion failed: %v", err)
 		// If Gemini fails, save the error and try the next backup model
 		errors = append(errors, fmt.Errorf("gemini provider failed: %w", err))
 	}
@@ -49,10 +53,13 @@ func (g *gateway) ExecutePrompt(ctx context.Context, prompt string) (string, err
 	// if an OPENAI_API_KEY is configured in the .env file.
 	// This ensures our AI features keep working even if one service goes down.
 	if openaiProv, exists := g.providers["openai"]; exists && openaiProv != nil {
+		log.Println("[AI Gateway] Attempting OpenAI ChatGPT (failover provider)...")
 		res, err := openaiProv.GenerateCompletion(ctx, prompt)
 		if err == nil {
+			log.Println("[AI Gateway] OpenAI ChatGPT completion succeeded.")
 			return res, nil
 		}
+		log.Printf("[AI Gateway] OpenAI ChatGPT completion failed: %v", err)
 		// Save the error in case the backup model also fails
 		errors = append(errors, fmt.Errorf("openai provider failed: %w", err))
 	}
@@ -62,9 +69,16 @@ func (g *gateway) ExecutePrompt(ctx context.Context, prompt string) (string, err
 	// we fall back to a local mock provider. This returns predefined mock data
 	// immediately, letting you test the website workflow locally without API charges.
 	if mockProv, exists := g.providers["mock"]; exists && mockProv != nil {
-		return mockProv.GenerateCompletion(ctx, prompt)
+		log.Println("[AI Gateway] Attempting Local Mock Provider (fallback)...")
+		res, err := mockProv.GenerateCompletion(ctx, prompt)
+		if err == nil {
+			log.Println("[AI Gateway] Local Mock Provider completion succeeded.")
+			return res, nil
+		}
+		log.Printf("[AI Gateway] Local Mock Provider completion failed: %v", err)
 	}
 
 	// If everything failed and even the mock provider is missing, return a final error
+	log.Println("[AI Gateway] No AI providers succeeded.")
 	return "", fmt.Errorf("no AI providers succeeded. errors: %v", errors)
 }

@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { rfqService } from '../../../services/rfqService';
+import api from '../../../services/api';
 import './RFQPage.css';
 
 /**
  * RFQBuilder is a modal component for Smart AI Extraction.
  */
-export default function RFQBuilder({ onClose, onSuccess }) {
+export default function RFQBuilder({ onClose, onSuccess, lead }) {
+  const navigate = useNavigate();
   const [rawText, setRawText] = useState('');
   const [isExtracting, setIsExtracting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   
   // Extracted Data
   const [extractedData, setExtractedData] = useState(null);
@@ -21,6 +25,72 @@ export default function RFQBuilder({ onClose, onSuccess }) {
     destination: '',
     incoterms: '',
   });
+
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerName, setSelectedCustomerName] = useState('');
+  const [loadingCustomer, setLoadingCustomer] = useState(false);
+
+  useEffect(() => {
+    async function resolveCustomer() {
+      if (!lead) return;
+      setLoadingCustomer(true);
+      try {
+        const res = await api.get('/api/v1/companies');
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        setCustomers(list);
+
+        const match = list.find(c => c.name.toLowerCase() === lead.company_name.toLowerCase());
+        if (match) {
+          setFormData(prev => ({
+            ...prev,
+            customer_id: match.id.toString(),
+            origin: lead.location || '',
+          }));
+          setSelectedCustomerName(match.name);
+        } else {
+          toast.loading('Creating customer profile for ' + lead.company_name + '...', { id: 'create-cust' });
+          const newCust = await api.post('/api/v1/companies', {
+            name: lead.company_name,
+            contact_name: lead.contact_name || '',
+            contact_email: lead.email || '',
+            contact_phone: lead.phone || '',
+          });
+          toast.dismiss('create-cust');
+          const created = newCust?.data || newCust;
+          if (created && created.id) {
+            setFormData(prev => ({
+              ...prev,
+              customer_id: created.id.toString(),
+              origin: lead.location || '',
+            }));
+            setSelectedCustomerName(created.name);
+            toast.success('Created customer profile successfully');
+          }
+        }
+      } catch (err) {
+        console.error('Failed to resolve customer:', err);
+        toast.error('Failed to link customer profile');
+      } finally {
+        setLoadingCustomer(false);
+      }
+    }
+
+    resolveCustomer();
+  }, [lead]);
+
+  useEffect(() => {
+    async function fetchCustomersList() {
+      if (lead) return;
+      try {
+        const res = await api.get('/api/v1/companies');
+        const list = Array.isArray(res) ? res : (res?.data || []);
+        setCustomers(list);
+      } catch (err) {
+        console.error('Failed to fetch customers:', err);
+      }
+    }
+    fetchCustomersList();
+  }, [lead]);
 
   const handleExtract = async () => {
     if (!rawText.trim()) {
@@ -71,10 +141,19 @@ export default function RFQBuilder({ onClose, onSuccess }) {
         incoterms: formData.incoterms,
         items: [] // For MVP, we skip detailed line items in the builder
       };
+      if (lead) {
+        payload.lead_id = lead.id;
+      }
       
-      await rfqService.createRFQ(payload);
-      toast.success('RFQ Created Successfully!');
-      onSuccess();
+      const res = await rfqService.createRFQ(payload);
+      const created = res?.data || res;
+      toast.success(created?.rfq_number ? `RFQ ${created.rfq_number} Created Successfully!` : 'RFQ Created Successfully!');
+      if (onSuccess) {
+        await onSuccess(created);
+      }
+      if (created && created.id) {
+        navigate(`/dashboard/rfqs/${created.id}`);
+      }
     } catch (error) {
       console.error('Failed to create RFQ:', error);
       toast.error('Failed to create RFQ');
@@ -82,6 +161,7 @@ export default function RFQBuilder({ onClose, onSuccess }) {
       setIsSubmitting(false);
     }
   };
+
 
   const getConfidenceClass = (score) => {
     if (score >= 80) return 'high';
@@ -168,14 +248,28 @@ export default function RFQBuilder({ onClose, onSuccess }) {
           {/* Form Section */}
           <form onSubmit={handleSubmit} className="standard-form">
             <div className="form-group">
-              <label>Customer ID *</label>
-              <input 
-                type="number" 
-                className="form-control"
-                value={formData.customer_id}
-                onChange={e => setFormData({...formData, customer_id: e.target.value})}
-                required
-              />
+              <label>Customer *</label>
+              {lead ? (
+                <input
+                  type="text"
+                  className="form-control"
+                  value={selectedCustomerName || (loadingCustomer ? 'Resolving Customer Profile...' : 'Loading...')}
+                  disabled
+                  style={{ background: '#F1F5F9', color: '#64748B' }}
+                />
+              ) : (
+                <select
+                  className="form-control"
+                  value={formData.customer_id}
+                  onChange={e => setFormData({...formData, customer_id: e.target.value})}
+                  required
+                >
+                  <option value="">Select customer...</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
             
             <div className="form-row">

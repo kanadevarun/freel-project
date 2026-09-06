@@ -2,9 +2,11 @@ package leads
 
 import (
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/freel/backend/internal/leads/spec"
 	"github.com/freel/backend/internal/svcerror"
@@ -63,6 +65,20 @@ func AddLeadsHandlers(
 		encodeAPIResponse,
 		options...,
 	).ServeHTTP)
+
+	router.With(authMiddleware).Post("/bulk", kitHttp.NewServer(
+		endpoints.BulkUpdateLeadsEP,
+		decodeBulkUpdateLeadsRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
+
+	router.With(authMiddleware).Get("/{id:[0-9]+}/timeline", kitHttp.NewServer(
+		endpoints.GetLeadTimelineEP,
+		decodeGetLeadTimelineRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
 }
 
 func getIDFromVars(r *http.Request) (int32, error) {
@@ -85,6 +101,8 @@ func decodeListLeadsRequest(_ context.Context, r *http.Request) (interface{}, er
 	limitStr := r.URL.Query().Get("limit")
 	offsetStr := r.URL.Query().Get("offset")
 	statusStr := r.URL.Query().Get("status")
+	searchStr := r.URL.Query().Get("search")
+	sourceStr := r.URL.Query().Get("source")
 
 	limit, _ := strconv.Atoi(limitStr)
 	offset, _ := strconv.Atoi(offsetStr)
@@ -94,10 +112,22 @@ func decodeListLeadsRequest(_ context.Context, r *http.Request) (interface{}, er
 		status = &statusStr
 	}
 
+	var search *string
+	if searchStr != "" {
+		search = &searchStr
+	}
+
+	var source *string
+	if sourceStr != "" {
+		source = &sourceStr
+	}
+
 	return &spec.ListLeadsRequest{
 		Limit:  limit,
 		Offset: offset,
 		Status: status,
+		Search: search,
+		Source: source,
 	}, nil
 }
 
@@ -110,10 +140,99 @@ func decodeCreateLeadRequest(_ context.Context, r *http.Request) (interface{}, e
 }
 
 func decodeImportLeadsRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req []*spec.CreateLeadRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// Parse multipart form (max 10MB)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	// Read headers
+	headers, err := reader.Read()
+	if err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+
+	companyIdx, contactIdx, emailIdx, phoneIdx, sourceIdx, notesIdx, locationIdx := -1, -1, -1, -1, -1, -1, -1
+	for i, h := range headers {
+		hClean := strings.ToLower(strings.TrimSpace(h))
+		switch hClean {
+		case "company name", "company":
+			companyIdx = i
+		case "contact name", "contact":
+			contactIdx = i
+		case "email":
+			emailIdx = i
+		case "phone":
+			phoneIdx = i
+		case "source":
+			sourceIdx = i
+		case "notes":
+			notesIdx = i
+		case "location":
+			locationIdx = i
+		}
+	}
+
+	if companyIdx == -1 {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+
+	var req []*spec.CreateLeadRequest
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+
+	for _, record := range records {
+		if companyIdx >= len(record) || strings.TrimSpace(record[companyIdx]) == "" {
+			continue
+		}
+
+		companyName := strings.TrimSpace(record[companyIdx])
+		var contactName, email, phone, source, notes, location *string
+
+		if contactIdx >= 0 && contactIdx < len(record) && strings.TrimSpace(record[contactIdx]) != "" {
+			val := strings.TrimSpace(record[contactIdx])
+			contactName = &val
+		}
+		if emailIdx >= 0 && emailIdx < len(record) && strings.TrimSpace(record[emailIdx]) != "" {
+			val := strings.TrimSpace(record[emailIdx])
+			email = &val
+		}
+		if phoneIdx >= 0 && phoneIdx < len(record) && strings.TrimSpace(record[phoneIdx]) != "" {
+			val := strings.TrimSpace(record[phoneIdx])
+			phone = &val
+		}
+		if sourceIdx >= 0 && sourceIdx < len(record) && strings.TrimSpace(record[sourceIdx]) != "" {
+			val := strings.TrimSpace(record[sourceIdx])
+			source = &val
+		}
+		if notesIdx >= 0 && notesIdx < len(record) && strings.TrimSpace(record[notesIdx]) != "" {
+			val := strings.TrimSpace(record[notesIdx])
+			notes = &val
+		}
+		if locationIdx >= 0 && locationIdx < len(record) && strings.TrimSpace(record[locationIdx]) != "" {
+			val := strings.TrimSpace(record[locationIdx])
+			location = &val
+		}
+
+		req = append(req, &spec.CreateLeadRequest{
+			CompanyName: companyName,
+			ContactName: contactName,
+			Email:       email,
+			Phone:       phone,
+			Source:      source,
+			Notes:       notes,
+			Location:    location,
+		})
+	}
+
 	return &spec.ImportLeadsRequest{Leads: req}, nil
 }
 
@@ -144,6 +263,22 @@ func decodeDeleteLeadRequest(_ context.Context, r *http.Request) (interface{}, e
 		return nil, err
 	}
 	return &spec.DeleteLeadRequest{ID: id}, nil
+}
+
+func decodeBulkUpdateLeadsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req spec.BulkUpdateLeadsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+	return &req, nil
+}
+
+func decodeGetLeadTimelineRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	id, err := getIDFromVars(r)
+	if err != nil {
+		return nil, err
+	}
+	return &spec.GetLeadRequest{ID: id}, nil
 }
 
 func encodeAPIResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {

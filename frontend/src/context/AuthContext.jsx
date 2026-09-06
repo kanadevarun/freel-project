@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authStorage } from '../utils/authStorage';
-import { onboardingStorage } from '../utils/onboardingStorage';
 
 /**
  * AuthContext — Global authentication state for the entire LogisticsHQ app.
@@ -18,7 +17,6 @@ import { onboardingStorage } from '../utils/onboardingStorage';
  *                 in sessions created before this format was introduced.
  *   isAuthenticated — boolean
  *   isBooting   — true on initial page load while checking localStorage
- *   onboardingCompleted - boolean indicating if user has finished setup
  */
 
 const AuthContext = createContext(null);
@@ -28,7 +26,6 @@ export function AuthProvider({ children }) {
   const [org, setOrg] = useState(null);
   const [memberRole, setMemberRole] = useState(null);
   const [isBooting, setIsBooting] = useState(true);
-  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   // Cross-tab sync and initial boot
   const checkSession = () => {
@@ -38,22 +35,16 @@ export function AuthProvider({ children }) {
         setUser(sessionUser.user);
         setOrg(sessionUser.org);
         setMemberRole(sessionUser.memberRole);
-        
-        // Check onboarding status tied to this email
-        const obState = onboardingStorage.getOnboardingState(sessionUser.user.email);
-        setOnboardingCompleted(!!(obState && obState.completed));
       } else {
         // No valid session
         setUser(null);
         setOrg(null);
         setMemberRole(null);
-        setOnboardingCompleted(false);
       }
     } catch {
       setUser(null);
       setOrg(null);
       setMemberRole(null);
-      setOnboardingCompleted(false);
     } finally {
       setIsBooting(false);
     }
@@ -100,8 +91,7 @@ export function AuthProvider({ children }) {
       // Re-evaluate session if relevant keys change in other tabs
       if (
         e.key === 'freel_session_user' || 
-        e.key === 'freel_access_token' || 
-        e.key === 'freel_onboarding_state'
+        e.key === 'freel_access_token'
       ) {
         checkSession();
         hydrateSession();
@@ -152,10 +142,6 @@ export function AuthProvider({ children }) {
     setOrg(savedOrg);
     setMemberRole(savedRole);
     authStorage.saveSessionUser(sessionData);
-
-    // Check if onboarding is already completed for this newly logged-in user
-    const obState = onboardingStorage.getOnboardingState(savedUser.email);
-    setOnboardingCompleted(!!(obState && obState.completed));
   }
 
   /**
@@ -165,17 +151,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setOrg(null);
     setMemberRole(null);
-    setOnboardingCompleted(false);
     authStorage.clearAll();
-  }
-
-  /**
-   * completeOnboarding — called when onboarding finishes successfully
-   */
-  async function completeOnboarding(answers = {}) {
-    if (!user || !user.email) return;
-    onboardingStorage.saveOnboardingState(user.email, answers);
-    setOnboardingCompleted(true);
   }
 
   /**
@@ -198,11 +174,9 @@ export function AuthProvider({ children }) {
       memberRole,
       isAuthenticated,
       isBooting,
-      onboardingCompleted,
       login,
       logout,
       updateOrg,
-      completeOnboarding,
     }}>
       {children}
     </AuthContext.Provider>

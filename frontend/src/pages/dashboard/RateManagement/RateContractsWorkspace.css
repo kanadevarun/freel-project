@@ -1,0 +1,534 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   RateContractsWorkspace.css — LogisticsHQ Carrier Contracts & Versions Styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.rc-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* ── KPI Grid ─────────────────────────────────────────────────────────────── */
+
+.rc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1200px) {
+  .rc-kpi-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px) {
+  .rc-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.rc-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.rc-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.rc-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-kpi-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rc-kpi-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rc-kpi-val {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+
+.rc-kpi-sub {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+/* ── Main Layout: 2 Columns ────────────────────────────────────────────────── */
+
+.rc-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .rc-layout-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Contracts Table Card ─────────────────────────────────────────────────── */
+
+.rc-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
+}
+
+.rc-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rc-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-card-title {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.rc-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rc-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+.rc-btn-primary:hover {
+  background: #1D4ED8;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.rc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 650;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rc-btn-secondary:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+/* ── Filter Bar ───────────────────────────────────────────────────────────── */
+
+.rc-filter-bar {
+  padding: 14px 20px;
+  background: #FAFAFA;
+  border-bottom: 1px solid #E2E8F0;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .rc-filter-bar { grid-template-columns: 1fr 1fr; }
+}
+
+.rc-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.rc-search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: #94A3B8;
+}
+.rc-search-input {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 9px;
+  padding: 8px 12px 8px 34px;
+  font-size: 13px;
+  color: #0F172A;
+  outline: none;
+}
+.rc-search-input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* ── Table Styling ────────────────────────────────────────────────────────── */
+
+.rc-table-wrap {
+  overflow-x: auto;
+}
+
+.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rc-table th {
+  background: #F8FAFC;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 11px 16px;
+  text-align: left;
+  border-bottom: 1px solid #E2E8F0;
+  white-space: nowrap;
+}
+
+.rc-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #F1F5F9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.rc-table tr:hover td {
+  background: #F8FAFC;
+}
+
+.rc-contract-ref {
+  font-weight: 750;
+  color: #2563EB;
+  font-family: ui-monospace, monospace;
+}
+
+.rc-carrier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  color: #0F172A;
+}
+
+.rc-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.rc-badge-active { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+.rc-badge-expiring { background: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; }
+.rc-badge-expired { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+.rc-badge-draft { background: #F1F5F9; color: #475569; border: 1px solid #CBD5E1; }
+.rc-badge-archived { background: #F8FAFC; color: #94A3B8; border: 1px solid #E2E8F0; }
+
+.rc-renewal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2.5px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.rc-renewal-not-started { background: #F1F5F9; color: #475569; }
+.rc-renewal-in-progress { background: #EFF6FF; color: #1D4ED8; }
+.rc-renewal-renewed { background: #ECFDF5; color: #065F46; }
+.rc-renewal-not-renewing { background: #FEF2F2; color: #991B1B; }
+
+/* ── Expiry & Renewal Panel ───────────────────────────────────────────────── */
+
+.rc-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rc-expiring-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rc-expiring-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-expiring-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rc-expiring-item {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rc-expiring-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-expiring-carrier {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0F172A;
+}
+
+.rc-days-badge {
+  font-size: 11px;
+  font-weight: 750;
+  padding: 2px 7px;
+  border-radius: 12px;
+}
+.rc-days-critical { background: #FEE2E2; color: #991B1B; }
+.rc-days-warning { background: #FEF3C7; color: #92400E; }
+
+.rc-expiring-meta {
+  font-size: 12px;
+  color: #64748B;
+  display: flex;
+  justify-content: space-between;
+}
+
+.rc-expiring-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.rc-btn-quick-renew {
+  flex: 1;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  border-radius: 7px;
+  padding: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.rc-btn-quick-renew:hover {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* ── Rate Version Timeline in Detail Drawer ───────────────────────────────── */
+
+.rc-version-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.rc-version-card {
+  position: relative;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+
+.rc-version-card.is-current {
+  border-color: #2563EB;
+  background: linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%);
+  box-shadow: 0 0 0 1px #2563EB;
+}
+
+.rc-version-card.is-superseded {
+  background: #F8FAFC;
+  opacity: 0.85;
+}
+
+.rc-version-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rc-version-number {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0F172A;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rc-version-amount {
+  font-size: 16px;
+  font-weight: 850;
+  color: #0F172A;
+}
+
+.rc-version-dates {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.rc-version-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  font-size: 16px;
+}
+
+/* ── Modals ───────────────────────────────────────────────────────────────── */
+
+.rc-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.rc-modal {
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: rc-modal-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rc-modal-pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.rc-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #F8FAFC;
+}
+
+.rc-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.rc-modal-close {
+  background: none;
+  border: none;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+.rc-modal-close:hover { background: #E2E8F0; color: #0F172A; }
+
+.rc-modal-body {
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.rc-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.rc-modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #F8FAFC;
+}

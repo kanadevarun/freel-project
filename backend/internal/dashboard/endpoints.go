@@ -23,19 +23,15 @@ func makeGetMissionControlEndpoint(bl BusinessLogic) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*spec.GetMissionControlRequest)
 
-		// Usually, OrgID would be extracted in transport and added to context or request.
-		// For consistency with the standard, we use the request payload if populated from context.
-		
-		// If OrgID is not already extracted, try context
 		if req.OrgID == 0 {
 			userCtx, ok := middleware.GetUserContext(ctx)
 			if !ok {
 				return nil, svcerror.NewServiceError(svcerror.ErrInsufficientResourceAccess)
 			}
-			req.OrgID = int32(userCtx.OrgID)
+			req.OrgID = userCtx.OrgID
 		}
 
-		resp, err := bl.GetMissionControl(ctx, req.OrgID)
+		resp, err := bl.GetMissionControl(ctx, req.OrgID, req.StartDate, req.EndDate, req.Preset)
 		if err != nil {
 			return nil, err
 		}

@@ -13,10 +13,8 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '../../context/AuthContext';
 import PublicOnlyRoute from '../../routes/PublicOnlyRoute';
 import { authStorage } from '../../utils/authStorage';
-import { onboardingStorage } from '../../utils/onboardingStorage';
 
 const LoginPage = () => <div data-testid="login-page">Login</div>;
-const OnboardingPage = () => <div data-testid="onboarding-page">Onboarding</div>;
 const DashboardPage = () => <div data-testid="dashboard-page">Dashboard</div>;
 
 function renderPublicOnlyRoute(initialPath = '/login') {
@@ -25,8 +23,6 @@ function renderPublicOnlyRoute(initialPath = '/login') {
       <MemoryRouter initialEntries={[initialPath]}>
         <Routes>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-
           <Route element={<PublicOnlyRoute />}>
             <Route path="/login" element={<LoginPage />} />
           </Route>
@@ -45,28 +41,13 @@ describe('PublicOnlyRoute', () => {
     });
   });
 
-  it('redirects to /onboarding when authenticated but onboarding incomplete', async () => {
-    authStorage.saveSessionUser({
-      user: { email: 'new@logisticshq.in' },
-      org: { name: 'Freel' },
-      memberRole: { name: 'SALES', permissions: [] },
-    });
-    // No onboarding state → incomplete
-
-    renderPublicOnlyRoute('/login');
-    await waitFor(() => {
-      expect(screen.getByTestId('onboarding-page')).toBeInTheDocument();
-    });
-  });
-
-  it('redirects to /dashboard when authenticated and onboarding complete', async () => {
+  it('redirects to /dashboard when authenticated', async () => {
     const email = 'done@logisticshq.in';
     authStorage.saveSessionUser({
       user: { email },
       org: { name: 'Freel' },
       memberRole: { name: 'SUPER_ADMIN', permissions: [] },
     });
-    onboardingStorage.saveOnboardingState(email, {});
 
     renderPublicOnlyRoute('/login');
     await waitFor(() => {

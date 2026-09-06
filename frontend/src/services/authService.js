@@ -137,6 +137,33 @@ export async function logout() {
   return { message: 'Logged out.' };
 }
 
+// ── INVITATIONS ───────────────────────────────────────────────────────────────
+
+/**
+ * validateInvite — Check if an invite token is still valid.
+ * @param {string} token
+ */
+export async function validateInvite(token) {
+  const response = await fetch(`${API_BASE_URL}/auth/invite/validate?token=${token}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return handleResponse(response, 'default');
+}
+
+/**
+ * acceptInvite — Accept an invitation and create an account.
+ * @param {{ token, password, full_name }} payload
+ */
+export async function acceptInvite(payload) {
+  const response = await fetch(`${API_BASE_URL}/auth/invite/accept`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse(response, 'signup');
+}
+
 // ── ONBOARDING MOCKS ─────────────────────────────────────────────────────────
 // Kept for backward compatibility with OnboardingPage until real backend is wired.
 

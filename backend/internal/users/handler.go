@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/utils"
 )
 
@@ -41,14 +42,20 @@ func (h *Handler) InviteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract Organization ID from context. 
-	// In a complete implementation, this would be injected by a JWT middleware.
-	// For this sprint's scope, we simulate it via a context helper or fallback to 1.
-	orgID := getOrgIDFromContext(r)
+	// Extract Organization ID from context.
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	// Delegate the business logic to the Service layer.
-	err := h.service.InviteUser(r.Context(), orgID, req)
+	err = h.service.InviteUser(r.Context(), orgID, req)
 	if err != nil {
+		if strings.Contains(err.Error(), "INVITATION_ALREADY_EXISTS") {
+			utils.Error(w, http.StatusConflict, "An invitation has already been sent to this email address.", "DUPLICATE_INVITATION")
+			return
+		}
 		// Return a generic error to the client to avoid leaking internal state,
 		// but in production this should be logged centrally.
 		utils.Error(w, http.StatusInternalServerError, "Failed to send invitation", "INVITE_FAILED")
@@ -63,7 +70,11 @@ func (h *Handler) InviteUser(w http.ResponseWriter, r *http.Request) {
 // It retrieves the organization ID from the context and fetches all active members
 // via the Service layer.
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgIDFromContext(r)
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	members, err := h.service.ListUsers(r.Context(), orgID)
 	if err != nil {
@@ -77,7 +88,11 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // ListInvitations handles the GET /users/invites endpoint.
 // It retrieves the organization ID from the context and fetches all pending invitations.
 func (h *Handler) ListInvitations(w http.ResponseWriter, r *http.Request) {
-	orgID := getOrgIDFromContext(r)
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	invites, err := h.service.ListInvitations(r.Context(), orgID)
 	if err != nil {
@@ -103,7 +118,11 @@ func (h *Handler) CancelInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := getOrgIDFromContext(r)
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	err = h.service.CancelInvitation(r.Context(), orgID, inviteID)
 	if err != nil {
@@ -137,10 +156,18 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := getOrgIDFromContext(r)
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	err = h.service.UpdateRole(r.Context(), orgID, userID, req)
 	if err != nil {
+		if strings.Contains(err.Error(), "SUPER_ADMIN") {
+			utils.Error(w, http.StatusBadRequest, err.Error(), "SUPER_ADMIN_RESTRICTION")
+			return
+		}
 		utils.Error(w, http.StatusInternalServerError, "Failed to update user role", "UPDATE_FAILED")
 		return
 	}
@@ -158,10 +185,18 @@ func (h *Handler) RemoveUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID := getOrgIDFromContext(r)
+	orgID, err := getOrgIDFromContext(r)
+	if err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "UNAUTHORIZED")
+		return
+	}
 
 	err = h.service.RemoveUser(r.Context(), orgID, userID)
 	if err != nil {
+		if strings.Contains(err.Error(), "SUPER_ADMIN") {
+			utils.Error(w, http.StatusBadRequest, err.Error(), "SUPER_ADMIN_RESTRICTION")
+			return
+		}
 		utils.Error(w, http.StatusInternalServerError, "Failed to remove user", "REMOVE_FAILED")
 		return
 	}
@@ -171,15 +206,12 @@ func (h *Handler) RemoveUser(w http.ResponseWriter, r *http.Request) {
 
 // --- Helper Functions ---
 
-// getOrgIDFromContext is a mock helper to extract the Organization ID from the request context.
-// In a full implementation, an authentication middleware places the JWT claims into the request context.
-func getOrgIDFromContext(r *http.Request) int64 {
-	// Fallback to a hardcoded ID (1) for this sprint's demonstration if context is missing.
-	val := r.Context().Value("org_id")
-	if id, ok := val.(int64); ok {
-		return id
+// getOrgIDFromContext extracts the authenticated Organization ID from the request context.
+func getOrgIDFromContext(r *http.Request) (int64, error) {
+	if userCtx, ok := middleware.GetUserContext(r.Context()); ok && userCtx.OrgID > 0 {
+		return userCtx.OrgID, nil
 	}
-	return 1
+	return 0, fmt.Errorf("unauthorized or missing organization context")
 }
 
 // extractIDFromPath is a simplistic URL parser to extract an integer ID from a path pattern.

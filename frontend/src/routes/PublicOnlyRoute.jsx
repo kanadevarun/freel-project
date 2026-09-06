@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function PublicOnlyRoute() {
-  const { isBooting, isAuthenticated, onboardingCompleted } = useAuth();
+  const { isBooting, isAuthenticated } = useAuth();
 
   if (isBooting) {
     return (
@@ -13,11 +13,7 @@ export default function PublicOnlyRoute() {
   }
 
   if (isAuthenticated) {
-    if (onboardingCompleted) {
-      return <Navigate to="/dashboard" replace />;
-    } else {
-      return <Navigate to="/onboarding" replace />;
-    }
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;

@@ -9,3 +9,11 @@ type Notification struct {
 	IsRead    bool   `json:"is_read" db:"is_read"`
 	CreatedAt string `json:"created_at" db:"created_at"`
 }
+
+const (
+	MailProviderSMTP = "smtp"
+	MailProviderSES  = "ses"
+
+	DefaultFromEmail   = "logisticshq26@gmail.com"
+	DefaultTemplateDir = "internal/notifications/templates"
+)

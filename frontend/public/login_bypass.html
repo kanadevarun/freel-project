@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Login Bypass</title>
+  <script>
+    localStorage.setItem('freel_access_token', 'test-token');
+    localStorage.setItem('freel_id_token', 'test-token');
+    localStorage.setItem('freel_session_user', JSON.stringify({
+      id: 1,
+      email: 'varunkanade3456@gmail.com',
+      role: 'SUPER_ADMIN',
+      org_id: 1,
+      first_name: 'Varun',
+      last_name: 'Kanade'
+    }));
+    window.location.href = '/dashboard/leads';
+  </script>
+</head>
+
+<body>
+  Logging in with test-token bypass...
+</body>
+
+</html>

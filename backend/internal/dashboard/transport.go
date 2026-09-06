@@ -32,9 +32,12 @@ func AddDashboardHandlers(
 }
 
 func decodeGetMissionControlRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	// The request doesn't have a body or query params for now.
-	// The OrgID will be extracted from the context in the endpoint.
-	return &spec.GetMissionControlRequest{}, nil
+	req := &spec.GetMissionControlRequest{
+		StartDate: r.URL.Query().Get("start_date"),
+		EndDate:   r.URL.Query().Get("end_date"),
+		Preset:    r.URL.Query().Get("preset"),
+	}
+	return req, nil
 }
 
 func encodeAPIResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {

@@ -26,4 +26,48 @@ describe('rfqService', () => {
     });
     expect(result).toEqual(mockResponse);
   });
+
+  it('getRequirements calls api.get with correct endpoint', async () => {
+    const mockRequirements = {
+      data: {
+        operational_readiness: { overall_status: 'READY_FOR_QUOTATION', blocking_count: 0 },
+        groups: [],
+        document_requirements: [],
+        ai_findings: []
+      }
+    };
+    api.get.mockResolvedValue(mockRequirements);
+
+    const result = await rfqService.getRequirements(101);
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/requirements');
+    expect(result).toEqual(mockRequirements);
+  });
+
+  it('getTimeline calls api.get with correct endpoint', async () => {
+    const mockTimeline = { data: [{ id: 'evt-1', action: 'CREATED' }] };
+    api.get.mockResolvedValue(mockTimeline);
+
+    const result = await rfqService.getTimeline(101);
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/timeline');
+    expect(result).toEqual(mockTimeline);
+  });
+
+  it('getActivity calls api.get with correct endpoint', async () => {
+    const mockActivity = {
+      data: {
+        summary: { total_events: 5, customer_events: 2 },
+        events: []
+      }
+    };
+    api.get.mockResolvedValue(mockActivity);
+
+    const result = await rfqService.getActivity(101);
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/activity');
+    expect(result).toEqual(mockActivity);
+  });
 });
+
+

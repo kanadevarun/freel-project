@@ -2,6 +2,7 @@ package carrier
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -23,25 +24,61 @@ type IntegrationConfig struct {
 
 // GetIntegrationConfig retrieves organization-specific carrier settings from the DB and env.
 func GetIntegrationConfig(ctx context.Context, db Queryer, orgID int64, scac string) (*IntegrationConfig, error) {
-	var isActive bool
-	err := db.GetContext(ctx, &isActive, `
-		SELECT is_active FROM carrier_integrations 
+	var row struct {
+		IsActive             bool    `db:"is_active"`
+		CredentialsJSON      *string `db:"credentials_json"`
+		EncryptedCredentials *string `db:"encrypted_credentials"`
+		Capabilities         *string `db:"capabilities"`
+	}
+	
+	err := db.GetContext(ctx, &row, `
+		SELECT is_active, credentials_json, encrypted_credentials, capabilities FROM carrier_integrations 
 		WHERE org_id = ? AND carrier_scac = ? LIMIT 1
 	`, orgID, scac)
+	
 	if err != nil {
 		return nil, fmt.Errorf("carrier integration not configured or inactive for org %d and carrier %s: %w", orgID, scac, err)
 	}
-	if !isActive {
+	if !row.IsActive {
 		return nil, fmt.Errorf("carrier integration is disabled for org %d and carrier %s", orgID, scac)
 	}
 
 	scacUpper := strings.ToUpper(scac)
 	
-	// Org-specific env config lookup
-	apiKey := os.Getenv(fmt.Sprintf("CARRIER_%s_API_KEY_%d", scacUpper, orgID))
-	baseURL := os.Getenv(fmt.Sprintf("CARRIER_%s_BASE_URL_%d", scacUpper, orgID))
-	authType := os.Getenv(fmt.Sprintf("CARRIER_%s_AUTH_TYPE_%d", scacUpper, orgID))
-	capsStr := os.Getenv(fmt.Sprintf("CARRIER_%s_CAPABILITIES_%d", scacUpper, orgID))
+	var creds map[string]interface{}
+	if row.CredentialsJSON != nil && *row.CredentialsJSON != "" {
+		json.Unmarshal([]byte(*row.CredentialsJSON), &creds)
+	}
+
+	getCred := func(key string) string {
+		if creds != nil && creds[key] != nil {
+			if s, ok := creds[key].(string); ok {
+				return s
+			}
+		}
+		return ""
+	}
+
+	apiKey := getCred("api_key")
+	baseURL := getCred("base_url")
+	authType := getCred("auth_type")
+	capsStr := ""
+	if row.Capabilities != nil {
+		capsStr = *row.Capabilities
+	}
+
+	if apiKey == "" {
+		apiKey = os.Getenv(fmt.Sprintf("CARRIER_%s_API_KEY_%d", scacUpper, orgID))
+	}
+	if baseURL == "" {
+		baseURL = os.Getenv(fmt.Sprintf("CARRIER_%s_BASE_URL_%d", scacUpper, orgID))
+	}
+	if authType == "" {
+		authType = os.Getenv(fmt.Sprintf("CARRIER_%s_AUTH_TYPE_%d", scacUpper, orgID))
+	}
+	if capsStr == "" {
+		capsStr = os.Getenv(fmt.Sprintf("CARRIER_%s_CAPABILITIES_%d", scacUpper, orgID))
+	}
 
 	// Fallbacks for local development mode
 	isDev := os.Getenv("APP_ENV") != "production"

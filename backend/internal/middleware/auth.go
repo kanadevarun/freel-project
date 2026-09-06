@@ -81,7 +81,7 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 				CognitoID: "mock-cognito-id",
 				UserID:    1,
 				OrgID:     1,
-				Role:      "ADMIN",
+				Role:      "SUPER_ADMIN",
 			}
 			ctx := context.WithValue(r.Context(), UserContextKey, userCtx)
 			next.ServeHTTP(w, r.WithContext(ctx))
@@ -95,10 +95,10 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 			return
 		}
 
-		// Verify the token
-		token, err := jwt.Parse([]byte(tokenString), jwt.WithKeySet(keyset), jwt.WithValidate(true))
+		// Verify the token (allowing up to 5 minutes of clock skew for local/AWS NTP drift)
+		token, err := jwt.Parse([]byte(tokenString), jwt.WithKeySet(keyset), jwt.WithValidate(true), jwt.WithAcceptableSkew(5*time.Minute))
 		if err != nil {
-			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
 

@@ -1,0 +1,237 @@
+/* ══════════════════════════════════════════════════════════════════════
+   MODULE HERO EMPTY STATE — Shared Design System for Zero-Data Onboarding
+   ══════════════════════════════════════════════════════════════════════ */
+
+.mhes-hero-container {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 44px 28px 36px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  animation: mhesFadeIn 0.25s ease-out;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@keyframes mhesFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.mhes-hero-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 640px;
+}
+
+/* ── Radar Sonar Pulse Visual ── */
+.mhes-radar-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.mhes-radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid #BFDBFE;
+  opacity: 0.6;
+}
+
+.mhes-radar-ring.ring-1 {
+  width: 44px;
+  height: 44px;
+}
+
+.mhes-radar-ring.ring-2 {
+  width: 70px;
+  height: 70px;
+  border-style: dashed;
+}
+
+.mhes-radar-ring.ring-3 {
+  width: 96px;
+  height: 96px;
+  animation: mhesRadarPulse 2.4s infinite ease-out;
+}
+
+@keyframes mhesRadarPulse {
+  0% { transform: scale(0.7); opacity: 0.8; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+
+.mhes-radar-sweep {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(37, 99, 235, 0.35) 0deg, transparent 90deg);
+  animation: mhesRadarSweep 3s infinite linear;
+}
+
+@keyframes mhesRadarSweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.mhes-icon-box {
+  position: relative;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #2563EB;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+/* Color Theme Variations for Radar and Icon */
+.mhes-radar-wrap.theme-indigo .mhes-radar-ring { border-color: #C7D2FE; }
+.mhes-radar-wrap.theme-indigo .mhes-radar-sweep { background: conic-gradient(from 0deg, rgba(79, 70, 229, 0.35) 0deg, transparent 90deg); }
+.mhes-radar-wrap.theme-indigo .mhes-icon-box { background: #EEF2FF; border-color: #C7D2FE; color: #4F46E5; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15); }
+
+.mhes-radar-wrap.theme-purple .mhes-radar-ring { border-color: #DDD6FE; }
+.mhes-radar-wrap.theme-purple .mhes-radar-sweep { background: conic-gradient(from 0deg, rgba(124, 58, 237, 0.35) 0deg, transparent 90deg); }
+.mhes-radar-wrap.theme-purple .mhes-icon-box { background: #F5F3FF; border-color: #DDD6FE; color: #7C3AED; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15); }
+
+.mhes-radar-wrap.theme-emerald .mhes-radar-ring { border-color: #A7F3D0; }
+.mhes-radar-wrap.theme-emerald .mhes-radar-sweep { background: conic-gradient(from 0deg, rgba(5, 150, 105, 0.35) 0deg, transparent 90deg); }
+.mhes-radar-wrap.theme-emerald .mhes-icon-box { background: #ECFDF5; border-color: #A7F3D0; color: #059669; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.15); }
+
+.mhes-radar-wrap.theme-amber .mhes-radar-ring { border-color: #FDE68A; }
+.mhes-radar-wrap.theme-amber .mhes-radar-sweep { background: conic-gradient(from 0deg, rgba(217, 119, 6, 0.35) 0deg, transparent 90deg); }
+.mhes-radar-wrap.theme-amber .mhes-icon-box { background: #FFFBEB; border-color: #FDE68A; color: #D97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.15); }
+
+/* ── Typography & Description ── */
+.mhes-title {
+  font-size: 1.25rem;
+  font-weight: 850;
+  color: #0F172A;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px 0;
+}
+
+.mhes-desc {
+  font-size: 0.84rem;
+  color: #64748B;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+/* ── Action Buttons ── */
+.mhes-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.mhes-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #2563EB;
+  color: #FFFFFF;
+  border: 1px solid #1D4ED8;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+}
+
+.mhes-btn-primary:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.mhes-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFFFFF;
+  color: #334155;
+  border: 1px solid #CBD5E1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: all 0.15s ease;
+}
+
+.mhes-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+/* ── 3 Feature Preview Cards Grid ── */
+.mhes-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 980px;
+  border-top: 1px solid #F1F5F9;
+  padding-top: 28px;
+}
+
+@media (max-width: 860px) {
+  .mhes-features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mhes-feat-card {
+  display: flex;
+  gap: 12px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.mhes-feat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mhes-feat-text h4 {
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.mhes-feat-text p {
+  font-size: 0.73rem;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.4;
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { dashboardService } from '../../../services/dashboardService';
 import NewFFDashboard from './NewFFDashboard';
@@ -7,10 +8,15 @@ import './DashboardHome.css';
 
 export default function DashboardHome() {
   const { user, isBooting, isAuthenticated } = useAuth();
+  const [searchParams] = useSearchParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+
+  const presetParam = searchParams.get('preset') || 'LAST_7D';
+  const startDateParam = searchParams.get('startDate') || '';
+  const endDateParam = searchParams.get('endDate') || '';
 
   useEffect(() => {
     if (isBooting) return;
@@ -23,7 +29,11 @@ export default function DashboardHome() {
         setAuthError(false);
         setFetchError(null);
 
-        const response = await dashboardService.getMissionControl();
+        const response = await dashboardService.getMissionControl({
+          preset: presetParam,
+          startDate: startDateParam,
+          endDate: endDateParam,
+        });
         if (isMounted) {
           // Normalize response envelope
           const missionData = response?.data || response || {};
@@ -51,7 +61,7 @@ export default function DashboardHome() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isBooting, presetParam, startDateParam, endDateParam]);
 
   // 1. Loading State
   if (loading) {
@@ -99,21 +109,22 @@ export default function DashboardHome() {
     );
   }
 
-  // 4. Determine Progressive Dashboard State
-  // An organization is considered operational if it has any active RFQs, shipments, revenue, or pending quotes in queue.
+  // 4. Determine Progressive Dashboard State driven by real backend operational classification
   const stats = data?.stats || {};
-  const approvalQueue = data?.approval_queue || [];
-  const isOperational =
-    (stats.open_rfqs && stats.open_rfqs > 0) ||
-    (stats.active_shipments && stats.active_shipments > 0) ||
-    (stats.total_revenue && stats.total_revenue > 0) ||
-    (stats.open_leads && stats.open_leads > 0) ||
-    approvalQueue.length > 0;
+  const isNewUser =
+    stats.is_new_user ??
+    (stats.account_maturity === 'NEW' ||
+      stats.account_maturity === 'LOW_DATA' ||
+      ((!stats.total_customers || stats.total_customers <= 1) &&
+        (!stats.open_rfqs || stats.open_rfqs === 0) &&
+        (!stats.active_shipments || stats.active_shipments === 0) &&
+        (!stats.total_invoices || stats.total_invoices === 0) &&
+        (!stats.open_leads || stats.open_leads === 0)));
 
-  if (isOperational) {
-    return <OperationalDashboard data={data} />;
+  if (!isNewUser) {
+    return <OperationalDashboard data={data} user={user} />;
   }
 
-  // Default: New Freight Forwarder Onboarding / Empty-State Dashboard
-  return <NewFFDashboard />;
+  // Default: New Freight Forwarder Onboarding / Low-Data Dashboard
+  return <NewFFDashboard data={data} user={user} />;
 }

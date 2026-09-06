@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { RotateCw, CheckCircle2, XCircle, AlertCircle, FileText, DollarSign, Lock } from 'lucide-react';
+import api from '../../../services/api';
 import './Shipments.css';
 
-export default function BillingWorkspace({ shipmentId, token, onRefreshShipment }) {
+export default function BillingWorkspace({ shipmentId, onRefreshShipment }) {
   const [invoices, setInvoices] = useState([]);
   const [profitability, setProfitability] = useState(null);
   const [closureAudit, setClosureAudit] = useState(null);
@@ -19,22 +21,18 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(`/api/v1/shipments/${shipmentId}/billing`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        setInvoices(data.data.invoices || []);
-        setProfitability(data.data.profitability);
-        setClosureAudit(data.data.closure_audit);
-      } else {
-        setError(data.message || 'Failed to load billing workspace');
-      }
+      const data = await api.get(`/api/v1/shipments/${shipmentId}/billing`);
+      setInvoices(data?.invoices || []);
+      setProfitability(data?.profitability || null);
+      setClosureAudit(data?.closure_audit || null);
     } catch (err) {
-      setError(err.message || 'Connection error to billing service');
+      // Graceful fallback for uninitialized billing workspaces
+      setInvoices([]);
+      setProfitability(null);
+      setClosureAudit(null);
+      if (err.response?.status !== 404) {
+        setError("We couldn't load billing information for this shipment. Please refresh and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -43,21 +41,10 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
   const handleGenerateInvoice = async () => {
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/v1/shipments/${shipmentId}/billing/invoices/generate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        await fetchBillingWorkspace();
-      } else {
-        alert(data.message || 'Failed to generate customer invoice');
-      }
+      await api.post(`/api/v1/shipments/${shipmentId}/billing/invoices/generate`);
+      await fetchBillingWorkspace();
     } catch (err) {
-      alert('Error connecting to billing API');
+      setError(err.message || 'Failed to generate customer invoice');
     } finally {
       setActionLoading(false);
     }
@@ -66,21 +53,10 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
   const handleApproveInvoice = async (invoiceId) => {
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/v1/billing/invoices/${invoiceId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        await fetchBillingWorkspace();
-      } else {
-        alert(data.message || 'Failed to approve customer invoice');
-      }
+      await api.post(`/api/v1/billing/invoices/${invoiceId}/approve`);
+      await fetchBillingWorkspace();
     } catch (err) {
-      alert('Error connecting to billing API');
+      setError(err.message || 'Failed to approve customer invoice');
     } finally {
       setActionLoading(false);
     }
@@ -89,21 +65,10 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
   const handlePayInvoice = async (invoiceId) => {
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/v1/billing/invoices/${invoiceId}/pay`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        await fetchBillingWorkspace();
-      } else {
-        alert(data.message || 'Failed to process payment');
-      }
+      await api.post(`/api/v1/billing/invoices/${invoiceId}/pay`);
+      await fetchBillingWorkspace();
     } catch (err) {
-      alert('Error connecting to billing API');
+      setError(err.message || 'Failed to process payment');
     } finally {
       setActionLoading(false);
     }
@@ -112,114 +77,119 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
   const handleCloseShipment = async () => {
     setActionLoading(true);
     try {
-      const resp = await fetch(`/api/v1/shipments/${shipmentId}/close`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      const data = await resp.json();
-      if (resp.ok && data.success) {
-        alert('Shipment successfully closed!');
-        onRefreshShipment();
-        await fetchBillingWorkspace();
-      } else {
-        alert(data.message || 'Failed to close shipment');
-      }
+      await api.post(`/api/v1/shipments/${shipmentId}/close`);
+      if (onRefreshShipment) onRefreshShipment();
+      await fetchBillingWorkspace();
     } catch (err) {
-      alert('Error connecting to shipment closure API');
+      setError(err.message || 'Failed to close shipment');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const getStatusBadgeClass = (status) => {
+  const getStatusBadgeStyle = (status) => {
     switch (status) {
-      case 'DRAFT': return 'status-badge draft';
-      case 'APPROVED': return 'status-badge approved';
-      case 'SENT': return 'status-badge sent';
-      case 'PAID': return 'status-badge paid';
-      case 'OVERDUE': return 'status-badge overdue';
-      default: return 'status-badge';
-    }
-  };
-
-  const getProfitabilityBadgeClass = (status) => {
-    switch (status) {
-      case 'ON_TARGET': return 'margin-badge on-target';
-      case 'UNDER_TARGET': return 'margin-badge under-target';
-      case 'NEGATIVE_MARGIN': return 'margin-badge negative-margin';
-      default: return 'margin-badge pending';
+      case 'PAID':
+        return { bg: '#dcfce7', fg: '#15803d', border: '#bbf7d0' };
+      case 'APPROVED':
+        return { bg: '#dbeafe', fg: '#1d4ed8', border: '#bfdbfe' };
+      case 'SENT':
+        return { bg: '#fef3c7', fg: '#b45309', border: '#fde68a' };
+      case 'OVERDUE':
+        return { bg: '#fee2e2', fg: '#dc2626', border: '#fecaca' };
+      case 'DRAFT':
+      default:
+        return { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' };
     }
   };
 
   return (
-    <div className="glass-card panel-card billing-workspace-card">
-      <div className="card-header">
-        <h3 className="section-title">💼 Billing & Closure Workspace</h3>
-        <button 
-          className="refresh-btn" 
-          onClick={fetchBillingWorkspace} 
-          disabled={loading || actionLoading}
-        >
-          {loading ? '🔄 Loading...' : '🔄 Refresh'}
-        </button>
+    <div className="sd-panel">
+      {/* Panel Header */}
+      <div className="sd-panel-header">
+        <div className="sd-panel-title-row">
+          <div>
+            <h3 className="sd-panel-title">Customer Billing & Invoicing</h3>
+            <p className="sd-panel-desc">Customer receivable invoicing, profitability margin tracking, and financial closure audit.</p>
+          </div>
+          <button 
+            className="sd-diagnostics-btn" 
+            onClick={fetchBillingWorkspace} 
+            disabled={loading || actionLoading}
+            title="Refresh Billing Data"
+          >
+            <RotateCw size={12} className={loading ? 'sd-spin' : ''} />
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="sd-error-banner" style={{ margin: '0 0 16px 0' }}>
+          <AlertCircle size={14} />
+          <span>{error}</span>
+          <button className="sd-btn-ghost" onClick={fetchBillingWorkspace} style={{ marginLeft: 'auto', fontSize: '0.74rem' }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* 1. Profitability Variance Analytics */}
       {profitability && (
-        <div className="profitability-section">
-          <div className="profitability-header">
-            <h4>📊 Shipment Profitability Margins</h4>
-            <span className={getProfitabilityBadgeClass(profitability.profitability_status)}>
-              Status: {profitability.profitability_status?.replace('_', ' ')}
+        <div className="sd-profitability-box" style={{ marginBottom: '16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#475569' }}>
+              📊 Shipment Profitability Margins
+            </span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', background: profitability.profitability_status === 'ON_TARGET' ? '#dcfce7' : '#fef3c7', color: profitability.profitability_status === 'ON_TARGET' ? '#15803d' : '#b45309' }}>
+              {profitability.profitability_status?.replace(/_/g, ' ') || 'Pending'}
             </span>
           </div>
 
-          <div className="profitability-grid">
-            <div className="metric-box">
-              <span className="metric-label">Quoted Expected Profit</span>
-              <span className="metric-value font-mono">${profitability.expected_profit?.toFixed(2)}</span>
-              <span className="metric-sub">
-                Sell: ${profitability.quoted_sell_price?.toFixed(2)} | Buy: ${profitability.quoted_buy_price?.toFixed(2)}
-              </span>
-              <span className="metric-sub text-green">
-                Margin: {profitability.expected_margin_pct?.toFixed(1)}%
-              </span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Quoted Expected</span>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>
+                ${profitability.expected_profit?.toFixed(2) || '0.00'}
+              </div>
+              <small style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 700 }}>
+                Margin: {profitability.expected_margin_pct?.toFixed(1) || '0.0'}%
+              </small>
             </div>
 
-            <div className="metric-box">
-              <span className="metric-label">Actual Audited Profit</span>
-              <span className="metric-value font-mono">${profitability.actual_profit?.toFixed(2)}</span>
-              <span className="metric-sub">
-                Revenue: ${profitability.actual_revenue?.toFixed(2)} | Cost: ${profitability.actual_carrier_cost?.toFixed(2)}
-              </span>
-              <span className="metric-sub text-blue">
-                Margin: {profitability.actual_margin_pct?.toFixed(1)}%
-              </span>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Actual Audited</span>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>
+                ${profitability.actual_profit?.toFixed(2) || '0.00'}
+              </div>
+              <small style={{ fontSize: '0.72rem', color: '#2563eb', fontWeight: 700 }}>
+                Margin: {profitability.actual_margin_pct?.toFixed(1) || '0.0'}%
+              </small>
             </div>
 
-            <div className="metric-box variance-box">
-              <span className="metric-label">Variance (Actual vs Expected)</span>
-              <span className={`metric-value font-mono ${profitability.variance >= 0 ? 'text-green' : 'text-red'}`}>
-                {profitability.variance >= 0 ? '+' : ''}${profitability.variance?.toFixed(2)}
-              </span>
-              <span className="metric-sub">Difference in bottom-line revenue</span>
+            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>Profit Variance</span>
+              <div style={{ fontSize: '1.05rem', fontWeight: 800, color: (profitability.variance ?? 0) >= 0 ? '#16a34a' : '#dc2626', margin: '2px 0' }}>
+                {(profitability.variance ?? 0) >= 0 ? '+' : ''}${profitability.variance?.toFixed(2) || '0.00'}
+              </div>
+              <small style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                Bottom-line variance
+              </small>
             </div>
           </div>
         </div>
       )}
 
       {/* 2. Customer Invoices Management */}
-      <div className="billing-list-section">
-        <div className="section-header-row">
-          <h4>📑 Customer Invoices</h4>
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#475569' }}>
+            📑 Customer Invoices ({invoices.length})
+          </span>
           {invoices.length === 0 && (
             <button 
-              className="action-btn primary-btn"
+              className="sd-action-btn sd-action-primary"
+              style={{ padding: '5px 12px', fontSize: '0.76rem' }}
               onClick={handleGenerateInvoice}
               disabled={actionLoading}
             >
@@ -229,52 +199,61 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
         </div>
 
         {invoices.length === 0 ? (
-          <div className="empty-state">
-            <p>No customer invoices generated yet for this shipment.</p>
+          <div className="sd-panel-empty-box">
+            <FileText size={24} className="sd-empty-icon-muted" />
+            <span className="sd-empty-title">No customer invoices issued yet</span>
+            <span className="sd-empty-desc">Invoices generated from confirmed customer quotations will appear here.</span>
           </div>
         ) : (
-          <div className="table-wrapper">
-            <table className="workspace-table">
+          <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
               <thead>
-                <tr>
-                  <th>Invoice No.</th>
-                  <th>Status</th>
-                  <th>Amount</th>
-                  <th>Due Date</th>
-                  <th>Actions</th>
+                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '0.72rem', fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '10px 12px' }}>Invoice No.</th>
+                  <th style={{ padding: '10px 12px' }}>Status</th>
+                  <th style={{ padding: '10px 12px' }}>Amount</th>
+                  <th style={{ padding: '10px 12px' }}>Due Date</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td className="font-mono">{inv.invoice_number}</td>
-                    <td>
-                      <span className={getStatusBadgeClass(inv.status)}>{inv.status}</span>
-                    </td>
-                    <td className="font-mono">${inv.total_amount?.toFixed(2)}</td>
-                    <td>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : 'N/A'}</td>
-                    <td className="actions-cell">
-                      {inv.status === 'DRAFT' && (
-                        <button 
-                          className="table-btn approve-btn"
-                          onClick={() => handleApproveInvoice(inv.id)}
-                          disabled={actionLoading}
-                        >
-                          Approve
-                        </button>
-                      )}
-                      {inv.status === 'APPROVED' && (
-                        <button 
-                          className="table-btn pay-btn"
-                          onClick={() => handlePayInvoice(inv.id)}
-                          disabled={actionLoading}
-                        >
-                          Mark Paid
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {invoices.map((inv) => {
+                  const badge = getStatusBadgeStyle(inv.status);
+                  return (
+                    <tr key={inv.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '10px 12px', fontWeight: 700, color: '#0f172a' }}>{inv.invoice_number}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '2px 7px', borderRadius: '4px', background: badge.bg, color: badge.fg, border: `1px solid ${badge.border}` }}>
+                          {inv.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontWeight: 750, color: '#0f172a' }}>${inv.total_amount?.toFixed(2)}</td>
+                      <td style={{ padding: '10px 12px', color: '#64748b' }}>{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : '—'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                        {inv.status === 'DRAFT' && (
+                          <button 
+                            className="sd-action-btn sd-action-primary"
+                            style={{ padding: '3px 9px', fontSize: '0.72rem' }}
+                            onClick={() => handleApproveInvoice(inv.id)}
+                            disabled={actionLoading}
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {inv.status === 'APPROVED' && (
+                          <button 
+                            className="sd-action-btn sd-action-success"
+                            style={{ padding: '3px 9px', fontSize: '0.72rem' }}
+                            onClick={() => handlePayInvoice(inv.id)}
+                            disabled={actionLoading}
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -283,33 +262,42 @@ export default function BillingWorkspace({ shipmentId, token, onRefreshShipment 
 
       {/* 3. Shipment Closure Checklist */}
       {closureAudit && (
-        <div className="closure-section">
-          <h4>🔒 Shipment Closure Audit Checklist</h4>
-          <div className="checklist-box">
+        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <Lock size={14} style={{ color: '#475569' }} />
+            <span style={{ fontSize: '0.78rem', fontWeight: 750, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#475569' }}>
+              Shipment Closure Readiness Audit
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
             {closureAudit.checks?.map((check, idx) => (
-              <div key={idx} className="checklist-item">
-                <span className={`check-icon ${check.passed ? 'passed' : 'failed'}`}>
-                  {check.passed ? '✅' : '❌'}
-                </span>
-                <div className="check-details">
-                  <span className="check-title">{check.rule_name}</span>
-                  <p className="check-desc">{check.description}</p>
+              <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '8px 10px' }}>
+                {check.passed ? (
+                  <CheckCircle2 size={16} style={{ color: '#16a34a', flexShrink: 0, marginTop: '2px' }} />
+                ) : (
+                  <XCircle size={16} style={{ color: '#dc2626', flexShrink: 0, marginTop: '2px' }} />
+                )}
+                <div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0f172a' }}>{check.rule_name}</div>
+                  <p style={{ fontSize: '0.72rem', color: '#64748b', margin: '2px 0 0 0' }}>{check.description}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="closure-action-row">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <button 
-              className={`close-shipment-btn ${closureAudit.ready ? 'ready' : 'blocked'}`}
+              className={`sd-action-btn ${closureAudit.ready ? 'sd-action-success' : 'sd-action-secondary'}`}
+              style={{ padding: '7px 16px', fontSize: '0.78rem' }}
               onClick={handleCloseShipment}
               disabled={!closureAudit.ready || actionLoading}
             >
-              {actionLoading ? 'Closing...' : 'Close Shipment & Archive'}
+              {actionLoading ? 'Closing File...' : 'Close Shipment & Archive File'}
             </button>
             {!closureAudit.ready && (
-              <span className="closure-tooltip">
-                ⚠️ All closure checklist rules must pass before archiving this shipment.
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                ⚠️ All audit requirements must pass before this shipment file can be closed.
               </span>
             )}
           </div>

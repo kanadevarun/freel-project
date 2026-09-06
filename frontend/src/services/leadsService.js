@@ -25,9 +25,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
  * @param {{ status?: string, limit?: number, offset?: number }} params
  * @returns {Promise<{ leads: Lead[], total: number }>}
  */
-export async function listLeads({ status, limit = 50, offset = 0 } = {}) {
+export async function listLeads({ status, limit = 50, offset = 0, search, source } = {}) {
   const queryParams = new URLSearchParams({ limit, offset });
   if (status) queryParams.set('status', status);
+  if (search) queryParams.set('search', search);
+  if (source) queryParams.set('source', source);
   return api.get(`/api/v1/leads?${queryParams.toString()}`);
 }
 
@@ -110,3 +112,54 @@ export async function importLeads(file) {
   }
   return data?.data !== undefined ? data.data : data;
 }
+
+// ── BULK UPDATE LEADS ─────────────────────────────────────────────────────────
+export async function bulkUpdateLeads(payload) {
+  return api.post('/api/v1/leads/bulk', payload);
+}
+
+// ── GET LEAD TIMELINE ──────────────────────────────────────────────────────────
+export async function getLeadTimeline(id) {
+  return api.get(`/api/v1/leads/${id}/timeline`);
+}
+
+// ── RETRY CLARIFICATION EMAIL ──────────────────────────────────────────────────
+export async function retryClarificationEmail(leadId, interactionId) {
+  return api.post(`/api/v1/leads/${leadId}/interactions/${interactionId}/retry-clarification`);
+}
+
+// ── RETRY EMAIL INTERACTION ────────────────────────────────────────────────────
+export async function retryEmailInteraction(leadId, interactionId) {
+  return api.post(`/api/v1/leads/${leadId}/interactions/${interactionId}/retry`);
+}
+
+// ── GET EMAIL DRAFT ────────────────────────────────────────────────────────────
+export async function getEmailDraft(leadId, interactionId) {
+  return api.get(`/api/v1/leads/${leadId}/interactions/${interactionId}/draft`);
+}
+
+// ── SAVE EMAIL DRAFT ───────────────────────────────────────────────────────────
+export async function saveEmailDraft(leadId, interactionId, payload) {
+  return api.put(`/api/v1/leads/${leadId}/interactions/${interactionId}/draft`, payload);
+}
+
+// ── DELETE EMAIL DRAFT ──────────────────────────────────────────────────────────
+export async function deleteEmailDraft(leadId, interactionId) {
+  return api.delete(`/api/v1/leads/${leadId}/interactions/${interactionId}/draft`);
+}
+
+// ── GET LEAD INTERACTIONS ──────────────────────────────────────────────────────
+export async function getLeadInteractions(id, order = 'asc') {
+  return api.get(`/api/v1/leads/${id}/interactions?order=${order}`);
+}
+
+// ── REPLY TO INTERACTION ───────────────────────────────────────────────────────
+export async function replyToInteraction(leadId, interactionId, payload) {
+  return api.post(`/api/v1/leads/${leadId}/interactions/${interactionId}/reply`, payload);
+}
+
+// ── GET CONNECTED MAILBOXES ────────────────────────────────────────────────────
+export async function getConnectedMailboxes() {
+  return api.get('/api/v1/organizations/mailboxes');
+}
+

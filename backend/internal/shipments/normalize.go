@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/freel/backend/internal/carrier"
+	"github.com/freel/backend/internal/shipments/spec"
 )
 
 // Normalize converts a raw carrier.TrackingEvent into the canonical shipments.NormalizedTrackingEvent contract
-func Normalize(raw carrier.TrackingEvent, carrierSCAC string, sourceType string) NormalizedTrackingEvent {
-	return NormalizedTrackingEvent{
+func Normalize(raw carrier.TrackingEvent, carrierSCAC string, sourceType string) spec.NormalizedTrackingEvent {
+	return spec.NormalizedTrackingEvent{
 		EventID:         raw.EventID,
 		SourceType:      sourceType,
 		CarrierSCAC:     carrierSCAC,

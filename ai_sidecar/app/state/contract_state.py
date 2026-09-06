@@ -58,6 +58,54 @@ class StateLogEntry(BaseModel):
     timestamp: str             # UTC execution time string
     message: str               # Log detail text
 
+class StateAgreementTerm(BaseModel):
+    """Structured clause or commercial term extracted from an agreement."""
+    term_category: str = "COMMERCIAL" # COMMERCIAL | OPERATIONAL | SLA | LEGAL | COMPLIANCE
+    term_key: str                     # e.g. PAYMENT_TERMS, DETENTION_FREE_DAYS, LIABILITY_CAP
+    term_title: str                   # Human-readable title
+    term_value: str                   # Formatted string value
+    value_type: str = "STRING"        # STRING | NUMBER | BOOLEAN | JSON
+    currency: Optional[str] = None
+    is_critical: bool = False
+    notes: Optional[str] = None
+
+class StateAgreementObligation(BaseModel):
+    """Extracted covenant, milestone, or performance obligation."""
+    obligation_title: str
+    obligation_type: str = "OPERATIONAL" # VOLUME_COMMITMENT | SLA_PERFORMANCE | REPORTING | PAYMENT | INSURANCE
+    party_responsible: str = "CARRIER"  # CARRIER | CUSTOMER | FORWARDER | MUTUAL
+    target_metric: Optional[str] = None
+    target_value: Optional[float] = None
+    metric_unit: Optional[str] = None
+    penalty_terms: Optional[str] = None
+    due_date: Optional[str] = None
+
+class ExtractedContractDraft(BaseModel):
+    """Complete structured agreement draft extracted by AI sidecar for user review."""
+    contract_name: str
+    contract_reference: str
+    contract_type: str = "CARRIER_AGREEMENT" # CARRIER_AGREEMENT | CUSTOMER_SLA | VENDOR_CONTRACT | FORWARDER_PARTNERSHIP
+    party_name: str
+    party_type: str = "CARRIER"              # CARRIER | CUSTOMER | VENDOR
+    carrier_scac: Optional[str] = None
+    transport_mode: str = "OCEAN"            # OCEAN | AIR | ROAD | RAIL | MULTIMODAL
+    currency: str = "USD"
+    contract_value: Optional[float] = None
+    effective_date: Optional[str] = None     # YYYY-MM-DD
+    expiry_date: Optional[str] = None        # YYYY-MM-DD
+    payment_terms: Optional[str] = "Net 30"
+    free_days_origin: int = 0
+    free_days_destination: int = 14
+    transit_time_days: Optional[int] = None
+    description: Optional[str] = None
+    notes: Optional[str] = None
+    ai_summary: str = ""
+    overall_confidence: int = 85             # 0-100
+    field_confidences: Dict[str, int] = {}
+    extracted_terms: List[StateAgreementTerm] = []
+    extracted_obligations: List[StateAgreementObligation] = []
+    duplicate_warning: Optional[str] = None
+
 class ContractExtractionState(BaseModel):
     """
     The main global state dictionary passed from node to node in LangGraph.
@@ -75,9 +123,11 @@ class ContractExtractionState(BaseModel):
     carrier_scac: Optional[str] = None
     extracted_rates: List[StateRateDraft] = []  # List of clean confirmed rates
     flagged_items: List[StateReviewItemDraft] = [] # List of flagged anomalous items
+    extracted_contract: Optional[ExtractedContractDraft] = None # Extracted agreement draft
     processing_log: List[StateLogEntry] = []       # Graph execution logs
     ai_summary: str = ""       # Gemini terms summary abstract
     is_anomaly_detected: bool = False             # Set to True to trigger interrupt pauses
     status: str = "QUEUED"     # Current pipeline status
+
 
 

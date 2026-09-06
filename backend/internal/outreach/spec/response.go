@@ -17,24 +17,27 @@ const (
 // Models
 
 type Campaign struct {
-	ID        int32      `json:"id"`
-	OrgID     int32      `json:"org_id"`
-	Name      string     `json:"name"`
-	Status    string     `json:"status"` // DRAFT | ACTIVE | PAUSED | COMPLETED
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
+	ID        int32      `json:"id" db:"id"`
+	OrgID     int32      `json:"org_id" db:"org_id"`
+	Name      string     `json:"name" db:"name"`
+	Status    string     `json:"status" db:"status"` // DRAFT | ACTIVE | PAUSED | COMPLETED
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
 	Sequences []Sequence `json:"sequences,omitempty"`
 }
 
 type Sequence struct {
-	ID         int32     `json:"id"`
-	CampaignID int32     `json:"campaign_id"`
-	StepNumber int       `json:"step_number"`
-	Channel    string    `json:"channel"` // EMAIL | LINKEDIN
-	Template   string    `json:"template"`
-	DelayDays  int       `json:"delay_days"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         int32     `json:"id" db:"id"`
+	CampaignID int32     `json:"campaign_id" db:"campaign_id"`
+	StepNumber int       `json:"step_number" db:"step_number"`
+	Channel    string    `json:"channel" db:"channel"` // EMAIL | LINKEDIN
+	Name       string    `json:"name" db:"name"`
+	Subject    string    `json:"subject" db:"subject"`
+	Body       string    `json:"body" db:"body"`
+	Template   string    `json:"template" db:"template"`
+	DelayDays  int       `json:"delay_days" db:"delay_days"`
+	CreatedAt  time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at" db:"updated_at"`
 }
 
 // Responses

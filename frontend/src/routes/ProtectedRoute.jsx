@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRBAC } from '../context/RBACContext';
 
 export default function ProtectedRoute({ requiredModule, requiredAction }) {
-  const { isBooting, isAuthenticated, onboardingCompleted } = useAuth();
+  const { isBooting, isAuthenticated } = useAuth();
   const { can } = useRBAC();
   const location = useLocation();
 
@@ -18,16 +18,6 @@ export default function ProtectedRoute({ requiredModule, requiredAction }) {
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
-  // Enforce onboarding logic for authenticated users
-  if (location.pathname.startsWith('/dashboard') && !onboardingCompleted) {
-    return <Navigate to="/onboarding" replace />;
-  }
-
-  if (location.pathname.startsWith('/onboarding') && onboardingCompleted) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // Route-level RBAC check
   if (requiredModule && requiredAction) {
     if (!can(requiredModule, requiredAction)) {

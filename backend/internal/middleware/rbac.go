@@ -1,44 +1,38 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
-
-	"github.com/freel/backend/internal/rbac"
 )
+
+// PermissionChecker defines the interface required by the RBAC middleware.
+type PermissionChecker interface {
+	HasPermission(ctx context.Context, roleName string, orgID int64, resource string, action string) (bool, error)
+}
 
 // RBACMiddleware handles permission checks for routes.
 type RBACMiddleware struct {
-	rbacSvc rbac.Service
+	rbacSvc PermissionChecker
 }
 
 // NewRBACMiddleware creates a new permission checking middleware.
-// Simple meaning: It prepares a security guard that checks if you have the right clearance level.
-// Example: rbacGuard := NewRBACMiddleware(rbacSvc)
-func NewRBACMiddleware(rbacSvc rbac.Service) *RBACMiddleware {
+func NewRBACMiddleware(rbacSvc PermissionChecker) *RBACMiddleware {
 	return &RBACMiddleware{rbacSvc: rbacSvc}
 }
 
 // RequirePermission wraps a route to ensure the user has specific permissions.
-// Simple meaning: It stops anyone from accessing the page unless they have the required permission (like "Delete Lead").
-// Example: router.With(rbacGuard.RequirePermission("LEADS", "DELETE")).Delete("/{id}", handler)
 func (m *RBACMiddleware) RequirePermission(resource, action string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Extract UserContext from the request
-			userCtxVal := r.Context().Value(UserContextKey)
-			if userCtxVal == nil {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-
-			userCtx, ok := userCtxVal.(UserContext)
+			userCtx, ok := GetUserContext(r.Context())
 			if !ok {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			// If the user is a super admin, let them through immediately
-			if userCtx.Role == "ADMIN" {
+			// If the user is SUPER_ADMIN, they have all permissions — skip DB lookup
+			if userCtx.Role == "SUPER_ADMIN" {
 				next.ServeHTTP(w, r)
 				return
 			}

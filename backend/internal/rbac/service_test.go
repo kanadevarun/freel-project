@@ -34,7 +34,7 @@ func TestGetRoles(t *testing.T) {
 			prepareMock: func(mock sqlmock.Sqlmock) {
 				rows := sqlmock.NewRows([]string{"id", "org_id", "name", "description"}).
 					AddRow(1, 1, "SUPER_ADMIN", "Full access")
-				mock.ExpectQuery(`SELECT id, org_id, name, description FROM roles WHERE org_id = \? ORDER BY id ASC`).
+				mock.ExpectQuery(`SELECT r\.id, r\.org_id, r\.name, COALESCE\(r\.description, ''\) AS description, COUNT\(rp\.permission_id\) AS permission_count FROM roles r LEFT JOIN role_permissions rp ON r\.id = rp\.role_id WHERE r\.org_id = \? GROUP BY r\.id, r\.org_id, r\.name, r\.description ORDER BY r\.id ASC`).
 					WithArgs(int64(1)).
 					WillReturnRows(rows)
 			},
@@ -91,22 +91,23 @@ func TestGetRolePermissions(t *testing.T) {
 				roleID: 1,
 			},
 			want: &RolePermissionsResponse{
-				RoleID: 1,
+				RoleID:   1,
+				RoleName: "SALES",
 				Permissions: []PermissionNode{
-					{Resource: "COMPANIES", Action: "READ"},
+					{ID: 1, Resource: "COMPANIES", Action: "READ"},
 				},
 			},
 			wantErr: false,
 			prepareMock: func(mock sqlmock.Sqlmock) {
 				// 1. Verify role
-				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \? AND org_id = \?`).
+				mock.ExpectQuery(`SELECT name FROM roles WHERE id = \? AND org_id = \?`).
 					WithArgs(int64(1), int64(1)).
-					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(1))
+					WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("SALES"))
 
 				// 2. Get permissions
-				permsRows := sqlmock.NewRows([]string{"resource", "action"}).
-					AddRow("COMPANIES", "READ")
-				mock.ExpectQuery(`SELECT p\.resource, p\.action FROM role_permissions rp JOIN permissions p ON rp\.permission_id = p\.id WHERE rp\.role_id = \?`).
+				permsRows := sqlmock.NewRows([]string{"id", "resource", "action"}).
+					AddRow(1, "COMPANIES", "READ")
+				mock.ExpectQuery(`SELECT p\.id, p\.resource, p\.action FROM role_permissions rp JOIN permissions p ON rp\.permission_id = p\.id WHERE rp\.role_id = \? ORDER BY p\.resource, p\.action`).
 					WithArgs(int64(1)).
 					WillReturnRows(permsRows)
 			},
@@ -165,10 +166,9 @@ func TestUpdateRolePermissions(t *testing.T) {
 			},
 			wantErr: false,
 			prepareMock: func(mock sqlmock.Sqlmock) {
-				// 1. Verify role
-				mock.ExpectQuery(`SELECT 1 FROM roles WHERE id = \? AND org_id = \?`).
+				mock.ExpectQuery(`SELECT name FROM roles WHERE id = \? AND org_id = \?`).
 					WithArgs(int64(1), int64(1)).
-					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(1))
+					WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("SALES"))
 
 				// 2. Begin tx
 				mock.ExpectBegin()

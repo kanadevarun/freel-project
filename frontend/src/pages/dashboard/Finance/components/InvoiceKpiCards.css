@@ -1,0 +1,133 @@
+.invoice-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.invoice-kpi-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.invoice-kpi-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.kpi-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.kpi-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.kpi-icon-wrapper {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kpi-icon-wrapper.total {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.kpi-icon-wrapper.outstanding {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.kpi-icon-wrapper.paid {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.kpi-icon-wrapper.overdue {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.kpi-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.kpi-subtext-count {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.kpi-trend-pill {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.kpi-trend-pill.total {
+  color: #16a34a;
+}
+
+.kpi-trend-pill.outstanding {
+  color: #ea580c;
+}
+
+.kpi-trend-pill.paid {
+  color: #16a34a;
+}
+
+.kpi-trend-pill.overdue {
+  color: #dc2626;
+}
+
+.trend-period {
+  font-weight: 400;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+@media (max-width: 1200px) {
+  .invoice-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .invoice-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

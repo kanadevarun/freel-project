@@ -1,0 +1,11 @@
+--- backend/internal/rates/transport.go
++++ backend/internal/rates/transport.go
+@@ -796,6 +796,7 @@
+ 
+ func encodeAPIResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+ 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+ 	if e, ok := response.(errorer); ok && e.error() != nil {
++		log.Printf("API ERROR in encodeAPIResponse: %v\n", e.error())
+ 		encodeError(context.Background(), e.error(), w)
+ 		return nil
+ 	}

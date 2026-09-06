@@ -8,3 +8,35 @@ dist/
 .env*
 .vercel/
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+
+# Log files
+*.log
+app.log
+ai_sidecar.log
+
+# LangGraph SQLite checkpoints
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Embedded / nested git repos
+gemini-web2api/
+
+# Scratch / test scripts (root-level only)
+test*.py
+test*.sh
+test*.js
+patch_frontend.js
+append_handlers.go
+leads_import_test.csv
+gemini-web2api/

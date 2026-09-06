@@ -266,7 +266,7 @@ def check_completeness_node(state: SalesAgentState) -> Dict[str, Any]:
         }
 
     print(f"[Sales Agent] All mandatory fields are present.")
-    return {}
+    return {"intent": "RFQ_REQUEST"}
 
 def draft_rfq_node(state: SalesAgentState) -> Dict[str, Any]:
     """Drafts a standard RFQ in the Go backend. Assumes all fields have been verified by completeness checker."""
@@ -342,7 +342,7 @@ def save_and_callback_node(state: SalesAgentState) -> Dict[str, Any]:
 
     # When info is still missing, persist the cumulative context (structured fields only)
     # so the next reply can restore it without re-reading raw emails.
-    if intent == "RFQ_REQUEST_INCOMPLETE":
+    if intent in ["RFQ_REQUEST", "RFQ_REQUEST_INCOMPLETE"]:
         partial_context = {
             "origin_port": state.get("origin_port"),
             "destination_port": state.get("destination_port"),

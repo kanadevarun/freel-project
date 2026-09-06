@@ -62,6 +62,7 @@ export async function refreshAccessToken() {
     if (!response.ok) {
       // Refresh failed — clear all auth data so user is prompted to log in again
       authStorage.clearAll();
+      window.location.href = '/login?expired=true';
       return null;
     }
 
@@ -70,6 +71,7 @@ export async function refreshAccessToken() {
 
     if (!payload?.access_token) {
       authStorage.clearAll();
+      window.location.href = '/login?expired=true';
       return null;
     }
 
@@ -83,6 +85,7 @@ export async function refreshAccessToken() {
     return payload.access_token;
   } catch {
     authStorage.clearAll();
+    window.location.href = '/login?expired=true';
     return null;
   }
 }
@@ -113,16 +116,28 @@ async function parseResponse(response) {
   if (!response.ok) {
     // Shape error consistently: { code, message, status, details? }
     throw {
-      code: data?.error_code || data?.code || 'API_ERROR',
-      message: data?.message || data?.error || 'An error occurred. Please try again.',
+      code: data?.error_code || data?.code || data?.error?.code || 'API_ERROR',
+      message: data?.message || (typeof data?.error === 'string' ? data.error : 'An error occurred. Please try again.'),
       status: response.status,
       details: data,
     };
   }
 
   // Unwrap standard backend envelope: { success, message, data }
-  // If data field exists, return it directly; otherwise return full body
-  return data?.data !== undefined ? data.data : data;
+  // If data field exists and total_count is not present, return it directly; otherwise return full body
+  if (data?.data !== undefined) {
+    if (
+      data?.total_count !== undefined ||
+      data?.kpis !== undefined ||
+      data?.pagination !== undefined ||
+      data?.carriers !== undefined ||
+      data?.items !== undefined
+    ) {
+      return data;
+    }
+    return data.data;
+  }
+  return data;
 }
 
 /**

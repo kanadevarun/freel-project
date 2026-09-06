@@ -6,7 +6,6 @@
  *  - Boot from localStorage (restores session correctly)
  *  - login(): saves tokens, updates state, normalizes role object vs string
  *  - logout(): clears all state
- *  - completeOnboarding(): updates onboardingCompleted
  *  - updateOrg(): merges org updates
  *  - useAuth() throws outside provider
  */
@@ -15,7 +14,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import { AuthProvider, useAuth } from '../../context/AuthContext';
 import { authStorage } from '../../utils/authStorage';
-import { onboardingStorage } from '../../utils/onboardingStorage';
 
 // Helper component that exposes auth state as text
 function AuthConsumer() {
@@ -25,7 +23,6 @@ function AuthConsumer() {
     memberRole,
     isAuthenticated,
     isBooting,
-    onboardingCompleted,
   } = useAuth();
 
   if (isBooting) return <div data-testid="booting">Booting</div>;
@@ -38,7 +35,6 @@ function AuthConsumer() {
       <div data-testid="role-name">{
         typeof memberRole === 'object' ? (memberRole?.name ?? 'null') : (memberRole ?? 'null')
       }</div>
-      <div data-testid="onboarding-completed">{String(onboardingCompleted)}</div>
     </div>
   );
 }
@@ -178,41 +174,6 @@ describe('AuthContext', () => {
     });
   });
 
-  // ── completeOnboarding() ──────────────────────────────────────────────────
-  describe('completeOnboarding()', () => {
-    it('sets onboardingCompleted to true', async () => {
-      let authApi;
-      function Trigger() {
-        authApi = useAuth();
-        return null;
-      }
-      render(
-        <AuthProvider>
-          <Trigger />
-          <AuthConsumer />
-        </AuthProvider>
-      );
-      await waitFor(() => expect(screen.queryByTestId('booting')).not.toBeInTheDocument());
-
-      // Login first so user.email is set
-      await act(async () => {
-        await authApi.login(
-          { access_token: 'at', id_token: 'it', refresh_token: 'rt' },
-          { email: 'onboard@logisticshq.in' },
-          null,
-          null
-        );
-      });
-
-      expect(screen.getByTestId('onboarding-completed').textContent).toBe('false');
-
-      await act(async () => {
-        await authApi.completeOnboarding({ role: 'shipper' });
-      });
-
-      expect(screen.getByTestId('onboarding-completed').textContent).toBe('true');
-    });
-  });
 
   // ── useAuth() outside provider ────────────────────────────────────────────
   describe('useAuth() outside provider', () => {

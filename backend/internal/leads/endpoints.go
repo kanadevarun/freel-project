@@ -10,22 +10,26 @@ import (
 )
 
 type Endpoints struct {
-	ListLeadsEP   endpoint.Endpoint
-	CreateLeadEP  endpoint.Endpoint
-	ImportLeadsEP endpoint.Endpoint
-	GetLeadEP     endpoint.Endpoint
-	UpdateLeadEP  endpoint.Endpoint
-	DeleteLeadEP  endpoint.Endpoint
+	ListLeadsEP        endpoint.Endpoint
+	CreateLeadEP       endpoint.Endpoint
+	ImportLeadsEP      endpoint.Endpoint
+	GetLeadEP          endpoint.Endpoint
+	UpdateLeadEP       endpoint.Endpoint
+	DeleteLeadEP       endpoint.Endpoint
+	BulkUpdateLeadsEP  endpoint.Endpoint
+	GetLeadTimelineEP  endpoint.Endpoint
 }
 
 func NewAllLeadsEndpoints(bl BusinessLogic) Endpoints {
 	return Endpoints{
-		ListLeadsEP:   makeListLeadsEndpoint(bl),
-		CreateLeadEP:  makeCreateLeadEndpoint(bl),
-		ImportLeadsEP: makeImportLeadsEndpoint(bl),
-		GetLeadEP:     makeGetLeadEndpoint(bl),
-		UpdateLeadEP:  makeUpdateLeadEndpoint(bl),
-		DeleteLeadEP:  makeDeleteLeadEndpoint(bl),
+		ListLeadsEP:        makeListLeadsEndpoint(bl),
+		CreateLeadEP:       makeCreateLeadEndpoint(bl),
+		ImportLeadsEP:      makeImportLeadsEndpoint(bl),
+		GetLeadEP:          makeGetLeadEndpoint(bl),
+		UpdateLeadEP:       makeUpdateLeadEndpoint(bl),
+		DeleteLeadEP:       makeDeleteLeadEndpoint(bl),
+		BulkUpdateLeadsEP:  makeBulkUpdateLeadsEndpoint(bl),
+		GetLeadTimelineEP:  makeGetLeadTimelineEndpoint(bl),
 	}
 }
 
@@ -145,5 +149,40 @@ func makeDeleteLeadEndpoint(bl BusinessLogic) endpoint.Endpoint {
 		return &spec.DeleteLeadResponse{
 			Data: map[string]interface{}{"success": true},
 		}, nil
+	}
+}
+
+func makeBulkUpdateLeadsEndpoint(bl BusinessLogic) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*spec.BulkUpdateLeadsRequest)
+		orgID, err := getOrgID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req.OrgID = orgID
+
+		resp, err := bl.BulkUpdateLeads(ctx, *req)
+		if err != nil {
+			return nil, err
+		}
+
+		return &spec.BulkUpdateLeadsResponse{Data: *resp}, nil
+	}
+}
+
+func makeGetLeadTimelineEndpoint(bl BusinessLogic) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*spec.GetLeadRequest)
+		orgID, err := getOrgID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := bl.GetLeadTimeline(ctx, orgID, req.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		return &spec.GetTimelineResponse{Data: resp}, nil
 	}
 }

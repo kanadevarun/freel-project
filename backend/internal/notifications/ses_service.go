@@ -102,14 +102,24 @@ func (s *sesServiceImpl) SendInviteEmail(ctx context.Context, toEmail, token, or
 		},
 		Message: &types.Message{
 			Subject: &types.Content{
-				Data: aws.String(fmt.Sprintf("You've been invited to join %s on Freel", orgName)),
+				Data: aws.String(fmt.Sprintf("You’re invited to join %s on LogisticsHQ", orgName)),
 			},
 			Body: &types.Body{
 				Html: &types.Content{
 					Data: aws.String(htmlBody.String()),
 				},
 				Text: &types.Content{
-					Data: aws.String(fmt.Sprintf("You've been invited to join %s. Click here to accept: %s", orgName, inviteLink)),
+					Data: aws.String(fmt.Sprintf(`You're invited to join %s on LogisticsHQ.
+
+You've been invited to collaborate with your organization on LogisticsHQ and help manage your logistics operations from one place.
+
+Accept your invitation:
+%s
+
+If you weren't expecting this invitation, you can safely ignore this email.
+
+© LogisticsHQ
+This is an automated invitation email. Please do not reply to this message.`, orgName, inviteLink)),
 				},
 			},
 		},

@@ -1,137 +1,234 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { Mail, User, Lock, Eye, EyeOff, CheckCircle2, ShieldCheck, Shield, UserPlus } from 'lucide-react';
+import { validateInvite, acceptInvite } from '../../../services/authService';
 import './AcceptInvitePage.css';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export default function AcceptInvitePage() {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const token = searchParams.get('token');
+  const navigate = useNavigate();
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
+  const [inviteData, setInviteData] = useState(null);
+  
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      setError('No invitation token found in the URL. Please check your email link.');
-    }
+    const validateToken = async () => {
+      if (!token) {
+        toast.error('Invalid or missing invitation token.');
+        setIsValidating(false);
+        return;
+      }
+      try {
+        const data = await validateInvite(token);
+        setInviteData(data);
+      } catch (err) {
+        console.error(err);
+        toast.error(err.message || 'This invitation is expired or invalid.');
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    validateToken();
   }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!token) return;
-    
-    setIsSubmitting(true);
-    setError('');
+
+    if (!fullName) {
+      toast.error('Please enter your full name.');
+      return;
+    }
+    if (!password) {
+      toast.error('Password is required.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/invite/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          password,
-          full_name: fullName,
-        }),
+      await acceptInvite({
+        token,
+        password,
+        full_name: fullName,
       });
 
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.message || data.error || 'Failed to accept invitation.');
-      }
-
-      setSuccess(true);
+      toast.success('Account created successfully! Please log in.');
+      navigate('/login');
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsSubmitting(false);
+      console.error(err);
+      toast.error(err.message || 'Failed to accept invitation. Please try again.');
+      setIsLoading(false);
     }
   };
 
-  if (success) {
+  if (isValidating) {
     return (
-      <div className="accept-invite-page">
-        <div className="ai-success">
-          <div className="ai-success-icon">🎉</div>
-          <h2>Welcome to LogisticsHQ!</h2>
-          <p>Your account has been successfully created and linked to your organization.</p>
-          <button 
-            className="ai-submit-btn" 
-            onClick={() => navigate('/login')}
-          >
-            Log in to your account
-          </button>
-        </div>
+      <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <p>Validating invitation...</p>
+      </div>
+    );
+  }
+
+  if (!inviteData) {
+    return (
+      <div className="auth-card" style={{ textAlign: 'center', padding: '40px' }}>
+        <h2>Invitation Invalid</h2>
+        <p style={{ color: '#64748B', marginTop: '10px' }}>
+          This invitation has expired, has already been used, or is no longer valid.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="accept-invite-page">
-      <div className="ai-header">
-        <h1>Accept Invitation</h1>
-        <p>Complete your profile to join your team on LogisticsHQ.</p>
+    <div className="auth-card">
+      <div className="auth-header">
+        <h1>Join LogisticsHQ</h1>
+        <p>You've been invited to join</p>
+        <span className="org-name-highlight">{inviteData.org_name}</span>
+        <div className="verified-badge">
+          <CheckCircle2 size={16} />
+          <span>Invitation verified</span>
+        </div>
       </div>
 
-      <div className="ai-card">
-        {error && (
-          <div className="form-alert error" style={{ marginBottom: '1.5rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="fullName">Full Name</label>
+      <form onSubmit={handleSubmit} className="auth-form">
+        <div className="auth-field" style={{ marginBottom: '8px' }}>
+          <label style={{ marginBottom: '4px' }}>Email address</label>
+          <div className="auth-input-wrapper" style={{ position: 'relative' }}>
+            <div className="input-icon" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+              <Mail size={18} strokeWidth={2} />
+            </div>
             <input
-              id="fullName"
+              type="email"
+              value={inviteData.email}
+              disabled
+              className="auth-input"
+              style={{ padding: '8px 14px 8px 40px', backgroundColor: '#F1F5F9', color: '#64748B', cursor: 'not-allowed' }}
+            />
+          </div>
+          <span className="input-hint" style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginTop: '4px' }}>This email is associated with your invitation.</span>
+        </div>
+
+        <div className="auth-field" style={{ marginBottom: '8px' }}>
+          <label style={{ marginBottom: '4px' }}>Full name</label>
+          <div className="auth-input-wrapper" style={{ position: 'relative' }}>
+            <div className="input-icon" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+              <User size={18} strokeWidth={2} />
+            </div>
+            <input
               type="text"
-              className="form-input"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="John Doe"
+              placeholder="Enter your full name"
               required
-              disabled={isSubmitting || !token}
+              className="auth-input"
+              style={{ padding: '8px 14px 8px 40px' }}
+              disabled={isLoading}
             />
           </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="password">Create Password</label>
+        <div className="auth-field" style={{ marginBottom: '8px' }}>
+          <label style={{ marginBottom: '4px' }}>Password</label>
+          <div className="auth-input-wrapper" style={{ position: 'relative' }}>
+            <div className="input-icon" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+              <Lock size={18} strokeWidth={2} />
+            </div>
             <input
-              id="password"
-              type="password"
-              className="form-input"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Create a strong password"
               required
+              className="auth-input"
+              style={{ padding: '8px 40px 8px 40px' }}
+              disabled={isLoading}
               minLength={8}
-              disabled={isSubmitting || !token}
             />
-            <p style={{ fontSize: '0.8rem', color: 'var(--slate-500)', marginTop: '0.5rem' }}>
-              Must be at least 8 characters.
-            </p>
+            <button
+              type="button"
+              className="auth-input-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
+          <span className="input-hint" style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginTop: '4px' }}>Use at least 8 characters</span>
+        </div>
 
-          <button 
-            type="submit" 
-            className="ai-submit-btn"
-            disabled={isSubmitting || !token || !fullName || password.length < 8}
-          >
-            {isSubmitting ? 'Joining...' : 'Join Organization'}
-          </button>
-        </form>
-      </div>
-      
-      <div style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.9rem', color: 'var(--slate-500)' }}>
-        Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>Log in</Link>
+        <div className="auth-field" style={{ marginBottom: '8px' }}>
+          <label style={{ marginBottom: '4px' }}>Confirm password</label>
+          <div className="auth-input-wrapper" style={{ position: 'relative' }}>
+            <div className="input-icon" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none', display: 'flex', alignItems: 'center' }}>
+              <Lock size={18} strokeWidth={2} />
+            </div>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Re-enter your password"
+              required
+              className="auth-input"
+              style={{ padding: '8px 40px 8px 40px' }}
+              disabled={isLoading}
+              minLength={8}
+            />
+            <button
+              type="button"
+              className="auth-input-toggle"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" className="auth-submit-btn" disabled={isLoading} style={{ marginTop: '8px', padding: '10px 20px' }}>
+          {isLoading ? (
+            <div className="auth-spinner" />
+          ) : (
+            <>
+              <UserPlus size={18} />
+              Create Account & Join Organization
+            </>
+          )}
+        </button>
+
+        <div className="info-alert-box" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '8px 12px', display: 'flex', alignItems: 'flex-start', gap: '8px', marginTop: '12px' }}>
+          <div className="info-alert-icon" style={{ color: '#2563EB', backgroundColor: '#EFF6FF', padding: '4px', borderRadius: '50%', display: 'flex' }}>
+            <ShieldCheck size={18} />
+          </div>
+          <p className="info-alert-text" style={{ fontSize: '0.8rem', lineHeight: '1.4', color: '#475569', margin: 0 }}>
+            Your account will be securely added to <strong>{inviteData.org_name}</strong> with the role assigned by your organization administrator.
+          </p>
+        </div>
+      </form>
+
+      <div className="secure-footer-links">
+        <div className="secure-footer-item">
+          <Lock size={14} />
+          <span>Secure invitation. This link will expire.</span>
+        </div>
+        <div className="secure-footer-divider"></div>
+        <div className="secure-footer-item">
+          <Shield size={14} />
+          <span>Your information is safe with us.</span>
+        </div>
       </div>
     </div>
   );

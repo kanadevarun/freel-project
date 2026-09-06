@@ -3,77 +3,15 @@ package shipments
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/freel/backend/internal/middleware"
-	"github.com/freel/backend/internal/utils"
+	"github.com/freel/backend/internal/shipments/spec"
 )
 
-type CarrierEmailRequest struct {
-	From      string `json:"from"`
-	To        string `json:"to"`
-	Subject   string `json:"subject"`
-	Body      string `json:"body"`
-	MessageID string `json:"message_id"`
-}
-
-// InboundCarrierEmailWebhook handles carrier email pushes to /api/v1/emails/carrier-inbound
-func (h *Handler) InboundCarrierEmailWebhook(w http.ResponseWriter, r *http.Request) {
-	var req CarrierEmailRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.Error(w, http.StatusBadRequest, "Invalid request body", "INVALID_PAYLOAD")
-		return
-	}
-
-	if req.From == "" || req.Body == "" {
-		utils.Error(w, http.StatusBadRequest, "From and Body are required fields", "MISSING_PARAMS")
-		return
-	}
-
-	// 3. Separate Ops Ingestion Path: Parse carrier email into NormalizedTrackingEvent
-	normalized, err := ParseCarrierEmail(&req)
-	if err != nil {
-		utils.Error(w, http.StatusBadRequest, "Failed to parse carrier email: "+err.Error(), "PARSE_ERROR")
-		return
-	}
-
-	// Dynamic organization resolution based on integration configurations matching carrier email domains
-	var orgID int64
-	dbErr := h.svc.(*service).db.GetContext(r.Context(), &orgID, `
-		SELECT org_id FROM carrier_integrations 
-		WHERE carrier_scac = ? AND is_active = 1 LIMIT 1
-	`, normalized.CarrierSCAC)
-	if dbErr != nil {
-		userCtx, ok := r.Context().Value(middleware.UserContextKey).(middleware.UserContext)
-		if ok && userCtx.OrgID > 0 {
-			orgID = userCtx.OrgID
-		} else if os.Getenv("APP_ENV") != "production" {
-			_ = h.svc.(*service).db.GetContext(r.Context(), &orgID, "SELECT id FROM organizations LIMIT 1")
-		}
-	}
-
-	if orgID <= 0 {
-		utils.Error(w, http.StatusBadRequest, "Unable to resolve org_id for carrier email", "RESOLVE_ERROR")
-		return
-	}
-
-	err = h.svc.HandleInboundCarrierEvent(r.Context(), orgID, normalized)
-	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, "Failed to ingest carrier email event: "+err.Error(), "INTERNAL_ERROR")
-		return
-	}
-
-	utils.Success(w, http.StatusOK, "Carrier email processed and enqueued", map[string]string{
-		"event_id": normalized.EventID,
-	})
-}
-
 // ParseCarrierEmail maps raw carrier email details to canonical NormalizedTrackingEvent contracts
-func ParseCarrierEmail(req *CarrierEmailRequest) (*NormalizedTrackingEvent, error) {
+func ParseCarrierEmail(req *spec.CarrierEmailRequest) (*spec.NormalizedTrackingEvent, error) {
 	// Attempt to extract Booking, Container, HBL, MBL, and SCAC mappings via headers and regex
 	scac := "MAEU" // Default to Maersk for testing if cannot resolve
 	fromLower := strings.ToLower(req.From)
@@ -98,7 +36,7 @@ func ParseCarrierEmail(req *CarrierEmailRequest) (*NormalizedTrackingEvent, erro
 
 	rawPayload, _ := json.Marshal(req)
 
-	return &NormalizedTrackingEvent{
+	return &spec.NormalizedTrackingEvent{
 		EventID:         eventID,
 		SourceType:      "EMAIL",
 		CarrierSCAC:     scac,

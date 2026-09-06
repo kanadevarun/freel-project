@@ -211,3 +211,59 @@ func (a *MockTrackingAdapter) ParseWebhookPayload(payload []byte) (*carrier.Trac
 
 	return nil, fmt.Errorf("malformed carrier response / normalization failure")
 }
+
+func (a *MockTrackingAdapter) GetRates(ctx context.Context, origin, destination string, incoterms string, grossWeight float64, volumeCBM float64, commodity string) ([]carrier.CarrierRate, error) {
+	if err := a.checkConfig("RATES"); err != nil {
+		return nil, err
+	}
+
+	// Mocking rates based on SCAC
+	scacUpper := strings.ToUpper(a.SCAC)
+	var rates []carrier.CarrierRate
+	
+	if scacUpper == "MAEU" || scacUpper == "MSK" {
+		rates = append(rates, carrier.CarrierRate{
+			CarrierName:           "Maersk",
+			BuyPrice:              2800.50,
+			TransitDays:           25,
+			ReliabilityScore:      92,
+			HistoricalSuccessRate: 95.0,
+			FreeDays:              14,
+			VesselName:            "MAERSK MC-KINNEY MOLLER",
+			ServiceCode:           "AE10",
+			OceanFreight:          2500,
+			OriginCharges:         150,
+			DestinationCharges:    150.50,
+		})
+	} else if scacUpper == "MSC" {
+		rates = append(rates, carrier.CarrierRate{
+			CarrierName:           "MSC",
+			BuyPrice:              2650.00,
+			TransitDays:           28,
+			ReliabilityScore:      85,
+			HistoricalSuccessRate: 90.0,
+			FreeDays:              21,
+			VesselName:            "MSC GULSÜN",
+			ServiceCode:           "LION",
+			OceanFreight:          2400,
+			OriginCharges:         100,
+			DestinationCharges:    150,
+		})
+	} else {
+		rates = append(rates, carrier.CarrierRate{
+			CarrierName:           a.SCAC,
+			BuyPrice:              2700.00,
+			TransitDays:           30,
+			ReliabilityScore:      80,
+			HistoricalSuccessRate: 85.0,
+			FreeDays:              7,
+			VesselName:            "GENERIC VESSEL",
+			ServiceCode:           "GEN1",
+			OceanFreight:          2500,
+			OriginCharges:         100,
+			DestinationCharges:    100,
+		})
+	}
+	
+	return rates, nil
+}

@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import { login as apiLogin } from '../../../services/authService';
 import { useAuth } from '../../../context/AuthContext';
-import { onboardingStorage } from '../../../utils/onboardingStorage';
 import AuthMessage from '../../../components/auth/AuthMessage/AuthMessage';
 import LogisticsHQLogo from '../../../components/Brand/LogisticsHQLogo';
 import './LoginPage.css';

@@ -2,8 +2,12 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/freel/backend/internal/audit"
+	"github.com/freel/backend/internal/audit/domain"
 	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/utils"
 )
@@ -14,6 +18,18 @@ type Handler struct {
 
 func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
+}
+
+func getClientIP(r *http.Request) string {
+	ip := r.Header.Get("X-Forwarded-For")
+	if ip == "" {
+		ip = r.Header.Get("X-Real-IP")
+	}
+	if ip == "" {
+		ip = r.RemoteAddr
+	}
+	parts := strings.Split(ip, ",")
+	return strings.TrimSpace(parts[0])
 }
 
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -55,13 +71,76 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	clientIP := getClientIP(r)
 	data, err := h.service.Login(r.Context(), req)
 	if err != nil {
+		// Log failed login attempt
+		_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+			OrgID:        1,
+			ActorType:    domain.ActorTypeUser,
+			ActorName:    req.Email,
+			Action:       domain.ActionLoginFailed,
+			Module:       domain.ModuleAuthentication,
+			ResourceType: "USER",
+			ResourceID:   req.Email,
+			ResourceName: req.Email,
+			Description:  fmt.Sprintf("Login attempt failed for %s", req.Email),
+			Result:       domain.ResultFailed,
+			ErrorMessage: err.Error(),
+			IPAddress:    clientIP,
+			UserAgent:    r.UserAgent(),
+		})
+
 		utils.Error(w, http.StatusUnauthorized, err.Error(), "LOGIN_FAILED")
 		return
 	}
 
+	// Log successful login
+	actorID := data.User.ID
+	orgID := data.Org.ID
+	if orgID <= 0 {
+		orgID = 1
+	}
+
+	_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		ActorID:      &actorID,
+		ActorType:    domain.ActorTypeUser,
+		ActorName:    data.User.FullName,
+		ActorRole:    data.Role.DisplayName,
+		Action:       domain.ActionLogin,
+		Module:       domain.ModuleAuthentication,
+		ResourceType: "USER",
+		ResourceID:   fmt.Sprintf("%d", data.User.ID),
+		ResourceName: data.User.Email,
+		Description:  fmt.Sprintf("%s logged in", data.User.FullName),
+		Result:       domain.ResultSuccess,
+		IPAddress:    clientIP,
+		UserAgent:    r.UserAgent(),
+	})
+
 	utils.Success(w, http.StatusOK, "Login successful", data)
+}
+
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	if userCtx, ok := middleware.GetUserContext(r.Context()); ok && userCtx.UserID > 0 {
+		actorID := userCtx.UserID
+		_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+			OrgID:        userCtx.OrgID,
+			ActorID:      &actorID,
+			ActorType:    domain.ActorTypeUser,
+			ActorRole:    userCtx.Role,
+			Action:       domain.ActionLogout,
+			Module:       domain.ModuleAuthentication,
+			ResourceType: "USER",
+			ResourceID:   fmt.Sprintf("%d", userCtx.UserID),
+			Description:  "User logged out",
+			Result:       domain.ResultSuccess,
+			IPAddress:    getClientIP(r),
+			UserAgent:    r.UserAgent(),
+		})
+	}
+	utils.Success(w, http.StatusOK, "Logged out successfully", nil)
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -143,3 +222,20 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	utils.Success(w, http.StatusOK, "User details fetched successfully", data)
 }
+
+func (h *Handler) ValidateInvite(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		utils.Error(w, http.StatusBadRequest, "Token is required", "INVALID_PAYLOAD")
+		return
+	}
+
+	data, err := h.service.ValidateInvite(r.Context(), token)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error(), "VALIDATE_INVITE_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Invitation valid", data)
+}
+

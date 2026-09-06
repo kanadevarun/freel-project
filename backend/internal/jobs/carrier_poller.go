@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/freel/backend/internal/carrier"
-	"github.com/freel/backend/internal/carrier/adapters"
 	"github.com/freel/backend/internal/shipments"
 	"github.com/jmoiron/sqlx"
 )
@@ -99,33 +97,10 @@ func (p *CarrierPoller) pollShipmentsWithStatus(status string) {
 			continue
 		}
 
-		// 1. Resolve TrackingProvider from CarrierAdapterFactory (Group 1 fix)
-		adapter, err := adapters.GetTrackingProvider(p.db, s.OrgID, s.CarrierSCAC)
+		// Execute unified tracking refresh through carrier adapter architecture
+		_, err := p.svc.RefreshShipmentTracking(ctx, s.OrgID, s.ID, nil, "Background Carrier Poller")
 		if err != nil {
-			log.Printf("[Carrier Poller] Unsupported carrier adapter %s: %v", s.CarrierSCAC, err)
-			continue
-		}
-
-		req := carrier.TrackingRequest{
-			BookingNumber: *s.BookingNumber,
-			CarrierSCAC:   s.CarrierSCAC,
-		}
-		if s.MBLNumber != nil {
-			req.MBLNumber = *s.MBLNumber
-		}
-
-		eventsList, err := adapter.GetTrackingEvents(ctx, req)
-		if err != nil {
-			log.Printf("[Carrier Poller] Failed to get tracking events for shipment %d: %v", s.ID, err)
-			continue
-		}
-
-		for _, ev := range eventsList {
-			normalized := shipments.Normalize(ev, s.CarrierSCAC, "POLLING")
-			err = p.svc.HandleInboundCarrierEvent(ctx, s.OrgID, &normalized)
-			if err != nil {
-				log.Printf("[Carrier Poller] Failed to process event %s for shipment %d: %v", ev.EventID, s.ID, err)
-			}
+			log.Printf("[Carrier Poller] Background tracking sync note for shipment #%d: %v", s.ID, err)
 		}
 	}
 

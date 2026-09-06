@@ -21,7 +21,8 @@ import json
 from fastapi import FastAPI, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel
 
-from app.state.contract_state import ContractExtractionState
+from app.state.contract_state import ContractExtractionState, ExtractedContractDraft
+from app.agents.parser_agent import parse_contract_agreement
 from app.graphs.contracts_graph import contracts_graph
 from app.graphs.pricing_graph import pricing_graph
 from app.persistence.queue_worker import QueueWorker
@@ -632,6 +633,43 @@ async def resume_document(req: ResumeRequest, background_tasks: BackgroundTasks)
     # Enqueue resume task run
     background_tasks.add_task(run_resume_pipeline, req)
     return {"message": "Resume request queued successfully"}
+
+class ExtractAgreementRequest(BaseModel):
+    document_id: Optional[str] = None
+    org_id: int
+    raw_text: Optional[str] = ""
+    file_name: Optional[str] = "contract_agreement.pdf"
+    s3_key: Optional[str] = None
+
+@app.post("/contracts/extract-agreement")
+async def extract_contract_agreement(req: ExtractAgreementRequest):
+    """
+    HTTP POST /contracts/extract-agreement
+    
+    Extracts full commercial contract agreement metadata, parties, commercial terms,
+    validity dates, and obligations from an agreement document.
+    """
+    print(f"[AI Sidecar] Extracting contract agreement for org={req.org_id}, file={req.file_name}")
+    raw_text = req.raw_text or ""
+    if not raw_text and req.s3_key:
+        possible_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", req.s3_key),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend", "internal", "contracts", req.s3_key),
+            os.path.join("/tmp", req.s3_key)
+        ]
+        for p in possible_paths:
+            if os.path.exists(p):
+                try:
+                    import pypdf
+                    reader = pypdf.PdfReader(p)
+                    raw_text = "\n".join([page.extract_text() or "" for page in reader.pages])
+                    break
+                except Exception as e:
+                    print(f"[AI Sidecar] Failed to read PDF at {p}: {e}")
+
+    extracted = parse_contract_agreement(raw_text, req.file_name or "agreement.pdf")
+    return {"status": "SUCCESS", "data": extracted}
+
 
 async def run_email_parse_pipeline(org_id: int, entity_id: str, payload: dict):
     interaction_id = int(entity_id)
