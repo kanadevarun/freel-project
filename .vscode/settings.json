@@ -1,0 +1,105 @@
+{
+  // ============================================================
+  // LogisticsHQ — IDE / Watcher Performance Settings
+  // Reduces file-watcher load, search indexing, and gopls scope
+  // by excluding dependency, generated, and scratch directories.
+  // ============================================================
+
+  // --- File Watcher Exclusions (reduces inotify / FS events) ---
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/venv/**": true,
+    "**/.venv/**": true,
+    "**/vendor/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/coverage/**": true,
+    "**/scratch/**": true,
+    "**/screenshots_task41/**": true,
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/storage/**": true,
+    "backend/uploads/**": true,
+    "mariadb_run.log": true
+  },
+
+  // --- Search Exclusions (reduces ripgrep / search index load) ---
+  "search.exclude": {
+    "**/node_modules/**": true,
+    "**/venv/**": true,
+    "**/.venv/**": true,
+    "**/vendor/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/coverage/**": true,
+    "**/scratch/**": true,
+    "**/screenshots_task41/**": true,
+    "**/__pycache__/**": true,
+    "**/.pytest_cache/**": true,
+    "**/storage/**": true,
+    "backend/uploads/**": true,
+    "**/*.log": true,
+    "**/*.sql": false
+  },
+
+  // --- Explorer Exclusions (reduces tree rendering load) ---
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/*.pyc": true,
+    "**/*.pyo": true,
+    "backend/uploads": false,
+    "mariadb_run.log": true
+  },
+
+  // --- Go / gopls Settings (reduces language server memory) ---
+  "gopls": {
+    "build.directoryFilters": [
+      "-**/vendor",
+      "-**/node_modules",
+      "-**/dist",
+      "-**/scratch"
+    ],
+    "ui.diagnostics.analyses": {
+      "shadow": false
+    },
+    "ui.completion.usePlaceholders": false,
+    "ui.codelenses": {
+      "gc_details": false,
+      "generate": false,
+      "regenerate_cgo": false,
+      "run_govulncheck": false,
+      "tidy": false,
+      "upgrade_dependency": false,
+      "vendor": false
+    }
+  },
+  "go.toolsEnvVars": {
+    "GOFLAGS": "-mod=vendor"
+  },
+
+  // --- Python Settings ---
+  "python.defaultInterpreterPath": "C:\\Users\\Sai\\.venvs\\freel-ai\\Scripts\\python.exe",
+  "python.analysis.exclude": [
+    "**/node_modules/**",
+    "**/venv/**",
+    "**/.venv/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/scratch/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**"
+  ],
+  "python.analysis.indexing": false,
+
+  // --- Editor Performance ---
+  "editor.minimap.enabled": false,
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.value": 10,
+  "extensions.autoUpdate": false,
+
+  // --- Terminal ---
+  "terminal.integrated.env.windows": {}
+}

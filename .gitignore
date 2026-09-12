@@ -1,42 +1,119 @@
-# Dependency directories
+# ============================================================
+# LogisticsHQ — .gitignore
+# Updated: Performance optimization Stage 1
+# ============================================================
+
+# --- Dependency directories ---
 node_modules/
+vendor/
 
-# Build outputs
-dist/
+# --- Python virtual environments ---
+venv/
+.venv/
+env/
+.Python
 
-# Local configuration & secrets
-.env*
-.vercel/
-.DS_Store
+# ============================================================
+# IMPORTANT: External venv is now at C:\Users\Sai\.venvs\freel-ai
+# The ai_sidecar/venv directory is kept only for backward compat
+# ============================================================
 
-# Python
+# --- Python compiled/generated ---
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-.Python
-.venv/
-venv/
-env/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
 
-# Log files
+# --- Frontend build outputs ---
+dist/
+build/
+coverage/
+
+# --- Compiled Go binaries (all platforms) ---
+# Root-level stale binaries
+server.exe
+server.exe~
+
+# backend/ compiled binaries
+backend/server
+backend/server.exe
+backend/server.exe~
+backend/server_app
+backend/freel_server
+backend/main
+backend/server_test_build.exe
+
+# Generic Go binary patterns
+*.exe
+*.exe~
+
+# --- Screenshots / captured test artifacts ---
+screenshots_task41/
+*.png
+
+# Exception: keep the one referenced in docs
+!dashboard_ia_redesign_full.png
+
+# --- Scratch directories and temp files ---
+scratch/
+backend/scratch/
+ai_sidecar/scratch/
+
+# Root-level scratch Python scripts
+scratch_*.py
+
+# --- Log files ---
 *.log
 app.log
 ai_sidecar.log
+mariadb_run.log
+mysqld_err.log
+mysqld_out.log
+backend/backend_stderr.log
+backend/backend_stdout.log
+backend/server_stderr.log
+backend/server_stdout.log
+ai_sidecar/sidecar_stderr.log
+ai_sidecar/sidecar_stdout.log
 
-# LangGraph SQLite checkpoints
+# --- LangGraph SQLite checkpoints ---
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
 
-# Embedded / nested git repos
+# --- Local configuration & secrets ---
+.env*
+.vercel/
+
+# --- OS generated ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- IDE ---
+# .vscode/ is intentionally NOT ignored — workspace settings must be tracked
+# so that the IDE picks up file-watcher exclusions automatically on clone.
+.idea/
+
+# --- Embedded / nested git repos ---
 gemini-web2api/
 
-# Scratch / test scripts (root-level only)
+# --- Scratch / test scripts (root-level only) ---
 test*.py
 test*.sh
 test*.js
 patch_frontend.js
 append_handlers.go
 leads_import_test.csv
-gemini-web2api/
+
+# --- Task result files ---
+task41_browser_results.json
+eval_summary.json
