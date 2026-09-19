@@ -12,6 +12,10 @@ import RFQDocuments from './components/RFQDocuments';
 import RFQQuotes from './components/RFQQuotes';
 import RFQBookingHandoff from './components/RFQBookingHandoff';
 import RFQShipmentHandoff from './components/RFQShipmentHandoff';
+import RFQPricingIntelligenceSection from './components/RFQPricingIntelligenceSection';
+import RFQIntelligentPricingWorkflowSection from './components/RFQIntelligentPricingWorkflowSection';
+import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
+import PricingMarginPredictiveIntelligenceCard from '../../../components/predictions/PricingMarginPredictiveIntelligenceCard';
 import './RFQDetailPage.css';
 
 export default function RFQDetailPage() {
@@ -334,6 +338,24 @@ export default function RFQDetailPage() {
               )}
             </button>
 
+            {/* RFQ & Pricing Intelligence Tab (Phase 1 Task 1.3) */}
+            <button
+              className={`rfq-workspace-tab-btn ${activeTab === 'intelligence' ? 'active' : ''}`}
+              onClick={() => handleTabChange('intelligence')}
+              data-testid="tab-intelligence-btn"
+            >
+              <span>Pricing Intel</span>
+            </button>
+
+            {/* AI Quotation Workflow Tab (Phase 3 Task 3.4) */}
+            <button
+              className={`rfq-workspace-tab-btn ${activeTab === 'pricing-workflow' ? 'active' : ''}`}
+              onClick={() => handleTabChange('pricing-workflow')}
+              data-testid="tab-pricing-workflow-btn"
+            >
+              <span>⚡ AI Quotation Workflow</span>
+            </button>
+
             {/* Booking Tab (Task 14 Handoff) */}
             <button
               className={`rfq-workspace-tab-btn ${activeTab === 'booking' ? 'active' : ''}`}
@@ -360,6 +382,16 @@ export default function RFQDetailPage() {
           </div>
         </div>
 
+        {/* Workflow Assistant Recommendations */}
+        <ModuleRecommendationsWidget
+          sourceType="RFQ"
+          sourceId={id}
+          sourceRef={rfq?.rfq_number}
+          onRefreshNeeded={refreshAllData}
+        />
+
+        {/* Phase 4 Task 4.5: Predictive Pricing & Margin Intelligence */}
+        <PricingMarginPredictiveIntelligenceCard recordType="rfq" recordId={id} />
 
         {/* 3. Tab Content Panels */}
         {activeTab === 'overview' && (
@@ -422,6 +454,18 @@ export default function RFQDetailPage() {
             onMutationSuccess={refreshAllData}
             onSwitchTab={handleTabChange}
             onRefresh={refreshAllData}
+          />
+        )}
+
+        {activeTab === 'intelligence' && (
+          <RFQPricingIntelligenceSection rfqId={id} />
+        )}
+
+        {activeTab === 'pricing-workflow' && (
+          <RFQIntelligentPricingWorkflowSection
+            rfqId={id}
+            rfqData={rfq}
+            onWorkflowUpdated={refreshAllData}
           />
         )}
 

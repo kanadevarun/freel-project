@@ -16,4 +16,7 @@ type Service interface {
 	// Simple meaning: It generates a secure, clickable link so a user can download their document.
 	// Example: link, err := fileSvc.GetFileURL(ctx, "invoice-123.pdf")
 	GetFileURL(ctx context.Context, filename string) (string, error)
+
+	// DownloadFile retrieves the raw byte content and MIME type of a stored file.
+	DownloadFile(ctx context.Context, filename string) ([]byte, string, error)
 }

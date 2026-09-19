@@ -1,10 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import ManualUpdatePanel from './ManualUpdatePanel';
 import DocumentWorkspace from './DocumentWorkspace';
 import FinanceWorkspace from './FinanceWorkspace';
 import BillingWorkspace from './BillingWorkspace';
 import CustomDropdown from './CustomDropdown';
+import BusinessIntelligenceCard from '../../../components/common/BusinessIntelligenceCard';
+import ShipmentOperationsIntelligenceSection from './components/ShipmentOperationsIntelligenceSection';
+import AutonomousShipmentLifecycleCard from './components/AutonomousShipmentLifecycleCard';
+import AutonomousExceptionLifecycleCard from './components/AutonomousExceptionLifecycleCard';
+import ShipmentOperationsAutomationSection from './components/ShipmentOperationsAutomationSection';
+import ExceptionResolutionDrawer from '../../../components/autonomy/ExceptionResolutionDrawer';
+import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
+import ShipmentPredictiveETACard from '../../../components/predictions/ShipmentPredictiveETACard';
+import ShipmentDisruptionForecastCard from '../../../components/predictions/ShipmentDisruptionForecastCard';
+import ShipmentReadinessPredictiveIntelligenceCard from '../../../components/predictions/ShipmentReadinessPredictiveIntelligenceCard';
+import NetworkPerformancePredictiveCard from '../../../components/predictions/NetworkPerformancePredictiveCard';
 import api from '../../../services/api';
 import { shipmentService } from '../../../services/shipmentService';
 import {
@@ -37,6 +49,14 @@ import './Shipments.css';
 export default function ShipmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'overview');
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
+
   const [shipment, setShipment] = useState(null);
   const [milestones, setMilestones] = useState([]);
   const [exceptions, setExceptions] = useState([]);
@@ -61,6 +81,7 @@ export default function ShipmentDetail() {
   const [newExcSeverity, setNewExcSeverity] = useState('MEDIUM');
   const [newExcTitle, setNewExcTitle] = useState('');
   const [newExcDesc, setNewExcDesc] = useState('');
+  const [selectedExceptionForResolution, setSelectedExceptionForResolution] = useState(null);
   const [submittingException, setSubmittingException] = useState(false);
   const [raiseError, setRaiseError] = useState('');
 
@@ -141,7 +162,7 @@ export default function ShipmentDetail() {
       await fetchShipmentDetails(false);
     } catch (err) {
       console.error('Error manually updating milestone:', err);
-      alert('Failed to update milestone: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to update milestone: ' + (err.message || 'Unknown error'));
     } finally {
       setSubmittingMilestone(false);
     }
@@ -185,29 +206,31 @@ export default function ShipmentDetail() {
   const handleAcknowledgeException = async (excId) => {
     try {
       await api.post(`/api/v1/shipments/${id}/exceptions/${excId}/acknowledge`);
+      toast.success('Exception acknowledged');
       await fetchShipmentDetails(false);
     } catch (err) {
       console.error('Error acknowledging exception:', err);
-      alert('Failed to acknowledge exception: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to acknowledge exception: ' + (err.message || 'Unknown error'));
     }
   };
 
   const handleResolveExceptionSubmit = async (e, excId) => {
     e.preventDefault();
     if (!resolutionNotesInput.trim()) {
-      alert('Please enter resolution notes to document actions taken.');
+      toast.error('Please enter resolution notes to document actions taken.');
       return;
     }
     try {
       await api.post(`/api/v1/shipments/${id}/exceptions/${excId}/resolve`, {
         resolution_notes: resolutionNotesInput,
       });
+      toast.success('Exception resolved successfully');
       setResolvingExcId(null);
       setResolutionNotesInput('');
       await fetchShipmentDetails(false);
     } catch (err) {
       console.error('Error resolving exception:', err);
-      alert('Failed to resolve exception: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to resolve exception: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -217,10 +240,11 @@ export default function ShipmentDetail() {
     }
     try {
       await api.post(`/api/v1/shipments/${id}/exceptions/${excId}/dismiss`);
+      toast.success('Exception dismissed');
       await fetchShipmentDetails(false);
     } catch (err) {
       console.error('Error dismissing exception:', err);
-      alert('Failed to dismiss exception: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to dismiss exception: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -274,10 +298,11 @@ export default function ShipmentDetail() {
     try {
       setRunningDiagnostics(true);
       await api.post(`/api/v1/shipments/${id}/exceptions/evaluate`);
+      toast.success('Exceptions evaluation completed');
       await fetchShipmentDetails(false);
     } catch (err) {
       console.error('Error evaluating exceptions:', err);
-      alert('Failed to run exceptions diagnostics: ' + (err.message || 'Unknown error'));
+      toast.error('Failed to run exceptions diagnostics: ' + (err.message || 'Unknown error'));
     } finally {
       setRunningDiagnostics(false);
     }
@@ -349,9 +374,10 @@ export default function ShipmentDetail() {
     try {
       setSubmittingClosure(true);
       await api.post(`/api/v1/shipments/${id}/evaluate`);
+      toast.success('Closure eligibility evaluated');
       await fetchShipmentDetails(false);
     } catch (err) {
-      alert("Failed to evaluate closure eligibility: " + (err.message || err));
+      toast.error("Failed to evaluate closure eligibility: " + (err.message || err));
     } finally {
       setSubmittingClosure(false);
     }
@@ -361,9 +387,10 @@ export default function ShipmentDetail() {
     try {
       setSubmittingClosure(true);
       await api.post(`/api/v1/shipments/${id}/complete`);
+      toast.success('Shipment marked as completed');
       await fetchShipmentDetails(false);
     } catch (err) {
-      alert("Failed to complete shipment: " + (err.message || err));
+      toast.error("Failed to complete shipment: " + (err.message || err));
     } finally {
       setSubmittingClosure(false);
     }
@@ -373,9 +400,10 @@ export default function ShipmentDetail() {
     try {
       setSubmittingClosure(true);
       await api.post(`/api/v1/shipments/${id}/reopen`);
+      toast.success('Shipment reopened');
       await fetchShipmentDetails(false);
     } catch (err) {
-      alert("Failed to reopen shipment: " + (err.message || err));
+      toast.error("Failed to reopen shipment: " + (err.message || err));
     } finally {
       setSubmittingClosure(false);
     }
@@ -578,13 +606,12 @@ export default function ShipmentDetail() {
             <button
               className="sd-btn sd-btn-ghost"
               onClick={() => {
+                handleTabChange('milestones');
                 const firstPending = milestones.find(m => m.status !== 'COMPLETED');
                 if (firstPending) {
                   handleOpenMilestoneForm(firstPending);
-                  document.getElementById('milestones-panel')?.scrollIntoView({ behavior: 'smooth' });
                 } else if (milestones.length > 0) {
                   handleOpenMilestoneForm(milestones[milestones.length - 1]);
-                  document.getElementById('milestones-panel')?.scrollIntoView({ behavior: 'smooth' });
                 }
               }}
             >
@@ -593,7 +620,10 @@ export default function ShipmentDetail() {
 
             <button
               className="sd-btn sd-btn-ghost"
-              onClick={handleEvaluateExceptions}
+              onClick={() => {
+                handleTabChange('exceptions');
+                handleEvaluateExceptions();
+              }}
               disabled={runningDiagnostics}
             >
               <Zap size={14} className={runningDiagnostics ? 'sd-spin' : ''} />
@@ -612,7 +642,7 @@ export default function ShipmentDetail() {
                   {closureStatus === 'ACTIVE' && (
                     <button
                       className="sd-dropdown-item"
-                      onClick={() => { setHeaderMenuOpen(false); handleEvaluateClosure(); }}
+                      onClick={() => { setHeaderMenuOpen(false); handleTabChange('milestones'); handleEvaluateClosure(); }}
                     >
                       <Check size={14} /> Evaluate Closure Eligibility
                     </button>
@@ -620,7 +650,7 @@ export default function ShipmentDetail() {
                   {closureStatus === 'READY_FOR_CLOSURE' && (
                     <button
                       className="sd-dropdown-item sd-item-success"
-                      onClick={() => { setHeaderMenuOpen(false); handleCompleteShipment(); }}
+                      onClick={() => { setHeaderMenuOpen(false); handleTabChange('milestones'); handleCompleteShipment(); }}
                     >
                       <CheckCircle2 size={14} /> Complete & Close File
                     </button>
@@ -628,14 +658,14 @@ export default function ShipmentDetail() {
                   {closureStatus === 'CLOSED' && (
                     <button
                       className="sd-dropdown-item"
-                      onClick={() => { setHeaderMenuOpen(false); handleReopenShipment(); }}
+                      onClick={() => { setHeaderMenuOpen(false); handleTabChange('milestones'); handleReopenShipment(); }}
                     >
                       <RefreshCw size={14} /> Reopen Shipment File
                     </button>
                   )}
                   <button
                     className="sd-dropdown-item"
-                    onClick={() => { setHeaderMenuOpen(false); setShowRaiseForm(true); document.getElementById('exceptions-panel')?.scrollIntoView({ behavior: 'smooth' }); }}
+                    onClick={() => { setHeaderMenuOpen(false); handleTabChange('exceptions'); setShowRaiseForm(true); }}
                   >
                     <AlertCircle size={14} /> Raise Manual Exception
                   </button>
@@ -727,7 +757,12 @@ export default function ShipmentDetail() {
 
         {/* ── 2. OPERATIONAL SUMMARY STRIP ───────────────────────────────────── */}
         <div className="sd-summary-strip">
-          <div className="sd-sum-item sd-sum-progress-item">
+          <div
+            className="sd-sum-item sd-sum-progress-item"
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleTabChange('milestones')}
+            title="View tracking milestones"
+          >
             <span className="sd-sum-label">PROGRESS</span>
             <div className="sd-sum-progress-wrap">
               <div
@@ -797,7 +832,12 @@ export default function ShipmentDetail() {
 
           <div className="sd-sum-divider" />
 
-          <div className="sd-sum-item">
+          <div
+            className="sd-sum-item"
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleTabChange('exceptions')}
+            title="View anomalies & exceptions"
+          >
             <span className="sd-sum-label">EXCEPTIONS</span>
             {activeExceptionCount > 0 ? (
               <span className="sd-sum-val sd-sum-exc-active">
@@ -830,7 +870,7 @@ export default function ShipmentDetail() {
           <div
             className="sd-sum-item"
             style={{ cursor: 'pointer' }}
-            onClick={() => document.getElementById('finance-workspace')?.scrollIntoView({ behavior: 'smooth' })}
+            onClick={() => handleTabChange('finance')}
             title="Jump to Financial Operations Workspace"
           >
             <span className="sd-sum-label">FINANCIALS</span>
@@ -913,326 +953,362 @@ export default function ShipmentDetail() {
             {criticalExcCount > 0 && <span className="sd-exc-alert-crit"> · {criticalExcCount} Critical</span>}
             <p>Review and resolve exceptions in the panel below to unblock operations and ensure on-time delivery.</p>
           </div>
+          <button
+            type="button"
+            className="sd-btn sd-btn-outline"
+            style={{ marginLeft: 'auto', background: '#ffffff', borderColor: '#fecaca', color: '#b91c1c' }}
+            onClick={() => handleTabChange('exceptions')}
+          >
+            Manage Exceptions ({activeExceptionCount}) →
+          </button>
         </div>
       )}
 
-      {/* ── 4. TRANSIT JOURNEY VISUALIZATION ─────────────────────────────────── */}
-      <div className="sd-journey-card">
-        <div className="sd-journey-header">
-          <div>
-            <h3 className="sd-journey-title">Transit Journey</h3>
-            <p className="sd-journey-sub">
-              {shipment.carrier_scac && <strong>{shipment.carrier_scac}</strong>}
-              {shipment.vessel_name && <> · {shipment.vessel_name}</>}
-              {shipment.voyage_number && <> (Voyage {shipment.voyage_number})</>}
-              {' · Direct Ocean Route'}
-            </p>
-          </div>
-          <div className="sd-journey-meta">
-            {progressPct >= 100 ? (
-              <span className="sd-journey-status-badge sd-status-completed">
-                <CheckCircle2 size={13} /> Destination Reached (100%)
-              </span>
-            ) : (
-              <span className="sd-journey-status-badge sd-status-active">
-                <Ship size={13} /> In Transit · {progressPct}%
+      {/* ── 4. WORKSPACE NAVIGATION TABS ───────────────────────────────────── */}
+      <div className="sd-tabs-shell">
+        <div className="sd-tabs-scroll" role="tablist">
+          <button
+            className={`sd-nav-tab ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => handleTabChange('overview')}
+            id="tab-overview"
+            role="tab"
+            aria-selected={activeTab === 'overview'}
+          >
+            <Ship size={15} /> Overview
+          </button>
+          <button
+            className={`sd-nav-tab ${activeTab === 'milestones' ? 'active' : ''}`}
+            onClick={() => handleTabChange('milestones')}
+            id="tab-milestones"
+            role="tab"
+            aria-selected={activeTab === 'milestones'}
+          >
+            <Calendar size={15} /> Tracking & Milestones
+            {milestones.length > 0 && (
+              <span className="sd-nav-tab-badge">
+                {milestones.filter((m) => m.status === 'COMPLETED').length}/{milestones.length}
               </span>
             )}
-          </div>
-        </div>
-
-        {/* ── Continuous Route Flow Container ── */}
-        <div className="sd-journey-route-box">
-          {/* Left: Origin Port */}
-          <div className="sd-jport-side sd-jport-origin">
-            <div className="sd-jport-code-row">
-              <span className="sd-jport-dot origin" />
-              <span className="sd-jport-code">{originPort.code}</span>
-              {originPort.country && <span className="sd-jport-country">{originPort.country.toUpperCase()}</span>}
-            </div>
-            <div className="sd-jport-city">{originPort.name || 'Origin Port'}</div>
-            <div className="sd-jport-date">
-              <span className="sd-jport-date-lbl">
-                {trackingSummary?.actual_etd || shipment.actual_departure ? 'Departed:' : 'Planned ETD:'}
-              </span>{' '}
-              <strong className="sd-jport-date-val">
-                {formatDateOnly(
-                  trackingSummary?.actual_etd ||
-                  shipment.actual_departure ||
-                  trackingSummary?.planned_etd ||
-                  shipment.planned_etd ||
-                  shipment.etd ||
-                  milestones.find(m => m.milestone_code === 'DEPARTURE' || m.milestone_code === 'VESSEL_DEPARTURE')?.actual_date ||
-                  milestones.find(m => m.milestone_code === 'DEPARTURE' || m.milestone_code === 'VESSEL_DEPARTURE')?.planned_date
-                )}
-              </strong>
-            </div>
-          </div>
-
-          {/* Center: Transit Ocean Corridor */}
-          <div className="sd-jcorridor-center">
-            <div className="sd-jcorridor-vessel">
-              <Ship size={14} className="sd-vessel-icon" />
-              <span className="sd-vessel-text">{shipment.vessel_name || 'Vessel Assigned'}</span>
-              {shipment.voyage_number && <span className="sd-voy-sub">· Voy {shipment.voyage_number}</span>}
-            </div>
-
-            <div className="sd-jtrack-line-container">
-              <div className="sd-jtrack-bg-line" />
-              <div
-                className="sd-jtrack-fill-line"
-                style={{
-                  width: `${progressPct}%`,
-                  background: trackingState === 'DELAYED' || trackingState === 'EXCEPTION'
-                    ? '#dc2626'
-                    : trackingState === 'AT_RISK'
-                      ? '#d97706'
-                      : 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)'
-                }}
-              />
-              <div
-                className="sd-jtrack-ship-marker"
-                style={{ left: `${Math.min(Math.max(progressPct, 4), 96)}%` }}
-                title={`Vessel Position: ${progressPct}%`}
-              >
-                <Ship size={12} />
-              </div>
-            </div>
-
-            <div className="sd-jcorridor-footer">
-              <span>🌊 Direct Ocean Corridor</span>
-              <span>·</span>
-              <span>{progressPct >= 100 ? 'Port Discharged' : 'In Transit'}</span>
-              {trackingSummary?.schedule_variance != null && (
-                <>
-                  <span>·</span>
-                  <span className={trackingSummary.schedule_variance > 0 ? 'sd-var-late' : 'sd-var-ok'}>
-                    {trackingSummary.schedule_variance > 0
-                      ? `+${trackingSummary.schedule_variance.toFixed(1)}d late`
-                      : 'On Schedule'}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Destination Port */}
-          <div className="sd-jport-side sd-jport-dest">
-            <div className="sd-jport-code-row">
-              <span className="sd-jport-dot dest" />
-              <span className="sd-jport-code">{destPort.code}</span>
-              {destPort.country && <span className="sd-jport-country">{destPort.country.toUpperCase()}</span>}
-            </div>
-            <div className="sd-jport-city">{destPort.name || 'Destination Port'}</div>
-            <div className="sd-jport-date">
-              <span className="sd-jport-date-lbl">
-                {trackingSummary?.actual_arrival || shipment.actual_arrival ? 'Arrived:' : 'Planned ETA:'}
-              </span>{' '}
-              <strong className="sd-jport-date-val">
-                {formatDateOnly(
-                  trackingSummary?.actual_arrival ||
-                  shipment.actual_arrival ||
-                  trackingSummary?.planned_eta ||
-                  shipment.planned_eta ||
-                  shipment.eta ||
-                  milestones.find(m => m.milestone_code === 'ARRIVAL' || m.milestone_code === 'VESSEL_ARRIVAL' || m.milestone_code === 'DISCHARGE')?.actual_date ||
-                  milestones.find(m => m.milestone_code === 'ARRIVAL' || m.milestone_code === 'VESSEL_ARRIVAL' || m.milestone_code === 'DISCHARGE')?.planned_date
-                )}
-              </strong>
-            </div>
-          </div>
+          </button>
+          <button
+            className={`sd-nav-tab ${activeTab === 'exceptions' ? 'active' : ''}`}
+            onClick={() => handleTabChange('exceptions')}
+            id="tab-exceptions"
+            role="tab"
+            aria-selected={activeTab === 'exceptions'}
+          >
+            <AlertTriangle size={15} /> Exceptions & Diagnostics
+            {activeExceptionCount > 0 && (
+              <span className={`sd-nav-tab-badge ${criticalExcCount > 0 ? 'badge-danger' : 'badge-amber'}`}>
+                {activeExceptionCount}
+              </span>
+            )}
+          </button>
+          <button
+            className={`sd-nav-tab ${activeTab === 'documents' ? 'active' : ''}`}
+            onClick={() => handleTabChange('documents')}
+            id="tab-documents"
+            role="tab"
+            aria-selected={activeTab === 'documents'}
+          >
+            <FileText size={15} /> Documents & Compliance
+          </button>
+          <button
+            className={`sd-nav-tab ${activeTab === 'finance' ? 'active' : ''}`}
+            onClick={() => handleTabChange('finance')}
+            id="tab-finance"
+            role="tab"
+            aria-selected={activeTab === 'finance'}
+          >
+            <DollarSign size={15} /> Financials & Billing
+          </button>
+          <button
+            className={`sd-nav-tab ${activeTab === 'intelligence' ? 'active' : ''}`}
+            onClick={() => handleTabChange('intelligence')}
+            id="tab-intelligence"
+            role="tab"
+            aria-selected={activeTab === 'intelligence'}
+          >
+            <Zap size={15} /> Operations Copilot & AI
+          </button>
         </div>
       </div>
 
-      {/* ── 5. MAIN TWO-COLUMN OPERATIONAL LAYOUT ────────────────────────────── */}
-      <div className="sd-main-grid">
+      {/* ── TAB 1: OVERVIEW ── */}
+      {activeTab === 'overview' && (
+        <div className="sd-tab-content sd-tab-overview">
+          {/* Phase 4 Predictive ETA & Delay Intelligence */}
+          <ShipmentPredictiveETACard shipmentId={id} authoritativeEta={shipment.eta} />
 
-        {/* ── LEFT COLUMN: WORKSPACES ─────────────────────────────────────────── */}
-        <div className="sd-left-col">
+          {/* Phase 4 Predictive Exception & Disruption Forecasting */}
+          <ShipmentDisruptionForecastCard
+            shipmentId={id}
+            onNavigateException={() => setActiveTab('exceptions')}
+          />
 
-          {/* 1. Operational Milestones */}
-          <div className="sd-panel" id="milestones-panel">
-            <div className="sd-panel-header">
-              <div className="sd-panel-title-row">
-                <div>
-                  <h3 className="sd-panel-title">Operational Milestones</h3>
-                  <p className="sd-panel-desc">Real-time carrier milestone monitoring from electronic tracking updates.</p>
-                </div>
-                {milestones.length > 0 && (
-                  <span className="sd-milestone-count-badge">
-                    {milestones.filter(m => m.status === 'COMPLETED').length} of {milestones.length} Completed
+          {/* Phase 4 Predictive Documentation, Readiness & Compliance Intelligence */}
+          <ShipmentReadinessPredictiveIntelligenceCard
+            shipmentId={id}
+            shipment={shipment}
+          />
+
+          {/* Phase 4 Predictive Carrier & Network Performance Intelligence */}
+          {shipment.carrier_scac && (
+            <NetworkPerformancePredictiveCard
+              entityType="carrier"
+              entityId={shipment.carrier_scac}
+            />
+          )}
+
+          {/* Transit Journey Ocean Corridor Flow */}
+          <div className="sd-journey-card">
+            <div className="sd-journey-header">
+              <div>
+                <h3 className="sd-journey-title">Transit Journey</h3>
+                <p className="sd-journey-sub">
+                  {shipment.carrier_scac && <strong>{shipment.carrier_scac}</strong>}
+                  {shipment.vessel_name && <> · {shipment.vessel_name}</>}
+                  {shipment.voyage_number && <> (Voyage {shipment.voyage_number})</>}
+                  {' · Direct Ocean Route'}
+                </p>
+              </div>
+              <div className="sd-journey-meta">
+                {progressPct >= 100 ? (
+                  <span className="sd-journey-status-badge sd-status-completed">
+                    <CheckCircle2 size={13} /> Destination Reached (100%)
+                  </span>
+                ) : (
+                  <span className="sd-journey-status-badge sd-status-active">
+                    <Ship size={13} /> In Transit · {progressPct}%
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="sd-milestones-list">
-              {milestones.length === 0 ? (
-                <div className="sd-panel-empty-box">
-                  <Calendar size={22} className="sd-empty-icon-muted" />
-                  <div className="sd-empty-title">Milestones Not Available</div>
-                  <p className="sd-empty-text">Milestone information will appear when carrier updates are received for this shipment.</p>
+            <div className="sd-journey-route-box">
+              {/* Left: Origin Port */}
+              <div className="sd-jport-side sd-jport-origin">
+                <div className="sd-jport-code-row">
+                  <span className="sd-jport-dot origin" />
+                  <span className="sd-jport-code">{originPort.code}</span>
+                  {originPort.country && <span className="sd-jport-country">{originPort.country.toUpperCase()}</span>}
                 </div>
-              ) : (
-                milestones.map((m, idx) => {
-                  const done = m.status === 'COMPLETED';
-                  const isCurrent = !done && (idx === 0 || milestones[idx - 1]?.status === 'COMPLETED');
-                  const isDelayed = !done && m.planned_date && new Date(m.planned_date) < new Date();
+                <div className="sd-jport-city">{originPort.name || 'Origin Port'}</div>
+                <div className="sd-jport-date">
+                  <span className="sd-jport-date-lbl">
+                    {trackingSummary?.actual_etd || shipment.actual_departure ? 'Departed:' : 'Planned ETD:'}
+                  </span>{' '}
+                  <strong className="sd-jport-date-val">
+                    {formatDateOnly(
+                      trackingSummary?.actual_etd ||
+                      shipment.actual_departure ||
+                      trackingSummary?.planned_etd ||
+                      shipment.planned_etd ||
+                      shipment.etd ||
+                      milestones.find(m => m.milestone_code === 'DEPARTURE' || m.milestone_code === 'VESSEL_DEPARTURE')?.actual_date ||
+                      milestones.find(m => m.milestone_code === 'DEPARTURE' || m.milestone_code === 'VESSEL_DEPARTURE')?.planned_date
+                    )}
+                  </strong>
+                </div>
+              </div>
 
-                  return (
-                    <div
-                      key={m.id}
-                      className={`sd-milestone-node ${
-                        done
-                          ? 'sd-ms-done'
-                          : isCurrent
-                            ? 'sd-ms-active-node'
-                            : 'sd-ms-pending'
-                      }`}
-                    >
-                      <div className="sd-ms-connector">
-                        <div
-                          className={`sd-ms-dot ${
-                            done
-                              ? 'sd-ms-dot-done'
-                              : isCurrent
-                                ? 'sd-ms-dot-active'
-                                : 'sd-ms-dot-pending'
-                          }`}
-                        >
-                          {done ? <CheckCircle2 size={14} /> : <span>{idx + 1}</span>}
-                        </div>
-                        {idx < milestones.length - 1 && (
-                          <div className={`sd-ms-line ${done ? 'sd-line-done' : ''}`} />
-                        )}
-                      </div>
+              {/* Center: Transit Ocean Corridor */}
+              <div className="sd-jcorridor-center">
+                <div className="sd-jcorridor-vessel">
+                  <Ship size={14} className="sd-vessel-icon" />
+                  <span className="sd-vessel-text">{shipment.vessel_name || 'Vessel Assigned'}</span>
+                  {shipment.voyage_number && <span className="sd-voy-sub">· Voy {shipment.voyage_number}</span>}
+                </div>
 
-                      <div className="sd-ms-content">
-                        <div className="sd-ms-header">
-                          <span className="sd-ms-code">{m.milestone_code.replace(/_/g, ' ')}</span>
-                          <span
-                            className={`sd-ms-badge ${
-                              done
-                                ? 'sd-ms-badge-done'
-                                : isDelayed
-                                  ? 'sd-ms-badge-delayed'
-                                  : isCurrent
-                                    ? 'sd-ms-badge-active'
-                                    : 'sd-ms-badge-pending'
-                            }`}
-                          >
-                            {done ? 'COMPLETED' : isDelayed ? 'DELAYED' : isCurrent ? 'ACTIVE' : 'PENDING'}
-                          </span>
+                <div className="sd-jtrack-line-container">
+                  <div className="sd-jtrack-bg-line" />
+                  <div
+                    className="sd-jtrack-fill-line"
+                    style={{
+                      width: `${progressPct}%`,
+                      background: trackingState === 'DELAYED' || trackingState === 'EXCEPTION'
+                        ? '#dc2626'
+                        : trackingState === 'AT_RISK'
+                          ? '#d97706'
+                          : 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)'
+                    }}
+                  />
+                  <div
+                    className="sd-jtrack-ship-marker"
+                    style={{ left: `${Math.min(Math.max(progressPct, 4), 96)}%` }}
+                    title={`Vessel Position: ${progressPct}%`}
+                  >
+                    <Ship size={12} />
+                  </div>
+                </div>
 
-                          {!done && (
-                            <button
-                              className="sd-ms-mark-btn"
-                              onClick={() => handleOpenMilestoneForm(m)}
-                            >
-                              Mark Complete
-                            </button>
-                          )}
-                        </div>
+                <div className="sd-jcorridor-footer">
+                  <span>🌊 Direct Ocean Corridor</span>
+                  <span>·</span>
+                  <span>{progressPct >= 100 ? 'Port Discharged' : 'In Transit'}</span>
+                  {trackingSummary?.schedule_variance != null && (
+                    <>
+                      <span>·</span>
+                      <span className={trackingSummary.schedule_variance > 0 ? 'sd-var-late' : 'sd-var-ok'}>
+                        {trackingSummary.schedule_variance > 0
+                          ? `+${trackingSummary.schedule_variance.toFixed(1)}d late`
+                          : 'On Schedule'}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
 
-                        {m.description && <p className="sd-ms-desc">{m.description}</p>}
-
-                        <div className="sd-ms-dates">
-                          <span className="sd-ms-planned-date">
-                            Planned: <strong>{formatDate(m.planned_date)}</strong>
-                          </span>
-                          {done && (
-                            <span className="sd-ms-actual-date">
-                              ✓ Actual: <strong>{formatDate(m.actual_date)}</strong>
-                            </span>
-                          )}
-                          {m.location && (
-                            <span className="sd-ms-loc">
-                              <MapPin size={11} /> {getPortDetails(m.location).fullName || m.location}
-                            </span>
-                          )}
-                        </div>
-
-                        {activeMilestoneForm?.id === m.id && (
-                          <form onSubmit={handleUpdateMilestone} className="sd-ms-form">
-                            <div className="sd-ms-form-header">
-                              <strong>Complete Milestone: {m.milestone_code.replace(/_/g, ' ')}</strong>
-                            </div>
-                            <div className="sd-ms-form-grid">
-                              <div className="sd-form-field">
-                                <label>Actual Date & Time *</label>
-                                <input
-                                  type="datetime-local"
-                                  required
-                                  value={actualDate}
-                                  onChange={(e) => setActualDate(e.target.value)}
-                                />
-                              </div>
-                              <div className="sd-form-field">
-                                <label>Location</label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g. INNSA"
-                                  value={milestoneLocation}
-                                  onChange={(e) => setMilestoneLocation(e.target.value)}
-                                />
-                              </div>
-                            </div>
-                            <div className="sd-form-field">
-                              <label>Operational Notes</label>
-                              <textarea
-                                rows={2}
-                                placeholder="Carrier logs or verification notes..."
-                                value={milestoneNotes}
-                                onChange={(e) => setMilestoneNotes(e.target.value)}
-                              />
-                            </div>
-                            <div className="sd-ms-form-actions">
-                              <button
-                                type="button"
-                                className="sd-form-btn-cancel"
-                                onClick={() => setActiveMilestoneForm(null)}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="submit"
-                                className="sd-form-btn-save"
-                                disabled={submittingMilestone}
-                              >
-                                {submittingMilestone ? 'Saving...' : 'Save Milestone'}
-                              </button>
-                            </div>
-                          </form>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              {/* Right: Destination Port */}
+              <div className="sd-jport-side sd-jport-dest">
+                <div className="sd-jport-code-row">
+                  <span className="sd-jport-dot dest" />
+                  <span className="sd-jport-code">{destPort.code}</span>
+                  {destPort.country && <span className="sd-jport-country">{destPort.country.toUpperCase()}</span>}
+                </div>
+                <div className="sd-jport-city">{destPort.name || 'Destination Port'}</div>
+                <div className="sd-jport-date">
+                  <span className="sd-jport-date-lbl">
+                    {trackingSummary?.actual_arrival || shipment.actual_arrival ? 'Arrived:' : 'Planned ETA:'}
+                  </span>{' '}
+                  <strong className="sd-jport-date-val">
+                    {formatDateOnly(
+                      trackingSummary?.actual_arrival ||
+                      shipment.actual_arrival ||
+                      trackingSummary?.planned_eta ||
+                      shipment.planned_eta ||
+                      shipment.eta ||
+                      milestones.find(m => m.milestone_code === 'ARRIVAL' || m.milestone_code === 'VESSEL_ARRIVAL' || m.milestone_code === 'DISCHARGE')?.actual_date ||
+                      milestones.find(m => m.milestone_code === 'ARRIVAL' || m.milestone_code === 'VESSEL_ARRIVAL' || m.milestone_code === 'DISCHARGE')?.planned_date
+                    )}
+                  </strong>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* 2. Document & Compliance Workspace */}
-          <DocumentWorkspace shipmentId={id} shipment={shipment} onRefreshShipment={() => fetchShipmentDetails(false)} />
+          {/* Structured 2-Column Overview Grid */}
+          <div className="sd-overview-grid">
+            {/* Left Column */}
+            <div className="sd-overview-col">
+              {/* Operational Milestones Highlights */}
+              <div className="sd-overview-card">
+                <div className="sd-overview-card-header">
+                  <h3 className="sd-overview-card-title">
+                    <Calendar size={18} style={{ color: '#2563eb' }} /> Operational Milestones Snapshot
+                  </h3>
+                  <button
+                    type="button"
+                    className="sd-overview-action-link"
+                    onClick={() => handleTabChange('milestones')}
+                  >
+                    View All ({milestones.length}) →
+                  </button>
+                </div>
+                {(() => {
+                  const nextMs = milestones.find((m) => m.status !== 'COMPLETED');
+                  const completedCount = milestones.filter((m) => m.status === 'COMPLETED').length;
+                  return (
+                    <div>
+                      {nextMs ? (
+                        <div className="sd-overview-milestone-highlight">
+                          <div className="sd-overview-ms-icon">
+                            <Clock size={18} />
+                          </div>
+                          <div className="sd-overview-ms-body">
+                            <span className="sd-sum-label">NEXT UPCOMING MILESTONE</span>
+                            <h4>{nextMs.milestone_code.replace(/_/g, ' ')}</h4>
+                            {nextMs.description && <p>{nextMs.description}</p>}
+                            <div className="sd-overview-ms-meta">
+                              Planned: <strong>{formatDate(nextMs.planned_date)}</strong>
+                              {nextMs.location && (
+                                <> · Location: <strong>{getPortDetails(nextMs.location).fullName || nextMs.location}</strong></>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="sd-overview-milestone-highlight" style={{ background: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                          <div className="sd-overview-ms-icon" style={{ background: '#dcfce7', color: '#166534' }}>
+                            <CheckCircle2 size={18} />
+                          </div>
+                          <div className="sd-overview-ms-body">
+                            <h4 style={{ color: '#166534' }}>All Milestones Completed</h4>
+                            <p>All {milestones.length} operational journey milestones have been verified and completed.</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="sd-track-progress-section" style={{ margin: 0 }}>
+                        <div className="sd-track-prog-header">
+                          <span>Milestone Completion</span>
+                          <strong>{completedCount} of {milestones.length} ({Math.round(milestones.length ? (completedCount / milestones.length) * 100 : 0)}%)</strong>
+                        </div>
+                        <div className="sd-track-prog-track">
+                          <div
+                            className="sd-track-prog-fill"
+                            style={{
+                              width: `${milestones.length ? (completedCount / milestones.length) * 100 : 0}%`,
+                              background: '#2563eb'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
 
-          {/* 3. Finance & Reconciliation Workspaces */}
-          <FinanceWorkspace shipmentId={id} shipment={shipment} onRefreshShipment={() => fetchShipmentDetails(false)} />
-          <BillingWorkspace shipmentId={id} onRefreshShipment={() => fetchShipmentDetails(false)} />
-        </div>
+              {/* Cargo & Equipment Manifest */}
+              <div className="sd-overview-card">
+                <div className="sd-overview-card-header">
+                  <h3 className="sd-overview-card-title">
+                    <Package size={18} style={{ color: '#2563eb' }} /> Cargo & Equipment Manifest
+                  </h3>
+                </div>
+                <div className="sd-metadata-grid">
+                  <div className="sd-meta-item">
+                    <div className="sd-meta-label">CARRIER SCAC</div>
+                    <div className="sd-meta-val"><span className="sd-scac-tag">{shipment.carrier_scac || '—'}</span></div>
+                  </div>
+                  <div className="sd-meta-item">
+                    <div className="sd-meta-label">VESSEL</div>
+                    <div className="sd-meta-val">🚢 {shipment.vessel_name || 'Unassigned'}</div>
+                  </div>
+                  <div className="sd-meta-item">
+                    <div className="sd-meta-label">VOYAGE NUMBER</div>
+                    <div className="sd-meta-val">{shipment.voyage_number || '—'}</div>
+                  </div>
+                  <div className="sd-meta-item">
+                    <div className="sd-meta-label">B/L NUMBERS</div>
+                    <div className="sd-meta-val">
+                      {shipment.mbl_number ? `MBL: ${shipment.mbl_number}` : 'MBL: —'}
+                      {shipment.hbl_number ? ` · HBL: ${shipment.hbl_number}` : ''}
+                    </div>
+                  </div>
+                  <div className="sd-meta-item sd-meta-full">
+                    <div className="sd-meta-label">CONTAINERS ASSIGNED ({containerCount})</div>
+                    <div className="sd-containers-wrap">
+                      {containers.length > 0 ? (
+                        containers.map((c) => (
+                          <span key={c} className="sd-container-tag">📦 {c}</span>
+                        ))
+                      ) : (
+                        <span className="sd-meta-empty">No container equipment assigned yet.</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        {/* ── RIGHT COLUMN: OPERATIONAL INTELLIGENCE SIDEBAR ────────────────── */}
-        <div className="sd-right-col-wrapper">
-          <div
-            className="sd-right-col"
-            ref={rightColRef}
-            onScroll={checkRightColScroll}
-          >
-
-            {/* A. Tracking Intelligence */}
-            <div className="sd-panel sd-panel-tracking">
-              <div className="sd-panel-header">
-                <div className="sd-panel-title-row">
-                  <h3 className="sd-panel-title">Tracking Intelligence</h3>
+            {/* Right Column */}
+            <div className="sd-overview-col">
+              {/* Tracking Telemetry & Variance Card */}
+              <div className="sd-overview-card">
+                <div className="sd-overview-card-header">
+                  <h3 className="sd-overview-card-title">
+                    <Activity size={18} style={{ color: '#2563eb' }} /> Tracking Telemetry
+                  </h3>
                   <span
                     className="sd-track-state-badge"
                     style={{ background: tsCfg.bg, color: tsCfg.fg, border: `1px solid ${tsCfg.border}` }}
@@ -1240,546 +1316,868 @@ export default function ShipmentDetail() {
                     {tsCfg.label}
                   </span>
                 </div>
-                <p className="sd-panel-desc">Real-time container journey telemetry and schedule variance metrics.</p>
-              </div>
-
-              {trackingSummary ? (
-                <>
-                  <div className="sd-track-progress-section">
-                    <div className="sd-track-prog-header">
-                      <span>Journey Progress</span>
-                      <strong>{progressPct}%</strong>
-                    </div>
-                    <div className="sd-track-prog-track">
-                      <div
-                        className="sd-track-prog-fill"
-                        style={{
-                          width: `${progressPct}%`,
-                          background:
-                            trackingState === 'DELAYED' || trackingState === 'EXCEPTION'
-                              ? '#dc2626'
-                              : trackingState === 'AT_RISK'
-                                ? '#d97706'
-                                : 'linear-gradient(90deg, #3b82f6, #2563eb)'
-                        }}
-                      />
-                    </div>
+                <div className="sd-track-dates">
+                  <div className="sd-track-date-row">
+                    <span className="sd-track-date-lbl">PLANNED ETD</span>
+                    <span className="sd-track-date-val">{formatDateOnly(trackingSummary?.planned_etd || shipment.planned_etd)}</span>
                   </div>
-
-                  <div className="sd-track-dates">
-                    <div className="sd-track-date-row">
-                      <span className="sd-track-date-lbl">PLANNED ETD</span>
-                      <span className="sd-track-date-val">{formatDateOnly(trackingSummary.planned_etd)}</span>
-                    </div>
-                    <div className="sd-track-date-row">
-                      <span className="sd-track-date-lbl">ACTUAL DEPARTURE</span>
-                      <span
-                        className={`sd-track-date-val ${
-                          trackingSummary.actual_etd > trackingSummary.planned_etd ? 'sd-date-late' : 'sd-date-ok'
-                        }`}
-                      >
-                        {formatDateOnly(trackingSummary.actual_etd)}
+                  <div className="sd-track-date-row">
+                    <span className="sd-track-date-lbl">ACTUAL DEPARTURE</span>
+                    <span className="sd-track-date-val">{formatDateOnly(trackingSummary?.actual_etd || shipment.actual_departure)}</span>
+                  </div>
+                  <div className="sd-track-date-row">
+                    <span className="sd-track-date-lbl">PLANNED ETA</span>
+                    <span className="sd-track-date-val">{formatDateOnly(trackingSummary?.planned_eta || shipment.planned_eta)}</span>
+                  </div>
+                  <div className="sd-track-date-row">
+                    <span className="sd-track-date-lbl">ACTUAL ARRIVAL</span>
+                    <span className="sd-track-date-val">{formatDateOnly(trackingSummary?.actual_arrival || shipment.actual_arrival)}</span>
+                  </div>
+                  {trackingSummary?.schedule_variance != null && (
+                    <div className="sd-track-date-row sd-track-variance">
+                      <span className="sd-track-date-lbl">SCHEDULE VARIANCE</span>
+                      <span className={`sd-track-date-val ${trackingSummary.schedule_variance > 0 ? 'sd-date-late' : 'sd-date-ok'}`}>
+                        {trackingSummary.schedule_variance > 0
+                          ? `+${trackingSummary.schedule_variance.toFixed(1)} days late`
+                          : trackingSummary.schedule_variance < 0
+                            ? `${Math.abs(trackingSummary.schedule_variance).toFixed(1)} days early`
+                            : 'On Schedule'}
                       </span>
                     </div>
-                    <div className="sd-track-date-row">
-                      <span className="sd-track-date-lbl">PLANNED ETA</span>
-                      <span className="sd-track-date-val">{formatDateOnly(trackingSummary.planned_eta)}</span>
-                    </div>
-                    <div className="sd-track-date-row">
-                      <span className="sd-track-date-lbl">ACTUAL ARRIVAL</span>
-                      <span
-                        className={`sd-track-date-val ${
-                          trackingSummary.actual_arrival && trackingSummary.actual_arrival > trackingSummary.planned_eta
-                            ? 'sd-date-late'
-                            : 'sd-date-ok'
-                        }`}
-                      >
-                        {formatDateOnly(trackingSummary.actual_arrival)}
-                      </span>
-                    </div>
-
-                    {trackingSummary.schedule_variance != null && (
-                      <div className="sd-track-date-row sd-track-variance">
-                        <span className="sd-track-date-lbl">SCHEDULE VARIANCE</span>
-                        <span
-                          className={`sd-track-date-val ${
-                            trackingSummary.schedule_variance > 0
-                              ? 'sd-date-late'
-                              : trackingSummary.schedule_variance < 0
-                                ? 'sd-date-early'
-                                : 'sd-date-ok'
-                          }`}
-                        >
-                          {trackingSummary.schedule_variance > 0
-                            ? `+${trackingSummary.schedule_variance.toFixed(1)} days late`
-                            : trackingSummary.schedule_variance < 0
-                              ? `${Math.abs(trackingSummary.schedule_variance).toFixed(1)} days early`
-                              : 'On Schedule'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="sd-panel-empty-box">
-                  <Clock size={20} className="sd-empty-icon-muted" />
-                  <div className="sd-empty-title">Tracking Information Unavailable</div>
-                  <p className="sd-empty-text">Tracking updates have not been received for this shipment yet.</p>
-                </div>
-              )}
-            </div>
-
-            {/* B. Closure Lifecycle */}
-            {trackingSummary && (
-              <div className="sd-panel sd-panel-closure" style={{ borderLeft: `4px solid ${cCfg.fg}` }}>
-                <div className="sd-panel-header">
-                  <div className="sd-panel-title-row">
-                    <h3 className="sd-panel-title">Closure Lifecycle</h3>
-                    <span
-                      className="sd-closure-state-badge"
-                      style={{ background: cCfg.bg, color: cCfg.fg, border: `1px solid ${cCfg.border}` }}
-                    >
-                      {cCfg.label}
-                    </span>
-                  </div>
-                  <p className="sd-panel-desc">Controlled operational completion with automated audit readiness.</p>
-                </div>
-
-                <div className="sd-closure-actions">
-                  {closureStatus === 'ACTIVE' && (
-                    <button
-                      className="sd-action-btn sd-action-primary"
-                      onClick={handleEvaluateClosure}
-                      disabled={submittingClosure}
-                    >
-                      {submittingClosure ? 'Evaluating...' : 'Evaluate Closure Eligibility'}
-                    </button>
-                  )}
-
-                  {closureStatus === 'READY_FOR_CLOSURE' && (
-                    <button
-                      className="sd-action-btn sd-action-success"
-                      onClick={handleCompleteShipment}
-                      disabled={submittingClosure}
-                    >
-                      {submittingClosure ? 'Processing...' : '✓ Complete & Close File'}
-                    </button>
-                  )}
-
-                  {closureStatus === 'BLOCKED_BY_EXCEPTION' && (
-                    <div className="sd-closure-blocked">
-                      <div className="sd-closure-blocked-msg">
-                        ⚠️ <strong>Closure Blocked</strong> — Resolve all critical exceptions first.
-                      </div>
-                      <button
-                        className="sd-action-btn sd-action-primary"
-                        onClick={handleEvaluateClosure}
-                        disabled={submittingClosure}
-                      >
-                        {submittingClosure ? 'Evaluating...' : 'Re-Evaluate Eligibility'}
-                      </button>
-                    </div>
-                  )}
-
-                  {closureStatus === 'CLOSED' && (
-                    <button
-                      className="sd-action-btn sd-action-secondary"
-                      onClick={handleReopenShipment}
-                      disabled={submittingClosure}
-                    >
-                      {submittingClosure ? 'Processing...' : 'Reopen Shipment File'}
-                    </button>
                   )}
                 </div>
               </div>
-            )}
 
-            {/* C. Container & Cargo Summary */}
-            <div className="sd-panel">
-              <div className="sd-panel-header">
-                <h3 className="sd-panel-title">Container & Cargo Summary</h3>
-                <p className="sd-panel-desc">Physical carrier manifest and equipment assignments.</p>
-              </div>
-              <div className="sd-metadata-grid">
-                <div className="sd-meta-item">
-                  <div className="sd-meta-label">CARRIER SCAC</div>
-                  <div className="sd-meta-val"><span className="sd-scac-tag">{shipment.carrier_scac || '—'}</span></div>
-                </div>
-                <div className="sd-meta-item">
-                  <div className="sd-meta-label">VESSEL</div>
-                  <div className="sd-meta-val">🚢 {shipment.vessel_name || 'Unassigned'}</div>
-                </div>
-                <div className="sd-meta-item">
-                  <div className="sd-meta-label">VOYAGE NUMBER</div>
-                  <div className="sd-meta-val">{shipment.voyage_number || '—'}</div>
-                </div>
-                <div className="sd-meta-item">
-                  <div className="sd-meta-label">MBL NUMBER</div>
-                  <div className="sd-meta-val">{shipment.mbl_number || '—'}</div>
-                </div>
-                <div className="sd-meta-item">
-                  <div className="sd-meta-label">HBL NUMBER</div>
-                  <div className="sd-meta-val">{shipment.hbl_number || '—'}</div>
-                </div>
-                <div className="sd-meta-item sd-meta-full">
-                  <div className="sd-meta-label">CONTAINERS ASSIGNED</div>
-                  <div className="sd-containers-wrap">
-                    {containers.length > 0 ? (
-                      containers.map((c) => (
-                        <span key={c} className="sd-container-tag">📦 {c}</span>
-                      ))
-                    ) : (
-                      <span className="sd-meta-empty">No container equipment assigned yet.</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* D. Anomalies & Exceptions */}
-            <div className="sd-panel" id="exceptions-panel">
-              <div className="sd-panel-header">
-                <div className="sd-panel-title-row">
-                  <h3 className="sd-panel-title">Anomalies & Exceptions</h3>
+              {/* Active Exceptions Preview Card */}
+              <div className="sd-overview-card">
+                <div className="sd-overview-card-header">
+                  <h3 className="sd-overview-card-title">
+                    <AlertTriangle size={18} style={{ color: activeExceptionCount > 0 ? '#d97706' : '#16a34a' }} />
+                    Operational Exceptions
+                  </h3>
                   <button
-                    className="sd-diagnostics-btn"
-                    onClick={handleEvaluateExceptions}
-                    disabled={runningDiagnostics}
+                    type="button"
+                    className="sd-overview-action-link"
+                    onClick={() => handleTabChange('exceptions')}
                   >
-                    <Zap size={12} className={runningDiagnostics ? 'sd-spin' : ''} />
-                    {runningDiagnostics ? 'Checking...' : 'Run Diagnostics'}
+                    {activeExceptionCount > 0 ? `Manage (${activeExceptionCount}) →` : 'Exceptions Desk →'}
                   </button>
                 </div>
-
-                <div className="sd-exc-pills">
-                  {activeExceptionCount > 0 && (
-                    <span className="sd-exc-pill sd-pill-active">{activeExceptionCount} Active</span>
-                  )}
-                  {criticalExcCount > 0 && (
-                    <span className="sd-exc-pill sd-pill-critical">{criticalExcCount} Critical</span>
-                  )}
-                  {resolvedExcCount > 0 && (
-                    <span className="sd-exc-pill sd-pill-resolved">{resolvedExcCount} Resolved</span>
-                  )}
-                  {exceptions.length === 0 && (
-                    <span className="sd-exc-pill sd-pill-clean">✓ All Clear</span>
-                  )}
-                </div>
-
-                <p className="sd-panel-desc">Operational risk queue from telemetry and automated delay detection.</p>
-              </div>
-
-              {/* Raise Manual Exception drawer */}
-              <div className="sd-raise-exc-wrap">
-                <button className="sd-raise-toggle-btn" onClick={() => setShowRaiseForm(!showRaiseForm)}>
-                  <span>🚨 Raise Manual Exception</span>
-                  <span>{showRaiseForm ? '▲ Close' : '▼ Expand'}</span>
-                </button>
-                {showRaiseForm && (
-                  <form onSubmit={handleRaiseException} className="sd-raise-form">
-                    <div className="sd-raise-form-grid">
-                      <div className="sd-form-field">
-                        <label>Category</label>
-                        <CustomDropdown
-                          value={newExcType}
-                          onChange={(val) => setNewExcType(val)}
-                          options={[
-                            { value: 'SCHEDULE_DELAY', label: 'Schedule Delay' },
-                            { value: 'VESSEL_ROLLOVER', label: 'Vessel Rollover' },
-                            { value: 'PORT_CONGESTION', label: 'Port Congestion' },
-                            { value: 'CUSTOMS_HOLD', label: 'Customs Hold' },
-                            { value: 'DOCUMENT_ISSUE', label: 'Document Issue' },
-                            { value: 'CARRIER_DELAY', label: 'Carrier Delay' },
-                            { value: 'ROUTE_DEVIATION', label: 'Route Deviation' },
-                            { value: 'CONTAINER_ISSUE', label: 'Container Issue' },
-                            { value: 'OTHER', label: 'Other' },
-                          ]}
-                        />
-                      </div>
-                      <div className="sd-form-field">
-                        <label>Severity</label>
-                        <CustomDropdown
-                          value={newExcSeverity}
-                          onChange={(val) => setNewExcSeverity(val)}
-                          options={[
-                            { value: 'LOW', label: 'Low' },
-                            { value: 'MEDIUM', label: 'Medium' },
-                            { value: 'HIGH', label: 'High' },
-                            { value: 'CRITICAL', label: 'Critical' },
-                          ]}
-                        />
-                      </div>
-                    </div>
-                    <div className="sd-form-field">
-                      <label>
-                        Exception Title <small style={{ color: '#94a3b8', fontWeight: 500 }}>(Optional · auto-generated if left blank)</small>
-                      </label>
-                      <input
-                        type="text"
-                        value={newExcTitle}
-                        onChange={(e) => setNewExcTitle(e.target.value)}
-                        placeholder="e.g. Customs Clearance Hold at POD"
-                      />
-                    </div>
-                    <div className="sd-form-field">
-                      <label>Description</label>
-                      <textarea
-                        value={newExcDesc}
-                        onChange={(e) => setNewExcDesc(e.target.value)}
-                        rows={3}
-                        placeholder="Enter operational notes or root cause details..."
-                      />
-                    </div>
-
-                    {raiseError && (
-                      <div className="sd-error-banner" style={{ margin: '4px 0 8px 0', fontSize: '0.74rem' }}>
-                        <AlertCircle size={13} />
-                        <span>{raiseError}</span>
-                      </div>
+                {activeExceptionCount > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {exceptions
+                      .filter((e) => e.status !== 'RESOLVED' && e.status !== 'DISMISSED')
+                      .slice(0, 2)
+                      .map((exc) => (
+                        <div key={exc.id} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <strong style={{ fontSize: '0.8125rem', color: '#92400e' }}>{exc.title}</strong>
+                            <span className="sd-exc-sev" style={{ fontSize: '0.68rem', padding: '1px 6px' }}>{exc.severity}</span>
+                          </div>
+                          {exc.description && (
+                            <p style={{ fontSize: '0.75rem', color: '#78350f', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {exc.description}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    {activeExceptionCount > 2 && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        + {activeExceptionCount - 2} more active exceptions
+                      </span>
                     )}
-
-                    <button
-                      type="submit"
-                      className="sd-action-btn sd-action-danger"
-                      disabled={submittingException}
-                      style={{ opacity: submittingException ? 0.7 : 1 }}
-                    >
-                      {submittingException ? 'Creating Alert...' : 'Create Exception Alert'}
-                    </button>
-                  </form>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 0', color: '#166534', fontSize: '0.8125rem' }}>
+                    <CheckCircle2 size={20} color="#16a34a" />
+                    <span>No active anomalies or operational holds on this shipment.</span>
+                  </div>
                 )}
               </div>
 
-              {/* Exceptions Queue */}
-              {exceptions.length === 0 ? (
-                <div className="sd-exc-empty">
-                  <span className="sd-exc-empty-icon">💚</span>
-                  <div className="sd-empty-title">No Active Exceptions</div>
-                  <p>Carrier tracking is operating normally for this shipment.</p>
+              {/* AI Operations Copilot Spotlight Card */}
+              <div className="sd-overview-ai-card">
+                <div className="sd-overview-ai-header">
+                  <h3 className="sd-overview-ai-title">
+                    <Zap size={18} /> Operations Copilot Active
+                  </h3>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: '#e0e7ff', color: '#3730a3' }}>
+                    REAL-TIME
+                  </span>
                 </div>
-              ) : (
-                <div className="sd-exc-list">
-                  {/* 1. Active Exceptions First */}
-                  {exceptions
-                    .filter((e) => e.status !== 'RESOLVED' && e.status !== 'DISMISSED')
-                    .map((exc) => {
-                      const isAcknowledged = exc.status === 'ACKNOWLEDGED';
-                      const sevPillMap = {
-                        CRITICAL: { bg: '#fee2e2', fg: '#dc2626', border: '#fecaca' },
-                        HIGH:     { bg: '#fef3c7', fg: '#b45309', border: '#fde68a' },
-                        MEDIUM:   { bg: '#dbeafe', fg: '#1d4ed8', border: '#bfdbfe' },
-                        LOW:      { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' },
-                      };
-                      const sev = sevPillMap[exc.severity] || sevPillMap.LOW;
+                <p className="sd-overview-ai-desc">
+                  Autonomous operational intelligence is actively evaluating carrier telemetry, port congestion, customs clearance, and document completeness for this shipment.
+                </p>
+                <button
+                  type="button"
+                  className="sd-overview-ai-btn"
+                  onClick={() => handleTabChange('intelligence')}
+                >
+                  <Zap size={14} /> Open Operations Copilot Workspace →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 2: TRACKING & MILESTONES ── */}
+      {activeTab === 'milestones' && (
+        <div className="sd-tab-content sd-tab-milestones">
+          <div className="sd-main-grid">
+            <div className="sd-left-col">
+              {/* Operational Milestones List */}
+              <div className="sd-panel" id="milestones-panel">
+                <div className="sd-panel-header">
+                  <div className="sd-panel-title-row">
+                    <div>
+                      <h3 className="sd-panel-title">Operational Milestones</h3>
+                      <p className="sd-panel-desc">Real-time carrier milestone monitoring from electronic tracking updates.</p>
+                    </div>
+                    {milestones.length > 0 && (
+                      <span className="sd-milestone-count-badge">
+                        {milestones.filter((m) => m.status === 'COMPLETED').length} of {milestones.length} Completed
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sd-milestones-list">
+                  {milestones.length === 0 ? (
+                    <div className="sd-panel-empty-box">
+                      <Calendar size={22} className="sd-empty-icon-muted" />
+                      <div className="sd-empty-title">Milestones Not Available</div>
+                      <p className="sd-empty-text">Milestone information will appear when carrier updates are received for this shipment.</p>
+                    </div>
+                  ) : (
+                    milestones.map((m, idx) => {
+                      const done = m.status === 'COMPLETED';
+                      const isCurrent = !done && (idx === 0 || milestones[idx - 1]?.status === 'COMPLETED');
+                      const isDelayed = !done && m.planned_date && new Date(m.planned_date) < new Date();
 
                       return (
-                        <div key={exc.id} className="sd-exc-card sd-exc-card-active">
-                          <div className="sd-exc-card-header">
-                            <span
-                              className="sd-exc-sev"
-                              style={{ background: sev.bg, color: sev.fg, border: `1px solid ${sev.border}` }}
+                        <div
+                          key={m.id}
+                          className={`sd-milestone-node ${
+                            done
+                              ? 'sd-ms-done'
+                              : isCurrent
+                                ? 'sd-ms-active-node'
+                                : 'sd-ms-pending'
+                          }`}
+                        >
+                          <div className="sd-ms-connector">
+                            <div
+                              className={`sd-ms-dot ${
+                                done
+                                  ? 'sd-ms-dot-done'
+                                  : isCurrent
+                                    ? 'sd-ms-dot-active'
+                                    : 'sd-ms-dot-pending'
+                              }`}
                             >
-                              {exc.severity}
-                            </span>
-                            <span
-                              className="sd-exc-status"
-                              style={{
-                                background: isAcknowledged ? '#fef3c7' : '#fee2e2',
-                                color: isAcknowledged ? '#b45309' : '#dc2626'
-                              }}
-                            >
-                              {exc.status}
-                            </span>
-                            {exc.exception_type && (
-                              <span className="sd-exc-type-tag">
-                                {exc.exception_type.replace(/_/g, ' ')}
-                              </span>
+                              {done ? <CheckCircle2 size={14} /> : <span>{idx + 1}</span>}
+                            </div>
+                            {idx < milestones.length - 1 && (
+                              <div className={`sd-ms-line ${done ? 'sd-line-done' : ''}`} />
                             )}
                           </div>
 
-                          <h4 className="sd-exc-title">{exc.title}</h4>
-                          {exc.description && <p className="sd-exc-desc">{exc.description}</p>}
+                          <div className="sd-ms-content">
+                            <div className="sd-ms-header">
+                              <span className="sd-ms-code">{m.milestone_code.replace(/_/g, ' ')}</span>
+                              <span
+                                className={`sd-ms-badge ${
+                                  done
+                                    ? 'sd-ms-badge-done'
+                                    : isDelayed
+                                      ? 'sd-ms-badge-delayed'
+                                      : isCurrent
+                                        ? 'sd-ms-badge-active'
+                                        : 'sd-ms-badge-pending'
+                                }`}
+                              >
+                                {done ? 'COMPLETED' : isDelayed ? 'DELAYED' : isCurrent ? 'ACTIVE' : 'PENDING'}
+                              </span>
 
-                          {exc.ai_summary && (
-                            <div className="sd-exc-ai">
-                              <strong>AI Analysis:</strong> {exc.ai_summary}
-                            </div>
-                          )}
-
-                          <div className="sd-exc-footer">
-                            <small>Logged: {formatDate(exc.created_at)}</small>
-                            <div className="sd-exc-actions">
-                              {!isAcknowledged && (
+                              {!done && (
                                 <button
-                                  className="sd-exc-btn sd-exc-ack"
-                                  onClick={() => handleAcknowledgeException(exc.id)}
+                                  className="sd-ms-mark-btn"
+                                  onClick={() => handleOpenMilestoneForm(m)}
                                 >
-                                  Acknowledge
+                                  Mark Complete
                                 </button>
                               )}
-                              <button
-                                className="sd-exc-btn sd-exc-resolve"
-                                onClick={() => setResolvingExcId(exc.id)}
-                              >
-                                Resolve
-                              </button>
-                              <button
-                                className="sd-exc-btn sd-exc-dismiss"
-                                onClick={() => handleDismissException(exc.id)}
-                              >
-                                Dismiss
-                              </button>
                             </div>
-                          </div>
 
-                          {resolvingExcId === exc.id && (
-                            <form
-                              onSubmit={(evt) => handleResolveExceptionSubmit(evt, exc.id)}
-                              className="sd-resolve-form"
-                            >
-                              <label>Resolution Documentation Notes</label>
-                              <textarea
-                                value={resolutionNotesInput}
-                                onChange={(evt) => setResolutionNotesInput(evt.target.value)}
-                                placeholder="Enter actions taken to resolve this operational exception..."
-                                rows={2}
-                                required
-                              />
-                              <div className="sd-resolve-actions">
-                                <button
-                                  type="button"
-                                  className="sd-form-btn-cancel"
-                                  onClick={() => {
-                                    setResolvingExcId(null);
-                                    setResolutionNotesInput('');
-                                  }}
-                                >
-                                  Cancel
-                                </button>
-                                <button type="submit" className="sd-form-btn-save">
-                                  Submit Resolution
-                                </button>
-                              </div>
-                            </form>
-                          )}
-                        </div>
-                      );
-                    })}
+                            {m.description && <p className="sd-ms-desc">{m.description}</p>}
 
-                  {/* 2. Resolved / Dismissed Exceptions Collapsible Section */}
-                  {exceptions.filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED').length > 0 && (
-                    <div className="sd-resolved-exc-section">
-                      <button
-                        type="button"
-                        className="sd-resolved-toggle-btn"
-                        onClick={() => {
-                          setShowResolvedHistory(!showResolvedHistory);
-                          setTimeout(checkRightColScroll, 50);
-                        }}
-                      >
-                        <span className="sd-resolved-toggle-title">
-                          {showResolvedHistory ? '▾' : '▸'} Resolved Exceptions ({exceptions.filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED').length})
-                        </span>
-                        <span className="sd-resolved-toggle-hint">
-                          {showResolvedHistory ? 'Hide history' : 'View resolution notes'}
-                        </span>
-                      </button>
+                            <div className="sd-ms-dates">
+                              <span className="sd-ms-planned-date">
+                                Planned: <strong>{formatDate(m.planned_date)}</strong>
+                              </span>
+                              {done && (
+                                <span className="sd-ms-actual-date">
+                                  ✓ Actual: <strong>{formatDate(m.actual_date)}</strong>
+                                </span>
+                              )}
+                              {m.location && (
+                                <span className="sd-ms-loc">
+                                  <MapPin size={11} /> {getPortDetails(m.location).fullName || m.location}
+                                </span>
+                              )}
+                            </div>
 
-                      {showResolvedHistory && (
-                        <div className="sd-resolved-exc-list">
-                          {exceptions
-                            .filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED')
-                            .map((exc) => {
-                              const isResolved = exc.status === 'RESOLVED';
-                              const sevPillMap = {
-                                CRITICAL: { bg: '#fee2e2', fg: '#dc2626', border: '#fecaca' },
-                                HIGH:     { bg: '#fef3c7', fg: '#b45309', border: '#fde68a' },
-                                MEDIUM:   { bg: '#dbeafe', fg: '#1d4ed8', border: '#bfdbfe' },
-                                LOW:      { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' },
-                              };
-                              const sev = sevPillMap[exc.severity] || sevPillMap.LOW;
-
-                              return (
-                                <div key={exc.id} className="sd-exc-card sd-exc-card-inactive">
-                                  <div className="sd-exc-card-header">
-                                    <span
-                                      className="sd-exc-sev"
-                                      style={{ background: sev.bg, color: sev.fg, border: `1px solid ${sev.border}` }}
-                                    >
-                                      {exc.severity}
-                                    </span>
-                                    <span
-                                      className="sd-exc-status"
-                                      style={{
-                                        background: isResolved ? '#dcfce7' : '#f1f5f9',
-                                        color: isResolved ? '#15803d' : '#475569'
-                                      }}
-                                    >
-                                      {exc.status}
-                                    </span>
-                                    {exc.exception_type && (
-                                      <span className="sd-exc-type-tag">
-                                        {exc.exception_type.replace(/_/g, ' ')}
-                                      </span>
-                                    )}
+                            {activeMilestoneForm?.id === m.id && (
+                              <form onSubmit={handleUpdateMilestone} className="sd-ms-form">
+                                <div className="sd-ms-form-header">
+                                  <strong>Complete Milestone: {m.milestone_code.replace(/_/g, ' ')}</strong>
+                                </div>
+                                <div className="sd-ms-form-grid">
+                                  <div className="sd-form-field">
+                                    <label>Actual Date & Time *</label>
+                                    <input
+                                      type="datetime-local"
+                                      required
+                                      value={actualDate}
+                                      onChange={(e) => setActualDate(e.target.value)}
+                                    />
                                   </div>
-
-                                  <h4 className="sd-exc-title">{exc.title}</h4>
-                                  {exc.description && <p className="sd-exc-desc">{exc.description}</p>}
-
-                                  {isResolved && exc.resolution_notes && (
-                                    <div className="sd-exc-resolution">
-                                      <strong>Resolution Notes:</strong> {exc.resolution_notes}
-                                      <div className="sd-exc-by">Resolved by: {exc.resolved_by || 'Operator'}</div>
-                                    </div>
-                                  )}
-
-                                  <div className="sd-exc-footer">
-                                    <small>Logged: {formatDate(exc.created_at)}</small>
+                                  <div className="sd-form-field">
+                                    <label>Location</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. INNSA"
+                                      value={milestoneLocation}
+                                      onChange={(e) => setMilestoneLocation(e.target.value)}
+                                    />
                                   </div>
                                 </div>
-                              );
-                            })}
+                                <div className="sd-form-field">
+                                  <label>Operational Notes</label>
+                                  <textarea
+                                    rows={2}
+                                    placeholder="Carrier logs or verification notes..."
+                                    value={milestoneNotes}
+                                    onChange={(e) => setMilestoneNotes(e.target.value)}
+                                  />
+                                </div>
+                                <div className="sd-ms-form-actions">
+                                  <button
+                                    type="button"
+                                    className="sd-form-btn-cancel"
+                                    onClick={() => setActiveMilestoneForm(null)}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    className="sd-form-btn-save"
+                                    disabled={submittingMilestone}
+                                  >
+                                    {submittingMilestone ? 'Saving...' : 'Save Milestone'}
+                                  </button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="sd-right-col-wrapper">
+              <div className="sd-right-col">
+                {/* Tracking Telemetry */}
+                <div className="sd-panel sd-panel-tracking">
+                  <div className="sd-panel-header">
+                    <div className="sd-panel-title-row">
+                      <h3 className="sd-panel-title">Tracking Telemetry</h3>
+                      <span
+                        className="sd-track-state-badge"
+                        style={{ background: tsCfg.bg, color: tsCfg.fg, border: `1px solid ${tsCfg.border}` }}
+                      >
+                        {tsCfg.label}
+                      </span>
+                    </div>
+                    <p className="sd-panel-desc">Real-time container journey telemetry and schedule variance metrics.</p>
+                  </div>
+
+                  {trackingSummary ? (
+                    <>
+                      <div className="sd-track-progress-section">
+                        <div className="sd-track-prog-header">
+                          <span>Journey Progress</span>
+                          <strong>{progressPct}%</strong>
+                        </div>
+                        <div className="sd-track-prog-track">
+                          <div
+                            className="sd-track-prog-fill"
+                            style={{
+                              width: `${progressPct}%`,
+                              background:
+                                trackingState === 'DELAYED' || trackingState === 'EXCEPTION'
+                                  ? '#dc2626'
+                                  : trackingState === 'AT_RISK'
+                                    ? '#d97706'
+                                    : 'linear-gradient(90deg, #3b82f6, #2563eb)'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="sd-track-dates">
+                        <div className="sd-track-date-row">
+                          <span className="sd-track-date-lbl">PLANNED ETD</span>
+                          <span className="sd-track-date-val">{formatDateOnly(trackingSummary.planned_etd)}</span>
+                        </div>
+                        <div className="sd-track-date-row">
+                          <span className="sd-track-date-lbl">ACTUAL DEPARTURE</span>
+                          <span
+                            className={`sd-track-date-val ${
+                              trackingSummary.actual_etd > trackingSummary.planned_etd ? 'sd-date-late' : 'sd-date-ok'
+                            }`}
+                          >
+                            {formatDateOnly(trackingSummary.actual_etd)}
+                          </span>
+                        </div>
+                        <div className="sd-track-date-row">
+                          <span className="sd-track-date-lbl">PLANNED ETA</span>
+                          <span className="sd-track-date-val">{formatDateOnly(trackingSummary.planned_eta)}</span>
+                        </div>
+                        <div className="sd-track-date-row">
+                          <span className="sd-track-date-lbl">ACTUAL ARRIVAL</span>
+                          <span
+                            className={`sd-track-date-val ${
+                              trackingSummary.actual_arrival && trackingSummary.actual_arrival > trackingSummary.planned_eta
+                                ? 'sd-date-late'
+                                : 'sd-date-ok'
+                            }`}
+                          >
+                            {formatDateOnly(trackingSummary.actual_arrival)}
+                          </span>
+                        </div>
+
+                        {trackingSummary.schedule_variance != null && (
+                          <div className="sd-track-date-row sd-track-variance">
+                            <span className="sd-track-date-lbl">SCHEDULE VARIANCE</span>
+                            <span
+                              className={`sd-track-date-val ${
+                                trackingSummary.schedule_variance > 0
+                                  ? 'sd-date-late'
+                                  : trackingSummary.schedule_variance < 0
+                                    ? 'sd-date-early'
+                                    : 'sd-date-ok'
+                              }`}
+                            >
+                              {trackingSummary.schedule_variance > 0
+                                ? `+${trackingSummary.schedule_variance.toFixed(1)} days late`
+                                : trackingSummary.schedule_variance < 0
+                                  ? `${Math.abs(trackingSummary.schedule_variance).toFixed(1)} days early`
+                                  : 'On Schedule'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="sd-panel-empty-box">
+                      <Clock size={20} className="sd-empty-icon-muted" />
+                      <div className="sd-empty-title">Tracking Information Unavailable</div>
+                      <p className="sd-empty-text">Tracking updates have not been received for this shipment yet.</p>
                     </div>
                   )}
                 </div>
+
+                {/* Closure Lifecycle */}
+                {trackingSummary && (
+                  <div className="sd-panel sd-panel-closure" style={{ borderLeft: `4px solid ${cCfg.fg}` }}>
+                    <div className="sd-panel-header">
+                      <div className="sd-panel-title-row">
+                        <h3 className="sd-panel-title">Closure Lifecycle</h3>
+                        <span
+                          className="sd-closure-state-badge"
+                          style={{ background: cCfg.bg, color: cCfg.fg, border: `1px solid ${cCfg.border}` }}
+                        >
+                          {cCfg.label}
+                        </span>
+                      </div>
+                      <p className="sd-panel-desc">Controlled operational completion with automated audit readiness.</p>
+                    </div>
+
+                    <div className="sd-closure-actions">
+                      {closureStatus === 'ACTIVE' && (
+                        <button
+                          className="sd-action-btn sd-action-primary"
+                          onClick={handleEvaluateClosure}
+                          disabled={submittingClosure}
+                        >
+                          {submittingClosure ? 'Evaluating...' : 'Evaluate Closure Eligibility'}
+                        </button>
+                      )}
+
+                      {closureStatus === 'READY_FOR_CLOSURE' && (
+                        <button
+                          className="sd-action-btn sd-action-success"
+                          onClick={handleCompleteShipment}
+                          disabled={submittingClosure}
+                        >
+                          {submittingClosure ? 'Processing...' : '✓ Complete & Close File'}
+                        </button>
+                      )}
+
+                      {closureStatus === 'BLOCKED_BY_EXCEPTION' && (
+                        <div className="sd-closure-blocked">
+                          <div className="sd-closure-blocked-msg">
+                            ⚠️ <strong>Closure Blocked</strong> — Resolve all critical exceptions first.
+                          </div>
+                          <button
+                            className="sd-action-btn sd-action-primary"
+                            onClick={handleEvaluateClosure}
+                            disabled={submittingClosure}
+                          >
+                            {submittingClosure ? 'Evaluating...' : 'Re-Evaluate Eligibility'}
+                          </button>
+                        </div>
+                      )}
+
+                      {closureStatus === 'CLOSED' && (
+                        <button
+                          className="sd-action-btn sd-action-secondary"
+                          onClick={handleReopenShipment}
+                          disabled={submittingClosure}
+                        >
+                          {submittingClosure ? 'Processing...' : 'Reopen Shipment File'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dev: Manual Carrier Update Panel */}
+                {isDev && (
+                  <ManualUpdatePanel
+                    onSubmit={handleSubmitCarrierUpdate}
+                    submittingUpdate={submittingUpdate}
+                    rawUpdate={rawUpdate}
+                    setRawUpdate={setRawUpdate}
+                    updateMsg={updateMsg}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 3: EXCEPTIONS & DIAGNOSTICS ── */}
+      {activeTab === 'exceptions' && (
+        <div className="sd-tab-content sd-tab-exceptions">
+          {/* Phase 4 Predictive Exception & Disruption Forecasting */}
+          <ShipmentDisruptionForecastCard shipmentId={id} />
+
+          <div className="sd-panel" id="exceptions-panel">
+            <div className="sd-panel-header">
+              <div className="sd-panel-title-row">
+                <h3 className="sd-panel-title">Anomalies & Exceptions</h3>
+                <button
+                  className="sd-diagnostics-btn"
+                  onClick={handleEvaluateExceptions}
+                  disabled={runningDiagnostics}
+                >
+                  <Zap size={12} className={runningDiagnostics ? 'sd-spin' : ''} />
+                  {runningDiagnostics ? 'Checking...' : 'Run Diagnostics'}
+                </button>
+              </div>
+
+              <div className="sd-exc-pills">
+                {activeExceptionCount > 0 && (
+                  <span className="sd-exc-pill sd-pill-active">{activeExceptionCount} Active</span>
+                )}
+                {criticalExcCount > 0 && (
+                  <span className="sd-exc-pill sd-pill-critical">{criticalExcCount} Critical</span>
+                )}
+                {resolvedExcCount > 0 && (
+                  <span className="sd-exc-pill sd-pill-resolved">{resolvedExcCount} Resolved</span>
+                )}
+                {exceptions.length === 0 && (
+                  <span className="sd-exc-pill sd-pill-clean">✓ All Clear</span>
+                )}
+              </div>
+
+              <p className="sd-panel-desc">Operational risk queue from telemetry and automated delay detection.</p>
+            </div>
+
+            {/* Raise Manual Exception drawer */}
+            <div className="sd-raise-exc-wrap">
+              <button className="sd-raise-toggle-btn" onClick={() => setShowRaiseForm(!showRaiseForm)}>
+                <span>🚨 Raise Manual Exception</span>
+                <span>{showRaiseForm ? '▲ Close' : '▼ Expand'}</span>
+              </button>
+              {showRaiseForm && (
+                <form onSubmit={handleRaiseException} className="sd-raise-form">
+                  <div className="sd-raise-form-grid">
+                    <div className="sd-form-field">
+                      <label>Category</label>
+                      <CustomDropdown
+                        value={newExcType}
+                        onChange={(val) => setNewExcType(val)}
+                        options={[
+                          { value: 'SCHEDULE_DELAY', label: 'Schedule Delay' },
+                          { value: 'VESSEL_ROLLOVER', label: 'Vessel Rollover' },
+                          { value: 'PORT_CONGESTION', label: 'Port Congestion' },
+                          { value: 'CUSTOMS_HOLD', label: 'Customs Hold' },
+                          { value: 'DOCUMENT_ISSUE', label: 'Document Issue' },
+                          { value: 'CARRIER_DELAY', label: 'Carrier Delay' },
+                          { value: 'ROUTE_DEVIATION', label: 'Route Deviation' },
+                          { value: 'CONTAINER_ISSUE', label: 'Container Issue' },
+                          { value: 'OTHER', label: 'Other' },
+                        ]}
+                      />
+                    </div>
+                    <div className="sd-form-field">
+                      <label>Severity</label>
+                      <CustomDropdown
+                        value={newExcSeverity}
+                        onChange={(val) => setNewExcSeverity(val)}
+                        options={[
+                          { value: 'LOW', label: 'Low' },
+                          { value: 'MEDIUM', label: 'Medium' },
+                          { value: 'HIGH', label: 'High' },
+                          { value: 'CRITICAL', label: 'Critical' },
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  <div className="sd-form-field">
+                    <label>
+                      Exception Title <small style={{ color: '#94a3b8', fontWeight: 500 }}>(Optional · auto-generated if left blank)</small>
+                    </label>
+                    <input
+                      type="text"
+                      value={newExcTitle}
+                      onChange={(e) => setNewExcTitle(e.target.value)}
+                      placeholder="e.g. Customs Clearance Hold at POD"
+                    />
+                  </div>
+                  <div className="sd-form-field">
+                    <label>Description</label>
+                    <textarea
+                      value={newExcDesc}
+                      onChange={(e) => setNewExcDesc(e.target.value)}
+                      rows={3}
+                      placeholder="Enter operational notes or root cause details..."
+                    />
+                  </div>
+
+                  {raiseError && (
+                    <div className="sd-error-banner" style={{ margin: '4px 0 8px 0', fontSize: '0.74rem' }}>
+                      <AlertCircle size={13} />
+                      <span>{raiseError}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="sd-action-btn sd-action-danger"
+                    disabled={submittingException}
+                    style={{ opacity: submittingException ? 0.7 : 1 }}
+                  >
+                    {submittingException ? 'Creating Alert...' : 'Create Exception Alert'}
+                  </button>
+                </form>
               )}
             </div>
 
-            {/* Dev: Manual Carrier Update Panel */}
-            {isDev && (
-              <ManualUpdatePanel
-                onSubmit={handleSubmitCarrierUpdate}
-                submittingUpdate={submittingUpdate}
-                rawUpdate={rawUpdate}
-                setRawUpdate={setRawUpdate}
-                updateMsg={updateMsg}
-              />
+            {/* Exceptions Queue */}
+            {exceptions.length === 0 ? (
+              <div className="sd-exc-empty">
+                <span className="sd-exc-empty-icon">💚</span>
+                <div className="sd-empty-title">No Active Exceptions</div>
+                <p>Carrier tracking is operating normally for this shipment.</p>
+              </div>
+            ) : (
+              <div className="sd-exc-list">
+                {/* 1. Active Exceptions First */}
+                {exceptions
+                  .filter((e) => e.status !== 'RESOLVED' && e.status !== 'DISMISSED')
+                  .map((exc) => {
+                    const isAcknowledged = exc.status === 'ACKNOWLEDGED';
+                    const sevPillMap = {
+                      CRITICAL: { bg: '#fee2e2', fg: '#dc2626', border: '#fecaca' },
+                      HIGH:     { bg: '#fef3c7', fg: '#b45309', border: '#fde68a' },
+                      MEDIUM:   { bg: '#dbeafe', fg: '#1d4ed8', border: '#bfdbfe' },
+                      LOW:      { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' },
+                    };
+                    const sev = sevPillMap[exc.severity] || sevPillMap.MEDIUM;
+
+                    return (
+                      <div key={exc.id} className={`sd-exc-card ${exc.severity === 'CRITICAL' ? 'sd-exc-critical' : ''}`}>
+                        <div className="sd-exc-card-header">
+                          <span
+                            className="sd-exc-sev"
+                            style={{ background: sev.bg, color: sev.fg, border: `1px solid ${sev.border}` }}
+                          >
+                            {exc.severity}
+                          </span>
+                          <span className={`sd-exc-status ${isAcknowledged ? 'sd-status-ack' : 'sd-status-new'}`}>
+                            {exc.status}
+                          </span>
+                          {exc.exception_type && (
+                            <span className="sd-exc-type-tag">
+                              {exc.exception_type.replace(/_/g, ' ')}
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="sd-exc-title">{exc.title}</h4>
+                        {exc.description && <p className="sd-exc-desc">{exc.description}</p>}
+
+                        {/* Inline Resolve Notes Form */}
+                        {resolvingExcId === exc.id ? (
+                          <div className="sd-exc-resolve-box">
+                            <label className="sd-exc-resolve-lbl">Resolution Summary / Actions Taken *</label>
+                            <textarea
+                              rows={2}
+                              value={resolutionNotesInput}
+                              onChange={(e) => setResolutionNotesInput(e.target.value)}
+                              placeholder="Document carrier updates, customs release info, or revised ETA..."
+                              className="sd-exc-resolve-input"
+                            />
+                            <div className="sd-exc-resolve-actions">
+                              <button
+                                className="sd-exc-btn sd-btn-ghost-sm"
+                                onClick={() => { setResolvingExcId(null); setResolutionNotesInput(''); }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                className="sd-exc-btn sd-btn-resolve-confirm"
+                                onClick={() => handleResolveException(exc.id)}
+                              >
+                                Confirm Resolution
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="sd-exc-actions-bar">
+                            <button
+                              className="sd-exc-btn sd-btn-ai-resolve"
+                              style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              onClick={() => setSelectedExceptionForResolution(exc)}
+                            >
+                              <ShieldAlert size={13} /> Autonomous Resolution (Task 5.8)
+                            </button>
+                            {!isAcknowledged && (
+                              <button
+                                className="sd-exc-btn sd-btn-ack"
+                                onClick={() => handleAcknowledgeException(exc.id)}
+                              >
+                                ✓ Acknowledge
+                              </button>
+                            )}
+                            <button
+                              className="sd-exc-btn sd-btn-resolve"
+                              onClick={() => { setResolvingExcId(exc.id); setResolutionNotesInput(''); }}
+                            >
+                              Resolve Exception
+                            </button>
+                            <button
+                              className="sd-exc-btn sd-btn-dismiss"
+                              onClick={() => handleDismissException(exc.id)}
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="sd-exc-footer">
+                          <small>Detected: {formatDate(exc.created_at)}</small>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                {/* 2. Resolved / Dismissed Exceptions Collapsible Section */}
+                {exceptions.filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED').length > 0 && (
+                  <div className="sd-resolved-exc-section">
+                    <button
+                      type="button"
+                      className="sd-resolved-toggle-btn"
+                      onClick={() => setShowResolvedHistory(!showResolvedHistory)}
+                    >
+                      <span className="sd-resolved-toggle-title">
+                        {showResolvedHistory ? '▾' : '▸'} Resolved Exceptions ({exceptions.filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED').length})
+                      </span>
+                      <span className="sd-resolved-toggle-hint">
+                        {showResolvedHistory ? 'Hide history' : 'View resolution notes'}
+                      </span>
+                    </button>
+
+                    {showResolvedHistory && (
+                      <div className="sd-resolved-exc-list">
+                        {exceptions
+                          .filter((e) => e.status === 'RESOLVED' || e.status === 'DISMISSED')
+                          .map((exc) => {
+                            const isResolved = exc.status === 'RESOLVED';
+                            const sevPillMap = {
+                              CRITICAL: { bg: '#fee2e2', fg: '#dc2626', border: '#fecaca' },
+                              HIGH:     { bg: '#fef3c7', fg: '#b45309', border: '#fde68a' },
+                              MEDIUM:   { bg: '#dbeafe', fg: '#1d4ed8', border: '#bfdbfe' },
+                              LOW:      { bg: '#f1f5f9', fg: '#475569', border: '#e2e8f0' },
+                            };
+                            const sev = sevPillMap[exc.severity] || sevPillMap.LOW;
+
+                            return (
+                              <div key={exc.id} className="sd-exc-card sd-exc-card-inactive">
+                                <div className="sd-exc-card-header">
+                                  <span
+                                    className="sd-exc-sev"
+                                    style={{ background: sev.bg, color: sev.fg, border: `1px solid ${sev.border}` }}
+                                  >
+                                    {exc.severity}
+                                  </span>
+                                  <span
+                                    className="sd-exc-status"
+                                    style={{
+                                      background: isResolved ? '#dcfce7' : '#f1f5f9',
+                                      color: isResolved ? '#15803d' : '#475569'
+                                    }}
+                                  >
+                                    {exc.status}
+                                  </span>
+                                  {exc.exception_type && (
+                                    <span className="sd-exc-type-tag">
+                                      {exc.exception_type.replace(/_/g, ' ')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <h4 className="sd-exc-title">{exc.title}</h4>
+                                {exc.description && <p className="sd-exc-desc">{exc.description}</p>}
+
+                                {isResolved && exc.resolution_notes && (
+                                  <div className="sd-exc-resolution">
+                                    <strong>Resolution Notes:</strong> {exc.resolution_notes}
+                                    <div className="sd-exc-by">Resolved by: {exc.resolved_by || 'Operator'}</div>
+                                  </div>
+                                )}
+
+                                <div className="sd-exc-footer">
+                                  <small>Logged: {formatDate(exc.created_at)}</small>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* End of Section Marker */}
-            <div className="sd-right-col-end-marker">
-              <Check size={13} className="sd-end-icon" />
-              <span>All Operational Modules Loaded</span>
-            </div>
           </div>
+        </div>
+      )}
 
-          {/* Floating Scroll Down Indicator Pill */}
-          {canScrollRightMore && (
-            <button
-              type="button"
-              className="sd-scroll-down-pill"
-              onClick={handleScrollRightColToBottom}
-              aria-label="Scroll down for more information"
-            >
-              <ChevronDown size={14} className="sd-bounce-arrow" />
-              <span>Scroll down for more</span>
-            </button>
+      {/* ── TAB 4: DOCUMENTS & COMPLIANCE ── */}
+      {activeTab === 'documents' && (
+        <div className="sd-tab-content sd-tab-documents">
+          <ShipmentReadinessPredictiveIntelligenceCard
+            shipmentId={id}
+            shipment={shipment}
+          />
+          <DocumentWorkspace
+            shipmentId={id}
+            shipment={shipment}
+            onRefreshShipment={() => fetchShipmentDetails(false)}
+          />
+        </div>
+      )}
+
+      {/* ── TAB 5: FINANCIALS & BILLING ── */}
+      {activeTab === 'finance' && (
+        <div className="sd-tab-content sd-tab-finance">
+          <FinanceWorkspace
+            shipmentId={id}
+            shipment={shipment}
+            onRefreshShipment={() => fetchShipmentDetails(false)}
+          />
+          <div style={{ marginTop: '20px' }}>
+            <BillingWorkspace
+              shipmentId={id}
+              onRefreshShipment={() => fetchShipmentDetails(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB 6: OPERATIONS COPILOT & AI INTELLIGENCE ── */}
+      {activeTab === 'intelligence' && (
+        <div className="sd-tab-content sd-tab-intelligence">
+          {/* Phase 3 Task 3.5: Shipment Operations Automation & Exception Response */}
+          {id && (
+            <ShipmentOperationsAutomationSection
+              shipmentId={id}
+              onRefreshShipment={() => fetchShipmentDetails(false)}
+            />
+          )}
+
+          {/* Grounded Recommendations */}
+          {id && (
+            <ModuleRecommendationsWidget
+              sourceType="SHIPMENT"
+              sourceId={id}
+              sourceRef={shipment?.booking_number || `SH-${id}`}
+            />
+          )}
+
+          {/* Phase 7.2 Autonomous Shipment Lifecycle Card */}
+          {id && (
+            <div style={{ marginTop: '20px' }}>
+              <AutonomousShipmentLifecycleCard shipmentId={id} />
+            </div>
+          )}
+
+          {/* Phase 7.4 Autonomous Enterprise Exception Management Card */}
+          {id && (
+            <div style={{ marginTop: '20px' }}>
+              <AutonomousExceptionLifecycleCard entityType="SHIPMENT" entityId={id} />
+            </div>
+          )}
+
+          {/* Deep Shipment Operations Intelligence Section */}
+          {id && (
+            <div style={{ marginTop: '20px' }}>
+              <ShipmentOperationsIntelligenceSection shipmentId={id} />
+            </div>
+          )}
+
+          {/* Unified Business Intelligence Card */}
+          {id && (
+            <div style={{ marginTop: '20px' }}>
+              <BusinessIntelligenceCard
+                entityType="Shipment"
+                entityId={id}
+                title="Shipment Context & Operational Intelligence"
+              />
+            </div>
           )}
         </div>
-      </div>
+      )}
+
+      {/* Phase 5 Task 5.8: Autonomous Exception Resolution Drawer */}
+      <ExceptionResolutionDrawer
+        exception={selectedExceptionForResolution}
+        isOpen={!!selectedExceptionForResolution}
+        onClose={() => setSelectedExceptionForResolution(null)}
+        onActionExecuted={() => {
+          fetchShipmentData();
+        }}
+      />
     </div>
   );
 }

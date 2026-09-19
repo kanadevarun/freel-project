@@ -15,7 +15,7 @@ import { useAuth } from './AuthContext';
  *   if (hasRole('SUPER_ADMIN'))  { ... }
  */
 
-const RBACContext = createContext(null);
+export const RBACContext = createContext(null);
 
 export function RBACProvider({ children }) {
   const { memberRole } = useAuth();
@@ -57,7 +57,7 @@ export function RBACProvider({ children }) {
   function can(module, action) {
     if (!module || !action) return false;
     const key = `${String(module).toUpperCase()}:${String(action).toUpperCase()}`;
-    return permissionsSet.has(key);
+    return permissionsSet.has(key) || permissionsSet.has('*') || hasRole('SUPER_ADMIN');
   }
 
   /**
@@ -97,5 +97,20 @@ export function RBACProvider({ children }) {
 export function useRBAC() {
   const ctx = useContext(RBACContext);
   if (!ctx) throw new Error('useRBAC must be used inside <RBACProvider>');
+  return ctx;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useSafeRBAC() {
+  const ctx = useContext(RBACContext);
+  if (!ctx) {
+    return {
+      can: () => true,
+      hasRole: (name) => false,
+      hasAnyRole: (names) => false,
+      roleName: null,
+      permissionsSet: new Set(),
+    };
+  }
   return ctx;
 }

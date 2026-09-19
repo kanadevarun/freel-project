@@ -18,10 +18,31 @@ export default function DocumentDetailsModal({ isOpen, onClose, document: doc, o
 
   if (!isOpen || !doc) return null;
 
-  const getDownloadUrl = () => {
-    if (!doc) return '#';
-    if (doc.file_path && doc.file_path.startsWith('http')) return doc.file_path;
-    return `http://localhost:8080/uploads/${doc.s3_key || doc.file_name}`;
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!doc?.id) return;
+    try {
+      setIsDownloading(true);
+      setError('');
+      const res = await api.get(`/api/v1/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.original_file_name || doc.file_name || `document_${doc.id}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+      setError(err?.response?.data?.message || 'Failed to download document. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -273,14 +294,14 @@ export default function DocumentDetailsModal({ isOpen, onClose, document: doc, o
               <Trash2 size={15} /> Delete Document
             </button>
 
-            <a
-              href={getDownloadUrl()}
-              target="_blank"
-              rel="noreferrer"
-              style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 750, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', padding: '8px 18px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 750, cursor: isDownloading ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              <Download size={16} /> Download File
-            </a>
+              <Download size={16} /> {isDownloading ? 'Downloading...' : 'Download File'}
+            </button>
           </div>
         </div>
       </div>

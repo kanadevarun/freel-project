@@ -42,12 +42,33 @@ def invoice_report_node(state: FinanceState) -> FinanceState:
         "status": state.get("invoice_status", "APPROVED"),
         "items": state.get("extracted_items", []),
         "discrepancies": discrepancies,
-        "ai_summary": ai_summary,
-    }
+    # Execute through Centralized Action System
+    from app.tools.action_bridge import execute_action
+    action_res = execute_action(
+        action_name="finance.reconcile_invoice",
+        org_id=org_id,
+        input_data={
+            "shipment_id": shipment_id,
+            "invoice_id": invoice_id,
+            "status": state.get("invoice_status", "APPROVED"),
+            "items": state.get("extracted_items", []),
+            "discrepancies": discrepancies,
+            "ai_summary": ai_summary
+        },
+        source="langgraph.finance"
+    )
+    if action_res.get("success"):
+        print(f"[Finance Agent] Action System execution success for invoice {invoice_id}")
+        return {
+            "discrepancies": discrepancies,
+            "ai_summary": ai_summary,
+            "invoice_status": state.get("invoice_status", "APPROVED")
+        }
 
-    token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+    # Fallback to direct callback if action did not execute
+    from app.tools.auth_utils import get_internal_service_token
     internal_headers = {
-        "X-LogisticsHQ-Service-Key": token,
+        "X-LogisticsHQ-Service-Key": get_internal_service_token(),
         "Content-Type": "application/json"
     }
 

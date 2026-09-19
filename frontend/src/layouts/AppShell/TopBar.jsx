@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { dashboardService } from '../../services/dashboardService';
 import { searchService } from '../../services/searchService';
+import { notificationCenterService } from '../../services/notificationCenterService';
 import {
   Search,
   Bell,
@@ -32,6 +33,7 @@ import {
   ExternalLink,
   History,
   CornerDownLeft,
+  PanelLeftOpen,
 } from 'lucide-react';
 import './TopBar.css';
 
@@ -77,7 +79,7 @@ const CURRENCIES = [
   { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', tag: 'Asia-Pacific Hub', color: '#0891b2', bg: '#ecfeff' },
 ];
 
-export default function TopBar() {
+export default function TopBar({ isSidebarCollapsed = false, onToggleSidebar }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -89,6 +91,31 @@ export default function TopBar() {
 
   // Notifications State
   const [attentionItems, setAttentionItems] = useState([]);
+  const [inAppNotifs, setInAppNotifs] = useState([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  const loadRealNotifications = async () => {
+    try {
+      const [countRes, listRes] = await Promise.all([
+        notificationCenterService.getUnreadCount(),
+        notificationCenterService.listNotifications({ pageSize: 6 }),
+      ]);
+      setUnreadNotifCount(countRes?.count ?? 0);
+      setInAppNotifs(listRes?.data || []);
+    } catch {
+      // Tolerate gracefully
+    }
+  };
+
+  useEffect(() => {
+    loadRealNotifications();
+  }, []);
+
+  useEffect(() => {
+    if (activeMenu === 'notif') {
+      loadRealNotifications();
+    }
+  }, [activeMenu]);
 
   // Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -351,21 +378,23 @@ export default function TopBar() {
     user?.first_name ||
     (user?.full_name && !user.full_name.includes('@') ? user.full_name.split(' ')[0] : null) ||
     (user?.name && !user.name.includes('@') ? user.name.split(' ')[0] : null) ||
-    'Varun';
+    (user?.email ? user.email.split('@')[0] : null) ||
+    'User';
 
   const userInitials = (
     (user?.first_name ? user.first_name[0] : '') +
     (user?.last_name ? user.last_name[0] : (firstName ? firstName[0] : 'U'))
-  ).toUpperCase() || 'VK';
+  ).toUpperCase() || 'HQ';
 
-  const userEmail = user?.email || 'operator@logisticshq.io';
+  const userEmail = user?.email || 'user@logisticshq.io';
   const userRole = user?.role || user?.role_name || 'Org Admin';
   const orgName = user?.org_name || user?.company_name || 'LogisticsHQ Enterprise';
 
-  const notifCount = attentionItems.length;
+  const notifCount = unreadNotifCount > 0 ? unreadNotifCount : attentionItems.length;
 
   const getCategoryIcon = (category) => {
     switch (category) {
+      case 'SHIPMENTS':
       case 'SHIPMENT':
         return <Ship size={14} className="text-blue-500" />;
       case 'BOOKING':
@@ -376,10 +405,13 @@ export default function TopBar() {
         return <FileSpreadsheet size={14} className="text-amber-500" />;
       case 'CUSTOMER':
         return <Users size={14} className="text-emerald-500" />;
+      case 'INVOICES':
       case 'INVOICE':
+      case 'FINANCE':
         return <CreditCard size={14} className="text-rose-500" />;
       case 'LEAD':
         return <Sparkles size={14} className="text-teal-500" />;
+      case 'CONTRACTS':
       case 'CONTRACT':
         return <FolderOpen size={14} className="text-cyan-500" />;
       case 'TRACKING':
@@ -389,15 +421,66 @@ export default function TopBar() {
     }
   };
 
+  // Determine contextual page title based on active route
+  const getRouteContext = () => {
+    const path = (location.pathname || '').toLowerCase();
+    if (path === '/dashboard' || path === '/dashboard/') {
+      return {
+        title: 'Operations Dashboard',
+        subtitle: 'Real-time freight operations, active pipeline & intelligence',
+        badge: 'LIVE WORKSPACE'
+      };
+    }
+    if (path.includes('/dashboard/leads')) return { title: 'Lead Management', subtitle: 'Inbound shipper inquiries & qualification pipeline' };
+    if (path.includes('/dashboard/rfqs')) return { title: 'Request for Quotations (RFQs)', subtitle: 'Customer freight rate requests & spot pricing' };
+    if (path.includes('/dashboard/shipments')) return { title: 'Shipments & Movements', subtitle: 'Live freight execution, milestones & tracking' };
+    if (path.includes('/dashboard/bookings')) return { title: 'Carrier Bookings', subtitle: 'Ocean, air & road transport allocations' };
+    if (path.includes('/dashboard/tracking')) return { title: 'Shipment Tracking', subtitle: 'Real-time telemetry, AIS & vessel status' };
+    if (path.includes('/dashboard/quotations')) return { title: 'Commercial Quotations', subtitle: 'Customer rate proposals & margin calculations' };
+    if (path.includes('/dashboard/rate-management')) return { title: 'Rate Management', subtitle: 'Carrier buy rates & tariff schedules' };
+    if (path.includes('/dashboard/contracts')) return { title: 'Customer & Carrier Contracts', subtitle: 'Volume commitments & service agreements' };
+    if (path.includes('/dashboard/customers')) return { title: 'Customer Accounts', subtitle: 'Shippers, consignees & trade partners' };
+    if (path.includes('/dashboard/outreach')) return { title: 'Commercial Outreach', subtitle: 'Automated sales touchpoints & follow-ups' };
+    if (path.includes('/dashboard/documents')) return { title: 'Freight Documents', subtitle: 'Bills of lading, packing lists & customs declarations' };
+    if (path.includes('/dashboard/approvals')) return { title: 'Approval Queue', subtitle: 'Tiered authorizations & financial controls' };
+    if (path.includes('/dashboard/recommendations')) return { title: 'Recommendation Center', subtitle: 'AI pricing, margin & risk optimizations' };
+    if (path.includes('/dashboard/automations')) return { title: 'Workflow Automations', subtitle: 'Rule triggers, auto-notifications & actions' };
+    if (path.includes('/dashboard/notifications')) return { title: 'Notification Center', subtitle: 'Operational alerts & mission events' };
+    if (path.includes('/dashboard/invoices')) return { title: 'Billing & Invoices', subtitle: 'Accounts receivable & freight billing' };
+    if (path.includes('/dashboard/debit-notes')) return { title: 'Debit Notes', subtitle: 'Carrier detention, demurrage & ancillary adjustments' };
+    if (path.includes('/dashboard/reports')) return { title: 'Operational Reports', subtitle: 'Freight volume, revenue & profitability analytics' };
+    if (path.includes('/dashboard/settings')) return { title: 'Settings & Administration', subtitle: 'Workspace preferences, security & user access' };
+    if (path.includes('/dashboard/ai-monitoring')) return { title: 'AI Telemetry & Monitoring', subtitle: 'Multi-agent orchestration & LangGraph execution' };
+
+    return {
+      title: `Welcome, ${firstName}`,
+      subtitle: 'Freight forwarding workspace',
+    };
+  };
+
+  const routeContext = getRouteContext();
+
   return (
     <>
       <header className="app-topbar">
-        {/* ── Left Welcome / Breadcrumb Header ── */}
+        {/* ── Left Breadcrumb / Context Header ── */}
         <div className="topbar-welcome">
-          <h1 className="topbar-title">
-            Welcome to LogisticsHQ, {firstName}! <span className="wave-emoji">👋</span>
-          </h1>
-          <p className="topbar-subtitle">Your freight workspace is ready. Let's get your first operation moving.</p>
+          <div className="topbar-title-row">
+            {isSidebarCollapsed && onToggleSidebar && (
+              <button
+                type="button"
+                className="topbar-sidebar-expand-btn"
+                onClick={onToggleSidebar}
+                title="Expand Sidebar (Ctrl+[)"
+                aria-label="Expand Sidebar"
+              >
+                <PanelLeftOpen size={17} strokeWidth={2} />
+              </button>
+            )}
+            <h1 className="topbar-title">{routeContext.title}</h1>
+            {routeContext.badge && <span className="topbar-live-badge">{routeContext.badge}</span>}
+          </div>
+          <p className="topbar-subtitle">{routeContext.subtitle}</p>
         </div>
 
         {/* ── Right Actions ── */}
@@ -421,12 +504,22 @@ export default function TopBar() {
 
           {/* Action Icons Group */}
           <div className="topbar-icons-group">
+            {/* 0. AI Copilot Trigger */}
+            <button
+              className="topbar-icon-btn copilot-topbar-btn"
+              aria-label="AI Copilot"
+              title="Open LogisticsHQ AI Copilot (Alt+C)"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-copilot'))}
+            >
+              <Sparkles size={18} style={{ color: '#2563eb' }} />
+            </button>
+
             {/* 1. Notifications Bell */}
             <div className="topbar-notif-container">
               <button
                 className={`topbar-icon-btn ${activeMenu === 'notif' ? 'active' : ''}`}
                 aria-label="Notifications"
-                title="Notifications & Priority Center"
+                title="Notifications & Escalation Center"
                 onClick={() => setActiveMenu((prev) => (prev === 'notif' ? null : 'notif'))}
               >
                 <Bell size={18} className="topbar-bell-icon" />
@@ -443,17 +536,68 @@ export default function TopBar() {
                   <div className="topbar-notif-header">
                     <div className="topbar-notif-title-wrap">
                       <Bell size={15} className="text-blue-600" />
-                      <span className="topbar-notif-title">Notifications & Priority Center</span>
+                      <span className="topbar-notif-title">Notifications & Alerts</span>
                     </div>
-                    {notifCount > 0 ? (
-                      <span className="topbar-notif-actionable-pill">{notifCount} Actionable</span>
-                    ) : (
-                      <span className="topbar-notif-caughtup-pill">All Caught Up</span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {unreadNotifCount > 0 && (
+                        <button
+                          style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await notificationCenterService.markAllAsRead();
+                            loadRealNotifications();
+                          }}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      {notifCount > 0 ? (
+                        <span className="topbar-notif-actionable-pill">{notifCount} Active</span>
+                      ) : (
+                        <span className="topbar-notif-caughtup-pill">All Caught Up</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="topbar-notif-list">
-                    {attentionItems.length > 0 ? (
+                    {inAppNotifs.length > 0 ? (
+                      inAppNotifs.map((item) => {
+                        const isCritical = item.severity === 'CRITICAL';
+                        const isHigh = item.severity === 'HIGH';
+                        const isEscalated = item.is_escalated;
+                        const iconBg = isCritical ? '#fef2f2' : isHigh ? '#fff7ed' : '#eff6ff';
+                        const iconColor = isCritical ? '#dc2626' : isHigh ? '#ea580c' : '#2563eb';
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`topbar-notif-item ${isCritical || isEscalated ? 'priority-high' : isHigh ? 'priority-med' : 'priority-info'} ${!item.is_read ? 'unread-item' : ''}`}
+                            onClick={() => {
+                              setActiveMenu(null);
+                              navigate(item.action_url || '/dashboard/notifications');
+                            }}
+                          >
+                            <div className="topbar-notif-item-icon-box" style={{ background: iconBg, color: iconColor }}>
+                              <Bell size={13} />
+                            </div>
+                            <div className="topbar-notif-item-body">
+                              <div className="topbar-notif-item-top">
+                                <span className="topbar-notif-item-title" style={{ fontWeight: item.is_read ? 500 : 700 }}>
+                                  {item.title}
+                                </span>
+                                {item.is_escalated && (
+                                  <span style={{ fontSize: '10px', background: '#dc2626', color: '#fff', padding: '1px 5px', borderRadius: '3px', fontWeight: 600 }}>
+                                    ESCALATED
+                                  </span>
+                                )}
+                              </div>
+                              <div className="topbar-notif-item-subtitle">{item.message}</div>
+                            </div>
+                            <ChevronRight size={13} className="topbar-notif-item-arrow" />
+                          </div>
+                        );
+                      })
+                    ) : attentionItems.length > 0 ? (
                       attentionItems.map((item) => {
                         const isHigh = item.priority === 'HIGH';
                         const isMed = item.priority === 'MEDIUM';
@@ -499,10 +643,10 @@ export default function TopBar() {
                       className="topbar-notif-footer-btn"
                       onClick={() => {
                         setActiveMenu(null);
-                        navigate('/dashboard/approvals');
+                        navigate('/dashboard/notifications');
                       }}
                     >
-                      <span>View All Approvals & Priority Queue</span>
+                      <span>Open Notification & Escalation Center</span>
                       <ChevronRight size={13} />
                     </button>
                   </div>

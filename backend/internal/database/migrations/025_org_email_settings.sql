@@ -28,5 +28,5 @@ CREATE INDEX idx_org_connected_mailboxes_org_id ON org_connected_mailboxes(org_i
 INSERT IGNORE INTO org_connected_mailboxes (org_id, email, owner_name, mailbox_type, is_primary, status, last_synced_at)
 VALUES 
 (1, 'sales@abcfreight.com', 'Primary business mailbox', 'Shared / Team', TRUE, 'Connected', CURRENT_TIMESTAMP),
-(1, 'varun@abcfreight.com', 'Varun Kanade', 'Individual', FALSE, 'Connected', CURRENT_TIMESTAMP),
+(1, 'ops@abcfreight.com', 'Operations Desk', 'Individual', FALSE, 'Connected', CURRENT_TIMESTAMP),
 (1, 'neha@abcfreight.com', 'Neha Sharma', 'Individual', FALSE, 'Connected', CURRENT_TIMESTAMP);

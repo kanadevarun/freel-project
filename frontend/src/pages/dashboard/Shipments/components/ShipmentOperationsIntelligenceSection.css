@@ -1,0 +1,693 @@
+/* Shipment Operations Intelligence Section - LogisticsHQ Light Design System */
+
+.sh-intel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 32px;
+}
+
+/* Header Bar */
+.sh-intel-header {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sh-intel-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sh-intel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.sh-intel-badge--readonly {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.sh-intel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.sh-intel-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sh-intel-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.sh-intel-risk-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.sh-intel-risk-pill--critical {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.sh-intel-risk-pill--high {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.sh-intel-risk-pill--moderate {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.sh-intel-risk-pill--low {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.sh-intel-freshness-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.sh-intel-freshness-pill--live {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.sh-intel-freshness-pill--recent {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.sh-intel-freshness-pill--stale {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.sh-intel-freshness-pill--unavailable {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+
+.sh-intel-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.sh-intel-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.sh-intel-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.sh-intel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.sh-intel-btn--secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.sh-intel-btn--secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* Grounded AI Operational Summary Card */
+.sh-intel-ai-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.sh-intel-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.sh-intel-ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sh-intel-ai-sparkle {
+  color: #2563eb;
+}
+
+.sh-intel-ai-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sh-intel-ai-confidence {
+  font-size: 11px;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.sh-intel-ai-disclaimer {
+  font-size: 11px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.sh-intel-ai-text {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #334155;
+  margin: 0 0 14px 0;
+}
+
+.sh-intel-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.sh-intel-ai-subitem {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.sh-intel-ai-subitem-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.sh-intel-ai-subitem p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475569;
+  margin: 0;
+}
+
+.sh-intel-ai-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.sh-intel-ai-action-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.sh-intel-ai-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sh-intel-ai-list-item {
+  display: flex;
+  align-items: flex-start;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.sh-intel-ai-citations {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.sh-intel-ai-citations-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sh-intel-citation-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* 4-Quadrant Operational KPI Grid */
+.sh-intel-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.sh-intel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sh-intel-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sh-intel-card-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sh-intel-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sh-intel-card-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+.sh-intel-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.sh-intel-kpi-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.sh-intel-kpi-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.sh-intel-kpi-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sh-intel-kpi-subval {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.sh-intel-risk-text--critical {
+  color: #dc2626;
+}
+
+.sh-intel-risk-text--high {
+  color: #ea580c;
+}
+
+.sh-intel-risk-text--moderate {
+  color: #d97706;
+}
+
+.sh-intel-risk-text--low {
+  color: #059669;
+}
+
+.sh-intel-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.sh-intel-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sh-intel-stat-name {
+  color: #64748b;
+}
+
+.sh-intel-stat-val {
+  color: #1e293b;
+}
+
+.sh-intel-notice-box {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Milestone Schedule Timeline Table */
+.sh-intel-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sh-intel-table-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sh-intel-table-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sh-intel-table-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.sh-intel-count-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.sh-intel-table-wrapper {
+  overflow-x: auto;
+}
+
+.sh-intel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.sh-intel-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 11px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.sh-intel-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sh-intel-tr--delayed {
+  background: #fffbeb;
+}
+
+.sh-intel-mstatus-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.sh-intel-mstatus-badge--completed {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.sh-intel-mstatus-badge--planned {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.sh-intel-delay-tag {
+  font-size: 11px;
+  font-weight: 700;
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+/* Empty states */
+.sh-intel-empty-placeholder {
+  padding: 32px 20px;
+  text-align: center;
+}
+
+/* Grounded Observation Ledger */
+.sh-intel-observations-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.sh-intel-obs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sh-intel-obs-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sh-intel-obs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sh-intel-obs-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.sh-intel-obs-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.sh-intel-obs-severity {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.sh-intel-obs-severity--info {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.sh-intel-obs-severity--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.sh-intel-obs-severity--critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.sh-intel-obs-category {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.sh-intel-obs-evidence {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.sh-intel-obs-msg {
+  font-size: 12px;
+  color: #334155;
+  margin: 0;
+}
+
+/* Loading & Error States */
+.sh-intel-loading {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.sh-intel-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: sh-intel-spin 0.8s linear infinite;
+}
+
+@keyframes sh-intel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sh-intel-loading-text {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.sh-intel-error {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .sh-intel-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .sh-intel-header-right {
+    align-items: flex-start;
+  }
+  .sh-intel-ai-actions-row {
+    grid-template-columns: 1fr;
+  }
+}

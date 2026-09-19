@@ -379,6 +379,38 @@ const quotationService = {
    * Trigger on-demand rate risk evaluation across all quotations.
    */
   evaluateRateRisks: () => api.post(`${BASE}/rate-risks/evaluate`, {}),
+
+  // ── Document & PDF Generation & Download ─────────────────────────────────
+
+  /**
+   * Generate a PDF/HTML document for a quotation.
+   * @param {number|string} quotationId
+   * @param {string} docType - 'PDF'|'HTML'
+   */
+  generateQuotationDocument: (quotationId, docType = 'PDF') =>
+    api.post(`${BASE}/${quotationId}/documents/generate`, { document_type: docType }),
+
+  /**
+   * List generated documents for a quotation.
+   * @param {number|string} quotationId
+   */
+  listQuotationDocuments: (quotationId) =>
+    api.get(`${BASE}/${quotationId}/documents`),
+
+  /**
+   * Download a generated quotation document.
+   * @param {number|string} quotationId
+   * @param {number|string} docId
+   */
+  downloadQuotationDocument: (quotationId, docId) =>
+    api.get(`${BASE}/${quotationId}/documents/${docId}/download`, { responseType: 'blob' }),
+
+  /**
+   * Direct customer-safe Quotation PDF generation and download.
+   * @param {number|string} quotationId
+   */
+  downloadQuotationPDF: (quotationId) =>
+    api.get(`${BASE}/${quotationId}/pdf`, { responseType: 'blob' }),
 };
 
 export default quotationService;

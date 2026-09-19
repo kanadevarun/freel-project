@@ -20,9 +20,24 @@ export default function ApprovalRow({ item, onSelect, onApprove, onOpenRejectMod
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'Overdue': return 'status-badge overdue';
-      case 'Pending': return 'status-badge pending';
-      case 'Approved': return 'status-badge approved';
-      case 'Rejected': return 'status-badge rejected';
+      case 'Pending':
+      case 'PENDING_APPROVAL': return 'status-badge pending';
+      case 'Returned for Changes':
+      case 'RETURNED_FOR_CHANGES': return 'status-badge in-progress';
+      case 'Approved':
+      case 'APPROVED':
+      case 'Completed':
+      case 'COMPLETED': return 'status-badge approved';
+      case 'Rejected':
+      case 'REJECTED': return 'status-badge rejected';
+      case 'Cancelled':
+      case 'CANCELLED': return 'status-badge cancelled';
+      case 'Expired':
+      case 'EXPIRED': return 'status-badge overdue';
+      case 'Executing':
+      case 'EXECUTING': return 'status-badge in-progress';
+      case 'Failed':
+      case 'FAILED': return 'status-badge rejected';
       default: return 'status-badge pending';
     }
   };
@@ -39,6 +54,7 @@ export default function ApprovalRow({ item, onSelect, onApprove, onOpenRejectMod
 
   const handleQuickApprove = async (e) => {
     e.stopPropagation();
+    if (approving) return;
     try {
       setApproving(true);
       await onApprove(item, 'Quick approved from table row');
@@ -54,6 +70,8 @@ export default function ApprovalRow({ item, onSelect, onApprove, onOpenRejectMod
     onOpenRejectModal(item);
   };
 
+  const isTerminal = ['Approved', 'APPROVED', 'Rejected', 'REJECTED', 'Cancelled', 'CANCELLED', 'Expired', 'EXPIRED', 'Completed', 'COMPLETED'].includes(item.status);
+
   return (
     <tr className="approval-row" onClick={() => onSelect(item)}>
       {/* REQUEST */}
@@ -63,8 +81,39 @@ export default function ApprovalRow({ item, onSelect, onApprove, onOpenRejectMod
             {getItemIcon(item.type)}
           </div>
           <div>
-            <strong className="request-title">{item.title}</strong>
-            <span className="request-id">{item.id}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <strong className="request-title">{item.title}</strong>
+              {item.actorType === 'AI_AGENT' && (
+                <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: '#EDE9FE', color: '#6D28D9' }}>
+                  🤖 AI
+                </span>
+              )}
+              {item.riskLevel && (
+                <span style={{
+                  fontSize: '0.68rem',
+                  fontWeight: 800,
+                  padding: '1px 6px',
+                  borderRadius: 4,
+                  background: item.riskLevel === 'CRITICAL' || item.riskLevel === 'HIGH_RISK' ? '#FEE2E2' : '#EFF6FF',
+                  color: item.riskLevel === 'CRITICAL' || item.riskLevel === 'HIGH_RISK' ? '#B91C1C' : '#1D4ED8',
+                }}>
+                  {item.riskLevel}
+                </span>
+              )}
+              {item.externalCommunication && (
+                <span style={{ fontSize: '0.68rem', fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#EFF6FF', color: '#1E40AF' }}>
+                  ✉ Outbound
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <span className="request-id">{item.id}</span>
+              {item.actionName && (
+                <span style={{ fontSize: '0.72rem', color: '#64748B', fontFamily: 'monospace' }}>
+                  • {item.actionName}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </td>
@@ -118,7 +167,7 @@ export default function ApprovalRow({ item, onSelect, onApprove, onOpenRejectMod
       {/* ACTIONS */}
       <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
         <div className="row-actions-group">
-          {item.status !== 'Approved' && item.status !== 'Rejected' && (
+          {!isTerminal && (
             <>
               <button
                 type="button"

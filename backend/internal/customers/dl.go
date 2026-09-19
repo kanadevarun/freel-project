@@ -1,10 +1,15 @@
 package customers
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -632,8 +637,9 @@ func (d *dataLayer) GetCustomer360KPIs(ctx context.Context, orgID int64, custome
 	// 4. Active Shipments
 	_ = d.db.QueryRowContext(ctx, `
 		SELECT COUNT(*)
-		FROM shipments
-		WHERE org_id = ? AND customer_id = ? AND status NOT IN ('DELIVERED', 'CANCELLED')
+		FROM shipments s
+		JOIN rfqs r ON s.rfq_id = r.id
+		WHERE s.org_id = ? AND r.customer_id = ? AND s.status NOT IN ('DELIVERED', 'CANCELLED')
 	`, orgID, customerID).Scan(&kpis.ActiveShipments)
 
 	// 5. Linked Contracts
@@ -657,7 +663,7 @@ func (d *dataLayer) GetCustomerRFQs(ctx context.Context, orgID int64, customerID
 			id, rfq_number, status, stage, 
 			COALESCE(origin, '') AS origin, 
 			COALESCE(destination, '') AS destination, 
-			COALESCE(mode_of_transport, 'OCEAN') AS mode_of_transport, 
+			'OCEAN' AS mode_of_transport, 
 			created_at
 		FROM rfqs
 		WHERE org_id = ? AND customer_id = ?
@@ -682,7 +688,7 @@ func (d *dataLayer) GetCustomerQuotations(ctx context.Context, orgID int64, cust
 	query := `
 		SELECT 
 			id, quotation_number, status, 
-			COALESCE(grand_total, 0.0) AS grand_total, 
+			COALESCE(total_amount, 0.0) AS grand_total, 
 			COALESCE(currency, 'USD') AS currency, 
 			valid_until, created_at
 		FROM quotations
@@ -735,16 +741,17 @@ func (d *dataLayer) GetCustomerShipments(ctx context.Context, orgID int64, custo
 	}
 	query := `
 		SELECT 
-			id, 
-			CONCAT('SHP-', id) AS shipment_number, 
-			status, 
-			COALESCE(mode_of_transport, 'OCEAN') AS mode_of_transport, 
-			'' AS origin, 
-			'' AS destination, 
-			created_at
-		FROM shipments
-		WHERE org_id = ? AND customer_id = ?
-		ORDER BY created_at DESC
+			s.id, 
+			CONCAT('SHP-', s.id) AS shipment_number, 
+			s.status, 
+			'OCEAN' AS mode_of_transport, 
+			COALESCE(s.origin_port, '') AS origin, 
+			COALESCE(s.destination_port, '') AS destination, 
+			s.created_at
+		FROM shipments s
+		JOIN rfqs r ON s.rfq_id = r.id
+		WHERE s.org_id = ? AND r.customer_id = ?
+		ORDER BY s.created_at DESC
 		LIMIT ?
 	`
 	var list []CustomerShipment
@@ -989,10 +996,10 @@ func (d *dataLayer) GetCommercialMetrics(ctx context.Context, orgID int64, custo
 		SELECT 
 			COUNT(*),
 			COALESCE(SUM(CASE WHEN status = 'ACCEPTED' THEN 1 ELSE 0 END), 0),
-			COALESCE(SUM(grand_total), 0.0),
-			COALESCE(SUM(CASE WHEN status IN ('DRAFT', 'SENT', 'UNDER_REVIEW') THEN grand_total ELSE 0 END), 0.0),
-			COALESCE(SUM(CASE WHEN status = 'ACCEPTED' THEN grand_total ELSE 0 END), 0.0),
-			COALESCE(SUM(CASE WHEN status IN ('DECLINED', 'REJECTED', 'EXPIRED') THEN grand_total ELSE 0 END), 0.0)
+			COALESCE(SUM(total_amount), 0.0),
+			COALESCE(SUM(CASE WHEN status IN ('DRAFT', 'SENT', 'UNDER_REVIEW') THEN total_amount ELSE 0 END), 0.0),
+			COALESCE(SUM(CASE WHEN status = 'ACCEPTED' THEN total_amount ELSE 0 END), 0.0),
+			COALESCE(SUM(CASE WHEN status IN ('DECLINED', 'REJECTED', 'EXPIRED') THEN total_amount ELSE 0 END), 0.0)
 		FROM quotations
 		WHERE org_id = ? AND customer_id = ?
 	`, orgID, customerID).Scan(
@@ -1221,6 +1228,57 @@ func (d *dataLayer) EvaluateAndPersistCustomerIntelligence(ctx context.Context, 
 		}
 	}
 
+	// Call Python sidecar if available to enrich insights
+	corrID := fmt.Sprintf("corr-eval-%d-%d", customerID, time.Now().UnixNano())
+	pyReq := pythonCustEvalRequest{
+		OrgID:              orgID,
+		CustomerID:         customerID,
+		CustomerCode:       cust.CustomerCode,
+		CustomerName:       cust.Name,
+		Tier:               cust.CustomerType,
+		Status:             cust.Status,
+		HasOwner:           hasOwner,
+		HasContact:         hasPrimaryContact,
+		HealthStatus:       healthStatus,
+		HealthScore:        healthScore,
+		TotalBookings:      len(bks),
+		TotalShipments:     len(shps),
+		OpenRFQs:           len(rfqs),
+		OpenQuotes:         openQuoteCount,
+		ActiveContracts:    activeContractCount,
+		OutstandingBalance: 0,
+		OverdueBalance:     0,
+		DSO:                0,
+		CreditLimit:        finProf.CreditLimit,
+		CreditHold:         finProf.CreditStatus == CreditStatusOnHold,
+		CorrelationID:      corrID,
+	}
+	if pyResp, err := d.callPythonCustomerEvaluation(ctx, pyReq); err == nil && pyResp != nil {
+		for _, r := range pyResp.Risks {
+			var count int
+			_ = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM customer_risk_events WHERE org_id = ? AND customer_id = ? AND risk_type = ? AND is_resolved = FALSE`, orgID, customerID, r.RiskType).Scan(&count)
+			if count == 0 {
+				_, _ = d.db.ExecContext(ctx, `
+					INSERT INTO customer_risk_events (org_id, customer_id, risk_type, severity, title, description, detected_at)
+					VALUES (?, ?, ?, ?, ?, ?, NOW())
+				`, orgID, customerID, r.RiskType, r.Severity, r.Title, r.Description)
+			}
+		}
+		for _, o := range pyResp.Opportunities {
+			var count int
+			_ = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM customer_opportunity_events WHERE org_id = ? AND customer_id = ? AND opportunity_type = ?`, orgID, customerID, o.OpportunityType).Scan(&count)
+			if count == 0 {
+				_, _ = d.db.ExecContext(ctx, `
+					INSERT INTO customer_opportunity_events (org_id, customer_id, opportunity_type, priority, title, reason, suggested_action, detected_at)
+					VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+				`, orgID, customerID, o.OpportunityType, o.Priority, o.Title, o.Reason, o.SuggestedAction)
+			}
+		}
+	}
+
+	// Sync actionable items with the centralized AI Action & Recommendation Center
+	d.syncCustomerFollowupRecommendations(ctx, orgID, cust, kpis, finProf, detectedRisks, detectedOpps, openQuoteCount, activeContractCount, hasOwner)
+
 	openRisks, _ := d.GetCustomerRisks(ctx, orgID, customerID, false)
 	oppsList, _ := d.GetCustomerOpportunities(ctx, orgID, customerID)
 
@@ -1297,8 +1355,8 @@ func (d *dataLayer) GetAttentionItems(ctx context.Context, orgID int64) ([]Custo
 	query := `
 		SELECT 
 			r.customer_id,
-			c.name AS customer_name,
-			c.customer_code,
+			COALESCE(c.name, '') AS customer_name,
+			COALESCE(c.customer_code, CONCAT('CUST-', YEAR(c.created_at), '-', LPAD(c.id, 5, '0'))) AS customer_code,
 			COALESCE(h.health_status, 'INSUFFICIENT_DATA') AS health_status,
 			COALESCE(h.health_score, 50) AS health_score,
 			r.severity,
@@ -1333,7 +1391,9 @@ func (d *dataLayer) GetAttentionItems(ctx context.Context, orgID int64) ([]Custo
 func (d *dataLayer) GetCustomerRisks(ctx context.Context, orgID int64, customerID int64, includeResolved bool) ([]CustomerRiskEvent, error) {
 	query := `
 		SELECT 
-			r.id, r.org_id, r.customer_id, c.name AS customer_name, c.customer_code,
+			r.id, r.org_id, r.customer_id,
+			COALESCE(c.name, '') AS customer_name,
+			COALESCE(c.customer_code, CONCAT('CUST-', YEAR(c.created_at), '-', LPAD(c.id, 5, '0'))) AS customer_code,
 			r.risk_type, r.severity, r.title, COALESCE(r.description, '') AS description,
 			r.detected_at, r.is_resolved, r.resolved_at, r.resolved_by,
 			COALESCE(u.first_name, u.email, '') AS resolved_by_name,
@@ -1362,7 +1422,9 @@ func (d *dataLayer) GetCustomerRisks(ctx context.Context, orgID int64, customerI
 func (d *dataLayer) GetCustomerOpportunities(ctx context.Context, orgID int64, customerID int64) ([]CustomerOpportunityEvent, error) {
 	query := `
 		SELECT 
-			o.id, o.org_id, o.customer_id, c.name AS customer_name, c.customer_code,
+			o.id, o.org_id, o.customer_id,
+			COALESCE(c.name, '') AS customer_name,
+			COALESCE(c.customer_code, CONCAT('CUST-', YEAR(c.created_at), '-', LPAD(c.id, 5, '0'))) AS customer_code,
 			o.opportunity_type, o.priority, o.title, COALESCE(o.reason, '') AS reason,
 			COALESCE(o.suggested_action, '') AS suggested_action, o.related_record_code, o.detected_at
 		FROM customer_opportunity_events o
@@ -1390,6 +1452,256 @@ func (d *dataLayer) ResolveCustomerRisk(ctx context.Context, orgID int64, custom
 	_, err := d.db.ExecContext(ctx, query, actorUserID, note, orgID, riskID, customerID)
 	return err
 }
+
+type pythonCustEvalRequest struct {
+	OrgID              int64   `json:"org_id"`
+	CustomerID         int64   `json:"customer_id"`
+	CustomerCode       string  `json:"customer_code"`
+	CustomerName       string  `json:"customer_name"`
+	Tier               string  `json:"tier"`
+	Status             string  `json:"status"`
+	HasOwner           bool    `json:"has_owner"`
+	HasContact         bool    `json:"has_contact"`
+	HealthStatus       string  `json:"health_status"`
+	HealthScore        int     `json:"health_score"`
+	TotalBookings      int     `json:"total_bookings"`
+	TotalShipments     int     `json:"total_shipments"`
+	OpenRFQs           int     `json:"open_rfqs"`
+	OpenQuotes         int     `json:"open_quotes"`
+	ActiveContracts    int     `json:"active_contracts"`
+	OutstandingBalance float64 `json:"outstanding_balance"`
+	OverdueBalance     float64 `json:"overdue_balance"`
+	DSO                float64 `json:"dso"`
+	CreditLimit        float64 `json:"credit_limit"`
+	CreditHold         bool    `json:"credit_hold"`
+	CorrelationID      string  `json:"correlation_id"`
+}
+
+type pythonCustEvalResponse struct {
+	HealthSummary       string           `json:"health_summary"`
+	PriorityExplanation string           `json:"priority_explanation"`
+	Risks               []pythonCustRisk `json:"risks"`
+	Opportunities       []pythonCustOpp  `json:"opportunities"`
+	Confidence          float64          `json:"confidence"`
+	CorrelationID       string           `json:"correlation_id"`
+}
+
+type pythonCustRisk struct {
+	RiskType    string `json:"risk_type"`
+	Severity    string `json:"severity"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+type pythonCustOpp struct {
+	OpportunityType string `json:"opportunity_type"`
+	Priority        string `json:"priority"`
+	Title           string `json:"title"`
+	Reason          string `json:"reason"`
+	SuggestedAction string `json:"suggested_action"`
+}
+
+func (d *dataLayer) callPythonCustomerEvaluation(ctx context.Context, req pythonCustEvalRequest) (*pythonCustEvalResponse, error) {
+	sidecarURL := os.Getenv("AI_SIDECAR_URL")
+	if sidecarURL == "" {
+		sidecarURL = "http://localhost:8090"
+	}
+	endpoint := strings.TrimRight(sidecarURL, "/") + "/customer-relationship/evaluate"
+
+	bodyBytes, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 4 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("sidecar returned status %d", resp.StatusCode)
+	}
+
+	var evalResp pythonCustEvalResponse
+	if err := json.NewDecoder(resp.Body).Decode(&evalResp); err != nil {
+		return nil, err
+	}
+	return &evalResp, nil
+}
+
+func (d *dataLayer) syncCustomerFollowupRecommendations(
+	ctx context.Context,
+	orgID int64,
+	cust *Customer,
+	kpis Customer360KPIs,
+	fin CustomerFinancialProfile,
+	risks []CustomerRiskEvent,
+	opps []CustomerOpportunityEvent,
+	openQuotes int,
+	activeContracts int,
+	hasOwner bool,
+) {
+	type recCandidate struct {
+		FollowupType string
+		Title        string
+		Description  string
+		Priority     string
+		RiskLevel    string
+		Action       string
+		Rule         string
+		Evidence     []map[string]interface{}
+	}
+
+	var candidates []recCandidate
+
+	if fin.CreditStatus == CreditStatusOnHold {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "Invoice reminder",
+			Title:        fmt.Sprintf("Credit Review & Receivables Follow-Up: %s", cust.Name),
+			Description:  fmt.Sprintf("Customer account is currently marked On Hold. Credit limit: %s %.2f.", fin.Currency, fin.CreditLimit),
+			Priority:     "high",
+			RiskLevel:    "high",
+			Action:       "Initiate credit review and verify outstanding payment schedule",
+			Rule:         "RULE_CUSTOMER_CREDIT_HOLD",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "credit_status", "observed_value": fin.CreditStatus, "description": "Customer credit status"},
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "credit_limit", "observed_value": fin.CreditLimit, "description": "Customer credit limit"},
+			},
+		})
+	}
+
+	if !hasOwner {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "Account review",
+			Title:        fmt.Sprintf("Assign Commercial Account Owner: %s", cust.Name),
+			Description:  "Customer does not have an assigned internal account manager or representative.",
+			Priority:     "medium",
+			RiskLevel:    "medium",
+			Action:       "Assign dedicated account manager and schedule initial relationship review",
+			Rule:         "RULE_CUSTOMER_UNASSIGNED_ACCOUNT",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "account_owner_id", "observed_value": nil, "description": "Unassigned commercial account owner"},
+			},
+		})
+	}
+
+	if openQuotes > 0 {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "Quotation follow-up",
+			Title:        fmt.Sprintf("Pending Quotation Engagement: %s", cust.Name),
+			Description:  fmt.Sprintf("Customer has %d open quotation(s) awaiting customer feedback or booking confirmation.", openQuotes),
+			Priority:     "high",
+			RiskLevel:    "medium",
+			Action:       "Follow up on outstanding quotation pricing and customer feedback",
+			Rule:         "RULE_CUSTOMER_PENDING_QUOTES",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "open_quotes", "observed_value": openQuotes, "description": "Active open quotation count"},
+			},
+		})
+	}
+
+	if activeContracts == 0 {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "Contract renewal",
+			Title:        fmt.Sprintf("Master Agreement / Contract Setup: %s", cust.Name),
+			Description:  "Customer is operating without an active contracted freight service agreement.",
+			Priority:     "medium",
+			RiskLevel:    "medium",
+			Action:       "Propose standardized freight rate agreement or annual service terms",
+			Rule:         "RULE_CUSTOMER_NO_ACTIVE_CONTRACT",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "active_contracts", "observed_value": 0, "description": "Zero active service contracts"},
+			},
+		})
+	}
+
+	if cust.HealthStatus == "AT_RISK" {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "Service recovery",
+			Title:        fmt.Sprintf("At-Risk Account Service Recovery: %s", cust.Name),
+			Description:  fmt.Sprintf("Account health score is critical (%d/100). Coordinated service intervention recommended.", cust.HealthScore),
+			Priority:     "critical",
+			RiskLevel:    "high",
+			Action:       "Schedule executive review and resolve open operational blockers",
+			Rule:         "RULE_CUSTOMER_AT_RISK_HEALTH",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "health_score", "observed_value": cust.HealthScore, "description": "Evaluated customer health score"},
+			},
+		})
+	}
+
+	// If no high priority candidate was generated, propose a periodic check-in
+	if len(candidates) == 0 {
+		candidates = append(candidates, recCandidate{
+			FollowupType: "General check-in",
+			Title:        fmt.Sprintf("Periodic Account Check-In: %s", cust.Name),
+			Description:  "Periodic relationship review and upcoming shipping demand check-in.",
+			Priority:     "low",
+			RiskLevel:    "low",
+			Action:       "Send relationship maintenance note and review upcoming shipping volume",
+			Rule:         "RULE_CUSTOMER_PERIODIC_CHECKIN",
+			Evidence: []map[string]interface{}{
+				{"source_module": "CUSTOMERS", "source_entity_id": cust.ID, "source_ref": cust.CustomerCode, "field_name": "status", "observed_value": cust.Status, "description": "Customer lifecycle status"},
+			},
+		})
+	}
+
+	for _, c := range candidates {
+		hashInput := fmt.Sprintf("%d:%d:%s:%s", orgID, cust.ID, "CUSTOMER_MANAGEMENT", c.FollowupType)
+		h := sha256.Sum256([]byte(hashInput))
+		dedupHash := hex.EncodeToString(h[:])
+
+		var existingID int64
+		var existingStatus string
+		err := d.db.QueryRowContext(ctx, `
+			SELECT id, status FROM ai_recommendations WHERE org_id = ? AND dedup_hash = ? LIMIT 1
+		`, orgID, dedupHash).Scan(&existingID, &existingStatus)
+
+		if err == nil {
+			if existingStatus != "completed" && existingStatus != "dismissed" {
+				_, _ = d.db.ExecContext(ctx, `
+					UPDATE ai_recommendations 
+					SET freshness = NOW(), updated_at = NOW() 
+					WHERE id = ?
+				`, existingID)
+			}
+			continue
+		}
+
+		evidenceBytes, _ := json.Marshal(c.Evidence)
+		correlationID := fmt.Sprintf("corr-cust-%d-%d", cust.ID, time.Now().UnixNano())
+
+		_, _ = d.db.ExecContext(ctx, `
+			INSERT INTO ai_recommendations (
+				org_id, source_type, source_id, source_reference, title, description,
+				category, priority, risk_level, confidence, confidence_score, evidence,
+				recommended_action, action_type, status, created_at, updated_at, freshness,
+				requires_approval, correlation_id, created_by, generated_by, rule_applied,
+				dedup_hash, customer_id, customer_name, followup_type, draft_status
+			) VALUES (
+				?, 'CUSTOMER', ?, ?, ?, ?,
+				'CUSTOMER_MANAGEMENT', ?, ?, 'HIGH', 0.90, ?,
+				?, 'PREPARE_FOLLOWUP_DRAFT', 'new', NOW(), NOW(), NOW(),
+				0, ?, 'CUSTOMER_INTELLIGENCE_ENGINE', 'DETERMINISTIC_RULES', ?,
+				?, ?, ?, ?, 'NONE'
+			)
+		`,
+			orgID, cust.ID, cust.CustomerCode, c.Title, c.Description,
+			c.Priority, c.RiskLevel, string(evidenceBytes),
+			c.Action, correlationID, c.Rule,
+			dedupHash, cust.ID, cust.Name, c.FollowupType,
+		)
+	}
+}
+
 
 
 

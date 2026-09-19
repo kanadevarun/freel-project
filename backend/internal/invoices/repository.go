@@ -28,6 +28,15 @@ type Repository interface {
 	GetAllPayments(ctx context.Context, orgID int64) ([]InvoicePayment, error)
 	AddDocument(ctx context.Context, orgID int64, invoiceID int64, doc *InvoiceDocument) error
 	GenerateInvoiceNumber(ctx context.Context, orgID int64) (string, error)
+	ResolveUserName(ctx context.Context, userID int64) (string, error)
+
+	// Debit Note methods
+	InsertDebitNote(ctx context.Context, dn *DebitNote, items []DebitNoteItem) (*DebitNote, error)
+	ListDebitNotes(ctx context.Context, orgID int64, params ListDebitNoteParams) ([]*DebitNote, int, error)
+	GetDebitNoteByID(ctx context.Context, orgID int64, id int64) (*DebitNote, error)
+	UpdateDebitNoteStatus(ctx context.Context, orgID int64, id int64, status string) error
+	GetDebitNoteKPIStats(ctx context.Context, orgID int64) (*DebitNoteKPIStats, error)
+	GenerateDebitNoteNumber(ctx context.Context, orgID int64) (string, error)
 }
 
 type repository struct {
@@ -506,3 +515,241 @@ func (r *repository) GenerateInvoiceNumber(ctx context.Context, orgID int64) (st
 	year := time.Now().Year()
 	return fmt.Sprintf("INV-%d-%04d", year, nextNum), nil
 }
+
+func (r *repository) ResolveUserName(ctx context.Context, userID int64) (string, error) {
+	if userID <= 0 {
+		return "", nil
+	}
+	var name sql.NullString
+	query := `
+		SELECT NULLIF(TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))), '')
+		FROM users
+		WHERE id = ?
+	`
+	err := r.db.GetContext(ctx, &name, query, userID)
+	if err == nil && name.Valid && name.String != "" {
+		return name.String, nil
+	}
+
+	var email string
+	if err := r.db.GetContext(ctx, &email, "SELECT email FROM users WHERE id = ?", userID); err == nil && email != "" {
+		return email, nil
+	}
+
+	return "", nil
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Debit Note repository implementations
+// ──────────────────────────────────────────────────────────────────
+
+func (r *repository) GenerateDebitNoteNumber(ctx context.Context, orgID int64) (string, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `SELECT COUNT(*) FROM debit_notes WHERE org_id = ?`, orgID)
+	if err != nil {
+		count = 0
+	}
+	date := time.Now().Format("20060102")
+	return fmt.Sprintf("DN-%s-%04d", date, count+1), nil
+}
+
+func (r *repository) InsertDebitNote(ctx context.Context, dn *DebitNote, items []DebitNoteItem) (*DebitNote, error) {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.ExecContext(ctx, `
+		INSERT INTO debit_notes (
+			org_id, debit_note_number, customer_id, customer_name, customer_country,
+			shipment_id, shipment_number, invoice_id, invoice_number,
+			reason, currency, subtotal, tax_amount, total_amount,
+			status, issue_date, due_date, notes, created_by_id, created_at, updated_at
+		) VALUES (?,?,?,?,?, ?,?,?,?, ?,?,?,?,?, ?,?,?,?,?,NOW(),NOW())
+	`,
+		dn.OrgID, dn.DebitNoteNumber, dn.CustomerID, dn.CustomerName, dn.CustomerCountry,
+		dn.ShipmentID, dn.ShipmentNumber, dn.InvoiceID, dn.InvoiceNumber,
+		dn.Reason, dn.Currency, dn.Subtotal, dn.TaxAmount, dn.TotalAmount,
+		dn.Status, dn.IssueDate, dn.DueDate, dn.Notes, dn.CreatedByID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	dn.ID = id
+
+	for i, item := range items {
+		_, err := tx.ExecContext(ctx, `
+			INSERT INTO debit_note_items (
+				org_id, debit_note_id, description, service_category,
+				quantity, unit_price, total_amount, display_order, created_at
+			) VALUES (?,?,?,?, ?,?,?,?,NOW())
+		`,
+			dn.OrgID, dn.ID, item.Description, item.ServiceCategory,
+			item.Quantity, item.UnitPrice, item.TotalAmount, i,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return dn, nil
+}
+
+func (r *repository) ListDebitNotes(ctx context.Context, orgID int64, params ListDebitNoteParams) ([]*DebitNote, int, error) {
+	whereClauses := []string{"org_id = ?"}
+	args := []interface{}{orgID}
+
+	if params.Status != "" && params.Status != "All" {
+		whereClauses = append(whereClauses, "status = ?")
+		args = append(args, params.Status)
+	}
+	if params.CustomerID > 0 {
+		whereClauses = append(whereClauses, "customer_id = ?")
+		args = append(args, params.CustomerID)
+	}
+	if params.ShipmentID > 0 {
+		whereClauses = append(whereClauses, "shipment_id = ?")
+		args = append(args, params.ShipmentID)
+	}
+	if params.Search != "" {
+		q := "%" + strings.TrimSpace(params.Search) + "%"
+		whereClauses = append(whereClauses, "(debit_note_number LIKE ? OR customer_name LIKE ? OR invoice_number LIKE ? OR reason LIKE ?)")
+		args = append(args, q, q, q, q)
+	}
+
+	where := strings.Join(whereClauses, " AND ")
+
+	var total int
+	if err := r.db.GetContext(ctx, &total, "SELECT COUNT(*) FROM debit_notes WHERE "+where, args...); err != nil {
+		return nil, 0, err
+	}
+
+	page := params.Page
+	pageSize := params.PageSize
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	offset := (page - 1) * pageSize
+
+	query := fmt.Sprintf(
+		"SELECT id, org_id, debit_note_number, customer_id, customer_name, customer_country, "+
+			"shipment_id, shipment_number, invoice_id, invoice_number, reason, currency, "+
+			"subtotal, tax_amount, total_amount, status, issue_date, due_date, notes, "+
+			"created_by_id, created_at, updated_at "+
+			"FROM debit_notes WHERE %s ORDER BY created_at DESC LIMIT ? OFFSET ?",
+		where,
+	)
+	args = append(args, pageSize, offset)
+
+	var list []*DebitNote
+	if err := r.db.SelectContext(ctx, &list, query, args...); err != nil {
+		return nil, 0, err
+	}
+	return list, total, nil
+}
+
+func (r *repository) GetDebitNoteByID(ctx context.Context, orgID int64, id int64) (*DebitNote, error) {
+	var dn DebitNote
+	err := r.db.GetContext(ctx, &dn,
+		`SELECT id, org_id, debit_note_number, customer_id, customer_name, customer_country,
+		        shipment_id, shipment_number, invoice_id, invoice_number, reason, currency,
+		        subtotal, tax_amount, total_amount, status, issue_date, due_date, notes,
+		        created_by_id, created_at, updated_at
+		 FROM debit_notes WHERE id = ? AND org_id = ?`,
+		id, orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []DebitNoteItem
+	_ = r.db.SelectContext(ctx, &items,
+		`SELECT id, org_id, debit_note_id, description, service_category,
+		        quantity, unit_price, total_amount, display_order, created_at
+		 FROM debit_note_items WHERE debit_note_id = ? ORDER BY display_order ASC`,
+		id,
+	)
+	dn.LineItems = items
+	return &dn, nil
+}
+
+func (r *repository) UpdateDebitNoteStatus(ctx context.Context, orgID int64, id int64, status string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE debit_notes SET status = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`,
+		status, id, orgID,
+	)
+	return err
+}
+
+func (r *repository) GetDebitNoteKPIStats(ctx context.Context, orgID int64) (*DebitNoteKPIStats, error) {
+	type row struct {
+		Status      string  `db:"status"`
+		Cnt         int     `db:"cnt"`
+		TotalAmount float64 `db:"total_amount"`
+	}
+	var rows []row
+	err := r.db.SelectContext(ctx, &rows,
+		`SELECT status, COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total_amount
+		 FROM debit_notes WHERE org_id = ? GROUP BY status`,
+		orgID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := &DebitNoteKPIStats{}
+	for _, row := range rows {
+		metric := KPICardMetric{
+			Amount:        fmt.Sprintf("%.2f", row.TotalAmount),
+			DisplayAmount: fmt.Sprintf("$%.2f", row.TotalAmount),
+			Count:         row.Cnt,
+			Label:         fmt.Sprintf("%d Debit Notes", row.Cnt),
+		}
+		switch row.Status {
+		case "DRAFT":
+			stats.Draft = metric
+		case "ISSUED":
+			stats.TotalIssued = metric
+		case "ACKNOWLEDGED":
+			// outstanding = ISSUED + ACKNOWLEDGED — sum them
+			prev := stats.Outstanding
+			prevAmt, _ := fmt.Sscanf(prev.Amount, "%f", new(float64))
+			_ = prevAmt
+			stats.Outstanding = KPICardMetric{
+				Amount:        fmt.Sprintf("%.2f", row.TotalAmount),
+				DisplayAmount: fmt.Sprintf("$%.2f", row.TotalAmount),
+				Count:         stats.Outstanding.Count + row.Cnt,
+				Label:         fmt.Sprintf("%d Debit Notes", stats.Outstanding.Count+row.Cnt),
+			}
+		case "VOID":
+			stats.Void = metric
+		}
+	}
+	// Also add ISSUED count/amount into Outstanding
+	issued := stats.TotalIssued
+	var issuedAmt float64
+	fmt.Sscanf(issued.Amount, "%f", &issuedAmt)
+	var outAmt float64
+	fmt.Sscanf(stats.Outstanding.Amount, "%f", &outAmt)
+	totalOut := issuedAmt + outAmt
+	totalOutCount := issued.Count + stats.Outstanding.Count
+	stats.Outstanding = KPICardMetric{
+		Amount:        fmt.Sprintf("%.2f", totalOut),
+		DisplayAmount: fmt.Sprintf("$%.2f", totalOut),
+		Count:         totalOutCount,
+		Label:         fmt.Sprintf("%d Debit Notes", totalOutCount),
+	}
+	return stats, nil
+}
+

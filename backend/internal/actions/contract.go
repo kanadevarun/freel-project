@@ -47,6 +47,9 @@ type Action interface {
 	// RequiresConfirmation indicates if a human must explicitly approve execution.
 	RequiresConfirmation() bool
 	
+	// RequiredPermission returns the canonical RBAC resource and action required to run this action.
+	RequiredPermission() (resource string, action string)
+
 	// Execute performs the operation. It must validate inputs and authorize based on ctx.
 	Execute(ctx *ActionContext, input []byte) (*ActionResult, error)
 }

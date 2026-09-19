@@ -15,39 +15,13 @@ from typing import Dict, Any
 
 from app.state.operations_state import OperationsAgentState
 from app.agents.llm_utils import execute_llm_json
+from app.prompts.prompt_registry import get_prompt
 
 
-PARSE_SYSTEM_PROMPT = """You are an expert freight logistics operations analyst.
-Your job is to parse a raw carrier tracking update and extract structured information.
+def get_ops_system_prompt() -> str:
+    return get_prompt("operations.tracking_parse", "1.0.0")
 
-Given a raw description from a carrier update, extract:
-
-1. milestones: A list of shipping milestones detected. Each entry must have:
-   - code: one of BOOKED, DEPARTED, IN_TRANSIT, ARRIVED, DELIVERED (map appropriately)
-   - date: ISO8601 date string (e.g. "2026-08-15T00:00:00Z"), null if not mentioned
-   - location: port or place name if mentioned, null otherwise
-   - notes: brief note about this event
-
-2. exception_signals: A list of anomalies detected. Each entry must have:
-   - type: one of DELAY, ROLLOVER, CUSTOMS_HOLD, PORT_CONGESTION, WEATHER
-   - detected: true/false
-   - details: brief text explaining what triggered this signal
-   - delay_hours: estimated hours of delay if applicable, 0 otherwise
-
-3. needs_human_review: true if the update is ambiguous or contains a serious unrecognized event
-
-4. ai_summary: A single plain English sentence summarizing what happened to this shipment.
-
-Return ONLY a JSON object with these 4 keys. No markdown, no explanation.
-
-Example:
-{
-  "milestones": [{"code": "DEPARTED", "date": "2026-08-12T00:00:00Z", "location": "INNSA", "notes": "Vessel departed on schedule"}],
-  "exception_signals": [{"type": "DELAY", "detected": false, "details": "", "delay_hours": 0}],
-  "needs_human_review": false,
-  "ai_summary": "Vessel departed Nhava Sheva on August 12 as scheduled."
-}
-"""
+PARSE_SYSTEM_PROMPT = get_ops_system_prompt()
 
 # Keywords for exception detection fallback (used when LLM is unavailable)
 ROLLOVER_KEYWORDS = ["rolled", "rollover", "next sailing", "vessel change", "alternative vessel"]

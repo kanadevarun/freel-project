@@ -175,7 +175,7 @@ export default function CinematicHero() {
           {/* CTA */}
           <div ref={ctaRef} className="cin-cta-row">
             <MagneticBtn>
-              <Link to="/contact" className="cin-btn-primary">
+              <Link to="/demo" className="cin-btn-primary">
                 <span>Book Demo</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7"/>

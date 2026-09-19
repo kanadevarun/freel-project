@@ -5,6 +5,7 @@ import {
   ChevronDown, CheckCircle, Hash, Users, Sparkles, AlertCircle
 } from 'lucide-react';
 import { contractsService } from '../../../services/contractsService';
+import { useAuth } from '../../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './ContractForm.css';
 
@@ -40,6 +41,13 @@ const CURRENCIES = [
 
 export default function ContractForm({ contract, onClose, onSuccess }) {
   const isEdit = !!contract;
+  const { user } = useAuth();
+  const defaultOwner =
+    user?.full_name ||
+    (user?.name && !user.name.includes('@') ? user.name : null) ||
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) ||
+    user?.email ||
+    'Contract Owner';
   
   const [formData, setFormData] = useState({
     contract_reference: '',
@@ -52,7 +60,7 @@ export default function ContractForm({ contract, onClose, onSuccess }) {
     contract_value: '',
     effective_date: '',
     expiry_date: '',
-    owner: 'Varun Kanade',
+    owner: defaultOwner,
     description: '',
     notes: ''
   });
@@ -88,7 +96,7 @@ export default function ContractForm({ contract, onClose, onSuccess }) {
         contract_value: contract.contract_value || '',
         effective_date: contract.effective_date || '',
         expiry_date: contract.expiry_date || '',
-        owner: contract.owner || 'Varun Kanade',
+        owner: contract.owner || defaultOwner,
         description: contract.description || '',
         notes: contract.notes || ''
       });
@@ -379,7 +387,7 @@ export default function ContractForm({ contract, onClose, onSuccess }) {
                   className="cf-input"
                   value={formData.owner}
                   onChange={handleChange}
-                  placeholder="e.g. Varun Kanade"
+                  placeholder="e.g. Commercial Director"
                 />
               </div>
             </div>

@@ -111,7 +111,7 @@ func TestShipmentFoundationAndSync(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = db.Exec(`
-			INSERT INTO shipment_milestones (shipment_id, milestone_code, description, planned_date, status)
+			INSERT IGNORE INTO shipment_milestones (shipment_id, milestone_code, description, planned_date, status)
 			VALUES 
 				(?, 'BOOKED', 'Confirmed by shipping line', NOW(), 'PLANNED'),
 				(?, 'DEPARTED', 'Vessel departed origin port', NOW(), 'PLANNED')

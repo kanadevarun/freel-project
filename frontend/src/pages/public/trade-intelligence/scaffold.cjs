@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const basePath = '/Users/varun.kanade/go/src/freel/freel-project/frontend/src/pages/public/trade-intelligence';
+const basePath = __dirname;
 
 const structure = {
   'guides': [
@@ -91,25 +91,12 @@ export default function ${comp}() {
   fs.writeFileSync(path.join(sharedDir, `${comp}.css`), `/* ${comp} CSS */\n`);
 });
 
-// Rename existing ComingSoon.jsx and CSS
-const oldCsJsx = '/Users/varun.kanade/go/src/freel/freel-project/frontend/src/pages/public/TradeIntelligence/ComingSoon.jsx';
-const oldCsCss = '/Users/varun.kanade/go/src/freel/freel-project/frontend/src/pages/public/TradeIntelligence/ComingSoon.css';
-const newCsDir = path.join(basePath, 'coming-soon');
-fs.mkdirSync(newCsDir, { recursive: true });
-
-if (fs.existsSync(oldCsJsx)) {
-  const jsxContent = fs.readFileSync(oldCsJsx, 'utf-8');
-  fs.writeFileSync(path.join(newCsDir, 'ComingSoonPage.jsx'), jsxContent.replace(/ComingSoon\.css/g, 'ComingSoonPage.css'));
-  fs.unlinkSync(oldCsJsx);
-}
-if (fs.existsSync(oldCsCss)) {
-  fs.copyFileSync(oldCsCss, path.join(newCsDir, 'ComingSoonPage.css'));
-  fs.unlinkSync(oldCsCss);
-}
-
 // Ensure old TradeIntelligence folder is cleaned up if empty
+const oldTiDir = path.resolve(basePath, '..', 'TradeIntelligence');
 try {
-  fs.rmdirSync('/Users/varun.kanade/go/src/freel/freel-project/frontend/src/pages/public/TradeIntelligence');
+  if (fs.existsSync(oldTiDir)) {
+    fs.rmdirSync(oldTiDir);
+  }
 } catch(e) {}
 
 console.log("Scaffolding complete.");

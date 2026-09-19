@@ -46,6 +46,9 @@ type TrackingRequest struct {
 // TrackingEvent is a raw tracking update returned by a carrier adapter.
 type TrackingEvent struct {
 	EventID         string
+	BookingNumber   string
+	ContainerNumber string
+	MBLNumber       string
 	MilestoneCode   string
 	EventTime       time.Time
 	Location        string

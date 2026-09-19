@@ -377,6 +377,20 @@ export const contractsService = {
   getContractOperationalIntelligence: async (contractId) => {
     return api.get(`/api/v1/contracts/${contractId}/operational-intelligence`);
   },
+
+  // ── Phase 1 Task 1.6: Contract & Compliance Intelligence ────────────────────
+  getContract360ComplianceIntelligence: async (contractId) => {
+    return api.get(`/api/v1/contracts/${contractId}/intelligence`);
+  },
+
+  getOrgContractComplianceSummary: async () => {
+    return api.get('/api/v1/contracts/compliance-summary');
+  },
+
+  getContractCoverageForEntity: async (entityType, entityId) => {
+    return api.get(`/api/v1/contracts/coverage-check?entity_type=${entityType}&entity_id=${entityId}`);
+  },
 };
 
 export default contractsService;
+

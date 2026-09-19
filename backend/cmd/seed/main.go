@@ -126,7 +126,7 @@ func (s *seeder) seedUsers(ctx context.Context, orgID int32) (map[string]seedUse
 	users := []struct {
 		first, last, email, role string
 	}{
-		{"Varun", "Kanade", "ceo@freel-demo.local", "CEO"},
+		{"Operations", "Executive", "ceo@freel-demo.local", "CEO"},
 		{"Priya", "Sharma", "sales@freel-demo.local", "SALES"},
 		{"Aditya", "Kumar", "pricing@freel-demo.local", "PRICING"},
 		{"Ravi", "Mehta", "customer@tata-exports.local", "CUSTOMER_CONTACT"},

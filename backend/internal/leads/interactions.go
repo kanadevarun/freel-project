@@ -48,18 +48,22 @@ type LeadInteraction struct {
 
 // LeadEmailDraft represents an auto-saved in-progress email reply draft.
 type LeadEmailDraft struct {
-	ID                  int64     `db:"id" json:"id"`
-	OrgID               int64     `db:"org_id" json:"org_id"`
-	LeadID              int64     `db:"lead_id" json:"lead_id"`
-	ParentInteractionID int64     `db:"parent_interaction_id" json:"parent_interaction_id"`
-	MailboxID           *int64    `db:"mailbox_id" json:"mailbox_id"`
-	From                string    `db:"-" json:"from"`
-	Recipients          string    `db:"recipients" json:"to"`
-	CCRecipients        string    `db:"cc_recipients" json:"cc"`
-	Subject             string    `db:"subject" json:"subject"`
-	Content             string    `db:"content" json:"body"`
-	CreatedAt           time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt           time.Time `db:"updated_at" json:"updated_at"`
+	ID                  int64      `db:"id" json:"id"`
+	OrgID               int64      `db:"org_id" json:"org_id"`
+	LeadID              int64      `db:"lead_id" json:"lead_id"`
+	ParentInteractionID int64      `db:"parent_interaction_id" json:"parent_interaction_id"`
+	MailboxID           *int64     `db:"mailbox_id" json:"mailbox_id"`
+	From                string     `db:"-" json:"from"`
+	Recipients          string     `db:"recipients" json:"to"`
+	CCRecipients        string     `db:"cc_recipients" json:"cc"`
+	Subject             string     `db:"subject" json:"subject"`
+	Content             string     `db:"content" json:"body"`
+	Status              string     `db:"status" json:"status"`
+	ApprovalID          *int64     `db:"approval_id" json:"approval_id,omitempty"`
+	SentAt              *time.Time `db:"sent_at" json:"sent_at,omitempty"`
+	ErrorMessage        *string    `db:"error_message" json:"error_message,omitempty"`
+	CreatedAt           time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt           time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 // UnmarshalPartialRFQContext deserializes PartialRFQContextRaw into PartialRFQContext.
@@ -99,17 +103,21 @@ func (d *dataLayer) LogInteraction(ctx context.Context, inter *LeadInteraction) 
 			raw_email_id, thread_id, sentiment, intent, linked_rfq_id, ai_confidence,
 			ai_summary, drafted_reply, parent_interaction_id, partial_rfq_context,
 			rfc_message_id, in_reply_to, references_header, sender, recipients, cc_recipients,
-			created_at, updated_at, mailbox_id, status
+			created_at, updated_at, mailbox_id, status, interaction_type
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?
 		)
 	`
+	channelType := inter.Channel
+	if channelType == "" {
+		channelType = "EMAIL"
+	}
 	res, err := d.db.ExecContext(ctx, query,
 		inter.OrgID, inter.LeadID, inter.Channel, inter.Direction, inter.Subject, inter.Content,
 		inter.RawEmailID, inter.ThreadID, inter.Sentiment, inter.Intent, inter.LinkedRFQID, inter.AIConfidence,
 		inter.AISummary, inter.DraftedReply, inter.ParentInteractionID, contextJSON,
 		inter.RFCMessageID, inter.InReplyTo, inter.ReferencesHeader, inter.Sender, inter.Recipients, inter.CCRecipients,
-		createdAtVal, inter.MailboxID, statusVal,
+		createdAtVal, inter.MailboxID, statusVal, channelType,
 	)
 	if err != nil {
 		return fmt.Errorf("insert lead interaction: %w", err)
@@ -191,9 +199,13 @@ func (d *dataLayer) UpdateInteractionAI(ctx context.Context, orgID int64, id int
 		SET intent = ?, sentiment = ?, ai_confidence = ?, linked_rfq_id = ?, ai_summary = ?, drafted_reply = ?
 		WHERE org_id = ? AND id = ?
 	`
-	_, err := d.db.ExecContext(ctx, query, intent, sentiment, confidence, linkedRFQID, aiSummary, draftedReply, orgID, id)
+	res, err := d.db.ExecContext(ctx, query, intent, sentiment, confidence, linkedRFQID, aiSummary, draftedReply, orgID, id)
 	if err != nil {
 		return fmt.Errorf("update lead interaction AI: %w", err)
+	}
+	rows, err := res.RowsAffected()
+	if err != nil || rows == 0 {
+		return sql.ErrNoRows
 	}
 	return nil
 }
@@ -359,7 +371,9 @@ func (d *dataLayer) GetDraft(ctx context.Context, orgID int64, leadID int64, par
 		       COALESCE(recipients, '') AS recipients, 
 		       COALESCE(cc_recipients, '') AS cc_recipients, 
 		       COALESCE(subject, '') AS subject, 
-		       content, created_at, updated_at
+		       content, COALESCE(status, 'DRAFT') AS status,
+		       approval_id, sent_at, error_message,
+		       created_at, updated_at
 		FROM lead_email_drafts
 		WHERE org_id = ? AND lead_id = ? AND parent_interaction_id = ?
 		LIMIT 1
@@ -374,28 +388,119 @@ func (d *dataLayer) GetDraft(ctx context.Context, orgID int64, leadID int64, par
 	return &draft, nil
 }
 
+func (d *dataLayer) GetDraftByID(ctx context.Context, orgID int64, draftID int64) (*LeadEmailDraft, error) {
+	var draft LeadEmailDraft
+	query := `
+		SELECT id, org_id, lead_id, parent_interaction_id, mailbox_id, 
+		       COALESCE(recipients, '') AS recipients, 
+		       COALESCE(cc_recipients, '') AS cc_recipients, 
+		       COALESCE(subject, '') AS subject, 
+		       content, COALESCE(status, 'DRAFT') AS status,
+		       approval_id, sent_at, error_message,
+		       created_at, updated_at
+		FROM lead_email_drafts
+		WHERE org_id = ? AND id = ?
+		LIMIT 1
+	`
+	err := d.db.GetContext(ctx, &draft, query, orgID, draftID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get lead email draft by id: %w", err)
+	}
+	return &draft, nil
+}
+
 func (d *dataLayer) SaveDraft(ctx context.Context, draft *LeadEmailDraft) error {
+	if draft.Status == "" {
+		draft.Status = "DRAFT"
+	}
 	query := `
 		INSERT INTO lead_email_drafts (
-			org_id, lead_id, parent_interaction_id, mailbox_id, recipients, cc_recipients, subject, content, created_at, updated_at
+			org_id, lead_id, parent_interaction_id, mailbox_id, recipients, cc_recipients, subject, content, status, approval_id, created_at, updated_at
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()
 		) ON DUPLICATE KEY UPDATE
 			mailbox_id = VALUES(mailbox_id),
 			recipients = VALUES(recipients),
 			cc_recipients = VALUES(cc_recipients),
 			subject = VALUES(subject),
 			content = VALUES(content),
+			status = VALUES(status),
+			approval_id = COALESCE(VALUES(approval_id), approval_id),
 			updated_at = NOW()
 	`
-	_, err := d.db.ExecContext(ctx, query,
+	res, err := d.db.ExecContext(ctx, query,
 		draft.OrgID, draft.LeadID, draft.ParentInteractionID, draft.MailboxID,
 		draft.Recipients, draft.CCRecipients, draft.Subject, draft.Content,
+		draft.Status, draft.ApprovalID,
 	)
 	if err != nil {
 		return fmt.Errorf("save lead email draft: %w", err)
 	}
+	if draft.ID == 0 {
+		if id, err := res.LastInsertId(); err == nil && id > 0 {
+			draft.ID = id
+		}
+	}
 	return nil
+}
+
+func (d *dataLayer) UpdateDraftStatus(ctx context.Context, orgID int64, draftID int64, status string, approvalID *int64, errMsg *string) error {
+	query := `
+		UPDATE lead_email_drafts
+		SET status = ?, 
+		    approval_id = COALESCE(?, approval_id),
+		    error_message = ?,
+		    sent_at = CASE WHEN ? = 'SENT' THEN NOW() ELSE sent_at END,
+		    updated_at = NOW()
+		WHERE org_id = ? AND id = ?
+	`
+	_, err := d.db.ExecContext(ctx, query, status, approvalID, errMsg, status, orgID, draftID)
+	return err
+}
+
+func (d *dataLayer) CreateApprovalForDraft(ctx context.Context, orgID int64, draft *LeadEmailDraft, customerName string, summary string) (int64, error) {
+	requestCode := fmt.Sprintf("APP-DRAFT-%d", draft.ParentInteractionID)
+
+	// Check if an existing approval already exists for this draft or interaction
+	var existingID int64
+	err := d.db.GetContext(ctx, &existingID, "SELECT id FROM approval_requests WHERE org_id = ? AND request_code = ? LIMIT 1", orgID, requestCode)
+	if err == nil && existingID > 0 {
+		return existingID, nil
+	}
+
+	desc := fmt.Sprintf("Recipient: %s\nSubject: %s\n\nBody:\n%s", draft.Recipients, draft.Subject, draft.Content)
+	title := fmt.Sprintf("AI Clarification Draft: %s", draft.Subject)
+	if len(title) > 250 {
+		title = title[:247] + "..."
+	}
+	dueText := "3 days left"
+	ref := fmt.Sprintf("LEAD-%d / INT-%d", draft.LeadID, draft.ParentInteractionID)
+
+	query := `
+		INSERT INTO approval_requests (
+			org_id, request_code, title, category, type, status, priority,
+			related_entity_type, related_entity_id, related_ref, customer_name,
+			requested_by_name, department, description, comments, due_date, due_text, created_at, updated_at
+		) VALUES (
+			?, ?, ?, 'COMMERCIAL', 'Clarification Email Approval', 'Pending', 'HIGH',
+			'LEAD_EMAIL_DRAFT', ?, ?, ?,
+			'Sales AI Agent', 'Sales', ?, ?, DATE_ADD(NOW(), INTERVAL 3 DAY), ?, NOW(), NOW()
+		)
+	`
+	res, err := d.db.ExecContext(ctx, query,
+		orgID, requestCode, title, draft.ID, ref, customerName, desc, summary, dueText,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create approval request for draft: %w", err)
+	}
+	appID, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return appID, nil
 }
 
 func (d *dataLayer) DeleteDraft(ctx context.Context, orgID int64, leadID int64, parentInteractionID int64) error {

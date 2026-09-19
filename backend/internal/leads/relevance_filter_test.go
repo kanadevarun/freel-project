@@ -27,8 +27,8 @@ func TestIsLogisticsEmail(t *testing.T) {
 		},
 		{
 			name:     "Personal Email Message",
-			subject:  "Hey Varun, catch up tomorrow?",
-			body:     "Hi Varun! Are you free for lunch tomorrow at 1 PM? Let me know!",
+			subject:  "Hey Alex, catch up tomorrow?",
+			body:     "Hi Alex! Are you free for lunch tomorrow at 1 PM? Let me know!",
 			expected: false,
 		},
 		{

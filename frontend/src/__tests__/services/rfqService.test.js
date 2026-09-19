@@ -68,6 +68,26 @@ describe('rfqService', () => {
     expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/activity');
     expect(result).toEqual(mockActivity);
   });
+
+  it('getRFQBookings calls api.get with correct endpoint', async () => {
+    const mockBookings = { data: { bookings: [] } };
+    api.get.mockResolvedValue(mockBookings);
+
+    const result = await rfqService.getRFQBookings(101);
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/bookings');
+    expect(result).toEqual(mockBookings);
+  });
+
+  it('getRFQShipments calls api.get with correct endpoint', async () => {
+    const mockShipments = { data: { shipments: [] } };
+    api.get.mockResolvedValue(mockShipments);
+
+    const result = await rfqService.getRFQShipments(101);
+
+    expect(api.get).toHaveBeenCalledWith('/api/v1/rfqs/101/shipments');
+    expect(result).toEqual(mockShipments);
+  });
 });
 
 

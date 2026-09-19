@@ -2,23 +2,30 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/ses"
 
+	"github.com/freel/backend/internal/actions"
 	"github.com/freel/backend/internal/activity"
 	"github.com/freel/backend/internal/agent"
 	"github.com/freel/backend/internal/ai"
+	"github.com/freel/backend/internal/aitasks"
 	"github.com/freel/backend/internal/approvals"
 	auditPkg "github.com/freel/backend/internal/audit"
 	auditRepoPkg "github.com/freel/backend/internal/audit/repository"
 	auditSvcPkg "github.com/freel/backend/internal/audit/service"
 	auditTransportPkg "github.com/freel/backend/internal/audit/transport"
 	"github.com/freel/backend/internal/auth"
+	"github.com/freel/backend/internal/automations"
+	"github.com/freel/backend/internal/autonomy"
 	"github.com/freel/backend/internal/billing"
 	"github.com/freel/backend/internal/carrier"
 	carrierRepoPkg "github.com/freel/backend/internal/carrier/repository"
@@ -26,32 +33,49 @@ import (
 	carrierTransportPkg "github.com/freel/backend/internal/carrier/transport"
 	"github.com/freel/backend/internal/common/events"
 	"github.com/freel/backend/internal/config"
+	bcontext "github.com/freel/backend/internal/context"
 	"github.com/freel/backend/internal/contracts"
+	"github.com/freel/backend/internal/contracts/contract_compliance_automation"
+	"github.com/freel/backend/internal/copilot"
 	"github.com/freel/backend/internal/customers"
 	"github.com/freel/backend/internal/dashboard"
 	"github.com/freel/backend/internal/database"
 	"github.com/freel/backend/internal/documents"
+	"github.com/freel/backend/internal/enterprise_autonomy"
+	"github.com/freel/backend/internal/event_workflows"
 	"github.com/freel/backend/internal/files"
 	"github.com/freel/backend/internal/finance"
+	"github.com/freel/backend/internal/governance"
 	"github.com/freel/backend/internal/invoices"
+	"github.com/freel/backend/internal/invoices/collections_automation"
+	"github.com/freel/backend/internal/integrations"
 	"github.com/freel/backend/internal/jobs"
 	"github.com/freel/backend/internal/leads"
+	"github.com/freel/backend/internal/memory"
+	"github.com/freel/backend/internal/monitoring"
 	"github.com/freel/backend/internal/notifications"
+	"github.com/freel/backend/internal/orchestration"
 	"github.com/freel/backend/internal/organization"
 	"github.com/freel/backend/internal/outreach"
+	"github.com/freel/backend/internal/predictions"
 	"github.com/freel/backend/internal/pricing"
 	"github.com/freel/backend/internal/quotations"
 	"github.com/freel/backend/internal/rates"
 	"github.com/freel/backend/internal/rbac"
+	"github.com/freel/backend/internal/recommendations"
 	"github.com/freel/backend/internal/reports"
 	"github.com/freel/backend/internal/rfq"
+	"github.com/freel/backend/internal/rfq/pricing_workflow"
 	"github.com/freel/backend/internal/search"
 	"github.com/freel/backend/internal/server"
 	"github.com/freel/backend/internal/shipments"
+	"github.com/freel/backend/internal/shipments/operations_automation"
+	"github.com/freel/backend/internal/sportal"
 	"github.com/freel/backend/internal/subscription"
 	"github.com/freel/backend/internal/trade_intel"
 	"github.com/freel/backend/internal/users"
 	"github.com/freel/backend/internal/workflow"
+	"github.com/freel/backend/internal/workforce"
 )
 
 func main() {
@@ -93,19 +117,22 @@ func main() {
 	// Initialize Trade Intel Engine
 	tradeIntelEngine := trade_intel.NewMockEngine()
 
-	// Initialize AI Gateway (dynamically registers active keys from .env)
+	// Initialize AI Gateway routed through the Python AI Sidecar
+	// Architectural rule: Go does not execute direct external LLM calls.
+	// All AI reasoning, prompt orchestration, and model providers run inside Python AI Sidecar.
+	sidecarClient := ai.NewSidecarClient("", "")
+	sidecarProvider := ai.NewSidecarProvider(sidecarClient)
 	aiProviders := map[string]ai.Provider{
-		"mock": ai.NewMockProvider(),
+		"mock":    ai.NewMockProvider(),
+		"sidecar": sidecarProvider,
+		"gemini":  sidecarProvider,
+		"openai":  sidecarProvider,
 	}
-	if cfg.GeminiAPIKey != "" {
-		log.Println("🤖 AI: Registering Google Gemini primary provider...")
-		aiProviders["gemini"] = ai.NewGeminiProvider(cfg.GeminiAPIKey)
+	aiRuntimeConfig, err := ai.LoadRuntimeConfigFromEnv()
+	if err != nil {
+		log.Printf("⚠️ AI Runtime Config warning: %v", err)
 	}
-	if cfg.OpenAIAPIKey != "" {
-		log.Println("🤖 AI: Registering OpenAI ChatGPT failover provider...")
-		aiProviders["openai"] = ai.NewOpenAIProvider(cfg.OpenAIAPIKey)
-	}
-	aiGateway := ai.NewGateway(aiProviders)
+	aiGateway := ai.NewGatewayWithConfig(aiProviders, aiRuntimeConfig, db)
 	promptManager := ai.NewPromptManager()
 
 	orgRepo := organization.NewRepository(db)
@@ -259,7 +286,13 @@ func main() {
 		emailNotifSvc = notifications.NewMockInAppService(eventBus)
 	}
 
-	notifSvc := notifications.NewMockInAppService(eventBus)
+	// Initialize Centralized Notification and Escalation Center (Phase 2 Task 2.8)
+	notifRepo := notifications.NewRepository(db)
+	notifEngine := notifications.NewEngine(db, notifRepo)
+	notifSvc := notifications.NewService(notifRepo, notifEngine, eventBus, emailNotifSvc,
+		notifications.WithEnvironment(cfg.AppEnv),
+		notifications.WithServiceKey(cfg.InternalServiceToken),
+	)
 	notifHandler := notifications.NewHandler(notifSvc)
 
 	// Initialize Pricing Module
@@ -354,7 +387,31 @@ func main() {
 	// Initialize Approvals Module
 	approvalsRepo := approvals.NewRepository(db)
 	approvalsSvc := approvals.NewService(approvalsRepo)
+	approvalsSvc.SetDraftHandlers(
+		func(ctx context.Context, orgID int64, draftID int64, actorName string, notes string) error {
+			draft, err := leadsBL.GetDraftByID(ctx, orgID, draftID)
+			if err != nil {
+				return err
+			}
+			if draft == nil {
+				return fmt.Errorf("draft ID %d not found", draftID)
+			}
+			_, err = leadsBL.ApproveClarificationDraft(ctx, orgID, draft.LeadID, draft.ParentInteractionID, actorName, notes)
+			return err
+		},
+		func(ctx context.Context, orgID int64, draftID int64, actorName string, reason string) error {
+			draft, err := leadsBL.GetDraftByID(ctx, orgID, draftID)
+			if err != nil {
+				return err
+			}
+			if draft == nil {
+				return fmt.Errorf("draft ID %d not found", draftID)
+			}
+			return leadsBL.RejectClarificationDraft(ctx, orgID, draft.LeadID, draft.ParentInteractionID, actorName, reason)
+		},
+	)
 	approvalsHandler := approvals.NewHandler(approvalsSvc)
+	notifSvc.SetApprovalsService(approvalsSvc)
 
 	// Initialize Invoices Module
 	invoicesRepo := invoices.NewRepository(db)
@@ -397,7 +454,302 @@ func main() {
 	searchSvc := search.NewService(searchRepo)
 	searchHandler := search.NewHandler(searchSvc)
 
-	srv := server.NewServer(cfg, db, authService, rbacSvc, rbacHandler, usersHandler, orgHandler, leadsEndpoints, leadsEmailHandler, outreachEndpoints, rfqEndpoints, dashboardEndpoints, notifHandler, reportsEndpoints, ratesEndpoints, contractsHandler, pricingHandler, shipmentsEndpoints, shipmentsSvc, documentsHandler, financeHandler, billingHandler, subHandler, quotationsEndpoints, commercialContractsEndpoints, customersEndpoints, approvalsHandler, invoicesHandler, carrierHandler, searchHandler, auditHandler)
+	// Initialize Centralized Action System (Task 0.5 Action Boundary)
+	actionsRegistry := actions.NewRegistry()
+	_ = actionsRegistry.Register(actions.NewGetShipmentAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewUpdateMilestoneAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewRefreshShipmentTrackingAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewCreateExceptionAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewUpdateETAAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewOperationsCallbackAction(shipmentsSvc))
+	_ = actionsRegistry.Register(actions.NewSaveDraftQuotesAction(rfqBL))
+	_ = actionsRegistry.Register(actions.NewApplySelectedRateAction(rfqBL))
+	_ = actionsRegistry.Register(actions.NewCreateRFQFromEmailAction(leadsBL, rfqBL))
+	_ = actionsRegistry.Register(actions.NewConvertLeadAction(leadsBL))
+	_ = actionsRegistry.Register(actions.NewSendClarificationEmailAction(leadsBL))
+	_ = actionsRegistry.Register(actions.NewIngestRatesAction(contractsSvc))
+	_ = actionsRegistry.Register(actions.NewReviewExtractionAction(contractsSvc))
+	_ = actionsRegistry.Register(actions.NewRecordComplianceDiscrepanciesAction(documentsSvc))
+	_ = actionsRegistry.Register(actions.NewReconcileInvoiceAction(financeSvc))
+
+	// Phase 5 Task 5.8: Autonomous Exception Resolution Actions
+	_ = actionsRegistry.Register(actions.NewExceptionRecoveryAction("customs_broker_notification", "Notify customs broker to resolve compliance and hold discrepancies"))
+	_ = actionsRegistry.Register(actions.NewExceptionRecoveryAction("carrier_inquiry", "Initiate high-priority carrier escalation and status inquiry"))
+	_ = actionsRegistry.Register(actions.NewExceptionRecoveryAction("customer_advisory", "Send proactive advisory and ETA adjustment notice to customer"))
+	_ = actionsRegistry.Register(actions.NewExceptionRecoveryAction("audit_log", "Record governed autonomous audit entry and supervisor notes"))
+	_ = actionsRegistry.Register(actions.NewExceptionRecoveryAction("exceptions.execute_recovery", "Execute controlled recovery action for shipment exception"))
+
+	// Unified Business Context & Intelligence Layer (Task 1.1, 1.2, 1.3, 1.4)
+	contextSvc := bcontext.NewService(db, rbacSvc)
+	_ = actionsRegistry.Register(actions.NewGetContextAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetInsightAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetCustomerIntelligenceAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetRFQIntelligenceAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetShipmentIntelligenceAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetInvoiceIntelligenceAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetContractIntelligenceAction(contextSvc))
+	_ = actionsRegistry.Register(actions.NewGetCrossModuleInsightsAction(contextSvc))
+	contextHandler := bcontext.NewHandler(contextSvc)
+
+	actionsStore := actions.NewDBIdempotencyStore(db)
+	actionsService := actions.NewService(actionsRegistry, actionsStore, rbacSvc, db)
+	actionsHandler := actions.NewHandler(actionsService)
+
+	// Wire Approvals and Centralized Action System (Task 0.6 Unified Approval & HITL Bridge)
+	approvalsSvc.SetRBACService(rbacSvc)
+	pricingHandler.SetApprovalsService(approvalsSvc)
+	contractsSvc.SetApprovalsService(approvalsSvc)
+	actionsService.SetApprovalsService(approvalsSvc)
+
+	approvalsSvc.SetActionExecutor(func(ctx context.Context, orgID int64, actionName string, input []byte, actorName string, userID int64, approvalRef string) (map[string]interface{}, error) {
+		var inputMap map[string]interface{}
+		if len(input) > 0 {
+			_ = json.Unmarshal(input, &inputMap)
+		}
+		execReq := actions.ActionExecutionRequest{
+			ActionName:     actionName,
+			OrgID:          orgID,
+			Input:          inputMap,
+			ActorType:      actions.ActorTypeUI,
+			ActingUserID:   userID,
+			IsConfirmed:    true, // Human approval satisfied the confirmation gate
+			IdempotencyKey: fmt.Sprintf("approval-%s", approvalRef),
+		}
+		resp, err := actionsService.Execute(ctx, execReq)
+		if err != nil {
+			return nil, err
+		}
+		if !resp.Success {
+			errMsg := "action execution failed"
+			if resp.Error != nil && resp.Error.Message != "" {
+				errMsg = resp.Error.Message
+			}
+			return nil, fmt.Errorf("%s", errMsg)
+		}
+		if resp.Data != nil {
+			if dataMap, ok := resp.Data.(map[string]interface{}); ok {
+				return dataMap, nil
+			}
+		}
+		return map[string]interface{}{"status": "success"}, nil
+	})
+
+	approvalsSvc.SetResumeExecutor(func(ctx context.Context, orgID int64, threadID string, action string, notes string) error {
+		if strings.HasPrefix(threadID, "rfq-") {
+			rfqIDStr := strings.TrimPrefix(threadID, "rfq-")
+			if action == "APPROVE" {
+				payload := map[string]interface{}{
+					"correlation_id": fmt.Sprintf("resume-%s-%d", threadID, time.Now().Unix()),
+					"callback_url":   goBackendURL + "/internal/pricing/callback",
+					"notes":          notes,
+				}
+				payloadBytes, _ := json.Marshal(payload)
+				_, err := db.ExecContext(ctx, `
+					INSERT INTO ai_processing_tasks (
+						org_id, entity_type, entity_id, task_type, payload, status, created_at, updated_at
+					) VALUES (
+						?, 'RFQ', ?, 'PRICING_RESUME', ?, 'QUEUED', NOW(), NOW()
+					)
+				`, orgID, rfqIDStr, string(payloadBytes))
+				return err
+			}
+			return nil
+		}
+
+		// Contract document resumption via sidecar aiBridge
+		return aiBridge.TriggerResumption(ctx, contracts.ResumptionRequest{
+			DocumentID:  threadID,
+			OrgID:       orgID,
+			Action:      action,
+			Notes:       notes,
+			CallbackURL: goBackendURL + "/internal/contracts/callback",
+		})
+	})
+
+	// AI Tasks Subsystem (Task 0.7 Hardening)
+	aiTasksRepo := aitasks.NewRepository(db)
+	aiTasksSvc := aitasks.NewService(aiTasksRepo)
+	aiTasksSvc.SetApprovalsDelegate(func(ctx context.Context, orgID int64, approvalID int64, actorName string, reason string) error {
+		_, err := approvalsSvc.CancelRequest(ctx, orgID, approvalID, actorName, 0, reason)
+		return err
+	})
+	aiTasksHandler := aitasks.NewHandler(aiTasksSvc)
+
+	// AI Action & Recommendation Center Subsystem (Phase 2 Task 2.1 & 2.2)
+	recommendationsRepo := recommendations.NewRepository(db)
+	recommendationsGen := recommendations.NewGenerator(db, recommendationsRepo)
+	recommendationsSvc := recommendations.NewService(recommendationsRepo, recommendationsGen, auditSvc)
+	recommendationsSvc.SetApprovalsService(approvalsSvc)
+	_ = actionsRegistry.Register(actions.NewListRecommendationsAction(recommendationsSvc))
+	_ = actionsRegistry.Register(actions.NewGetRecommendationAction(recommendationsSvc))
+	_ = actionsRegistry.Register(actions.NewGenerateFollowupDraftAction(recommendationsSvc))
+	_ = actionsRegistry.Register(actions.NewCreateFollowupTaskAction(recommendationsSvc))
+	recommendationsHandler := recommendations.NewHandler(recommendationsSvc)
+
+	// Workflow Automation & Scheduled AI Jobs Subsystem (Phase 2 Task 2.7)
+	automationsRepo := automations.NewRepository(db)
+	automationsSvc := automations.NewService(automationsRepo, recommendationsGen, recommendationsRepo, auditSvc)
+	automationsHandler := automations.NewHandler(automationsSvc)
+	automationsScheduler := automations.NewScheduler(automationsRepo, automationsSvc, 30*time.Second)
+	automationsScheduler.Start()
+
+	// AI Memory & Personalization Subsystem (Phase 2 Task 2.10)
+	memoryRepo := memory.NewRepository(db)
+	memorySvc := memory.NewService(memoryRepo)
+	memoryHandler := memory.NewHandler(memorySvc)
+
+	// AI Performance, Cost, and Quality Monitoring Subsystem (Phase 2 Task 2.11)
+	monitoringRepo := monitoring.NewRepository(db)
+	monitoringSvc := monitoring.NewService(monitoringRepo)
+	monitoringHandler := monitoring.NewHandler(monitoringSvc)
+
+	// Controlled AI Workflow Execution and Action Orchestration (Phase 3 Task 3.2)
+	orchestrationRepo := orchestration.NewRepository(db)
+	orchestrationRegistry := orchestration.NewRegistry()
+	orchestrationSidecar := orchestration.NewSidecarClient()
+	orchestrationSvc := orchestration.NewService(orchestrationRepo, orchestrationRegistry, orchestrationSidecar, auditSvc, db)
+	orchestrationSvc.SetActionsService(actionsService)
+	orchestrationHandler := orchestration.NewHandler(orchestrationSvc)
+
+	// RFQ-to-Quotation Automation and Intelligent Pricing Workflow (Phase 3 Task 3.4)
+	pricingWorkflowRepo := pricing_workflow.NewRepository(db)
+	pricingWorkflowSvc := pricing_workflow.NewService(db, pricingWorkflowRepo, rfqBL, approvalsSvc, orchestrationSvc, auditSvc)
+	pricingWorkflowHandler := pricing_workflow.NewHandler(pricingWorkflowSvc)
+
+	// Shipment Operations Automation and Intelligent Exception Response (Phase 3 Task 3.5)
+	shipmentOpsRepo := operations_automation.NewRepository(db)
+	shipmentOpsSvc := operations_automation.NewService(db, shipmentOpsRepo, shipmentsRepo, approvalsSvc, auditSvc)
+	shipmentOpsHandler := operations_automation.NewHandler(shipmentOpsSvc)
+
+	// Finance and Collections Automation and Intelligent Receivables Follow-Up (Phase 3 Task 3.6)
+	collectionsAutomationRepo := collections_automation.NewRepository(db)
+	collectionsAutomationSvc := collections_automation.NewService(db, collectionsAutomationRepo, invoicesRepo, approvalsSvc, auditSvc)
+	collectionsAutomationHandler := collections_automation.NewHandler(collectionsAutomationSvc)
+
+	// Contract and Compliance Automation and Intelligent Document Review (Phase 3 Task 3.7)
+	contractComplianceRepo := contract_compliance_automation.NewRepository(db)
+	contractComplianceSvc := contract_compliance_automation.NewService(db, contractComplianceRepo, approvalsSvc, auditSvc)
+	contractComplianceHandler := contract_compliance_automation.NewHandler(contractComplianceSvc)
+
+	// Event-Driven AI Workflows and Cross-Module Automation (Phase 3 Task 3.8)
+	eventWorkflowsRepo := event_workflows.NewRepository(db)
+	eventWorkflowsSvc := event_workflows.NewService(db, eventWorkflowsRepo, approvalsSvc, orchestrationRegistry, auditSvc)
+	eventWorkflowsHandler := event_workflows.NewHandler(eventWorkflowsSvc)
+
+	// AI Copilot Across Every Module (Phase 3 Task 3.10)
+	copilotRepo := copilot.NewRepository(db)
+	copilotSvc := copilot.NewService(copilotRepo)
+	copilotHandler := copilot.NewHandler(copilotSvc)
+
+	// Advanced Reporting and Forecasting Subsystem (Phase 3 Task 3.11)
+	reportsRepo := reports.NewRepository(db)
+	reportsSvc := reports.NewService(reportsRepo)
+	reportsAdvancedHandler := reports.NewHandler(reportsSvc)
+
+	// AI Governance and Production Controls Subsystem (Phase 3 Task 3.12)
+	governanceRepo := governance.NewRepository(db)
+	governanceSvc := governance.NewService(governanceRepo)
+	governanceHandler := governance.NewHandler(governanceSvc)
+
+	// Predictive Intelligence & Decision Support Foundation (Phase 4 Task 4.1)
+	predictionsRepo := predictions.NewMySQLRepository(db.DB)
+	predictionsSidecar := predictions.NewSidecarClient(aiSidecarURL, "")
+	predictionsSvc := predictions.NewService(predictionsRepo, predictionsSidecar, db.DB)
+	predictionsHandler := predictions.NewHandler(predictionsSvc)
+
+	// Phase 5 Controlled Autonomy Foundation (Phase 5 Task 5.1)
+	autonomyRepo := autonomy.NewMySQLRepository(db.DB)
+	autonomySidecar := autonomy.NewSidecarClient(aiSidecarURL, "")
+	autonomySvc := autonomy.NewService(autonomyRepo, autonomySidecar, actionsService, approvalsSvc, db.DB)
+	autonomyHandler := autonomy.NewHandler(autonomySvc)
+
+	// Phase 6.1 Multi-Agent Workforce Foundation
+	workforceRepo := workforce.NewMySQLRepository(db.DB)
+	_ = workforceRepo.SeedBaselineAgents(context.Background())
+	workforceSidecar := workforce.NewSidecarClient(aiSidecarURL)
+	workforceSvc := workforce.NewService(workforceRepo, workforceSidecar, actionsService, approvalsSvc, auditSvc)
+	workforceHandler := workforce.NewHandler(workforceSvc)
+
+	// Phase 7.1, 7.2, 7.3, 7.4, 7.5, 7.6 & 7.7 Enterprise Autonomous Platform Foundation
+	enterpriseRepo := enterprise_autonomy.NewMySQLRepository(db)
+	enterpriseSvc := enterprise_autonomy.NewService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc)
+	enterpriseResilienceSvc := enterprise_autonomy.NewEnterpriseResilienceService(enterpriseRepo, actionsService, approvalsSvc, auditSvc, db)
+	enterpriseSvc.SetResilienceService(enterpriseResilienceSvc)
+	shipmentLifecycleSvc := enterprise_autonomy.NewShipmentLifecycleService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, shipmentsSvc, predictionsSvc)
+	commercialLifecycleSvc := enterprise_autonomy.NewCommercialLifecycleService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, shipmentLifecycleSvc, db)
+	exceptionManagementSvc := enterprise_autonomy.NewExceptionManagementService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, db)
+	customerRelationshipSvc := enterprise_autonomy.NewCustomerRelationshipService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, commercialLifecycleSvc, exceptionManagementSvc, db)
+	revenueOptimizationSvc := enterprise_autonomy.NewRevenueOptimizationService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, commercialLifecycleSvc, exceptionManagementSvc, customerRelationshipSvc, db)
+	contractComplianceRiskSvc := enterprise_autonomy.NewContractComplianceRiskService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, shipmentLifecycleSvc, commercialLifecycleSvc, exceptionManagementSvc, customerRelationshipSvc, revenueOptimizationSvc, db)
+	eventMeshSvc := enterprise_autonomy.NewEnterpriseEventMeshService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, shipmentLifecycleSvc, commercialLifecycleSvc, exceptionManagementSvc, customerRelationshipSvc, revenueOptimizationSvc, contractComplianceRiskSvc, enterpriseResilienceSvc, db)
+	enterpriseGovernanceSvc := enterprise_autonomy.NewEnterpriseGovernanceService(enterpriseRepo, actionsService, approvalsSvc, auditSvc, db)
+	controlTowerSvc := enterprise_autonomy.NewEnterpriseControlTowerService(enterpriseRepo, workforceSvc, actionsService, approvalsSvc, auditSvc, predictionsSvc, shipmentLifecycleSvc, commercialLifecycleSvc, exceptionManagementSvc, customerRelationshipSvc, revenueOptimizationSvc, contractComplianceRiskSvc, eventMeshSvc, enterpriseGovernanceSvc, enterpriseResilienceSvc, db)
+	enterpriseHandler := enterprise_autonomy.NewHandler(enterpriseSvc, shipmentLifecycleSvc, commercialLifecycleSvc, exceptionManagementSvc, customerRelationshipSvc, revenueOptimizationSvc, contractComplianceRiskSvc, eventMeshSvc, controlTowerSvc, enterpriseGovernanceSvc, enterpriseResilienceSvc)
+
+	srv := server.NewServer(cfg, db, authService, rbacSvc, rbacHandler, usersHandler, orgHandler, leadsEndpoints, leadsEmailHandler, outreachEndpoints, rfqEndpoints, dashboardEndpoints, notifHandler, reportsEndpoints, ratesEndpoints, contractsHandler, pricingHandler, shipmentsEndpoints, shipmentsSvc, documentsHandler, financeHandler, billingHandler, subHandler, quotationsEndpoints, commercialContractsEndpoints, customersEndpoints, approvalsHandler, invoicesHandler, carrierHandler, searchHandler, auditHandler, actionsHandler, aiTasksHandler, contextHandler, recommendationsHandler, automationsHandler, memoryHandler, monitoringHandler, orchestrationHandler)
+
+	srv.RegisterRFQPricingWorkflowRoutes(pricingWorkflowHandler)
+	srv.RegisterShipmentOperationsAutomationRoutes(shipmentOpsHandler)
+	srv.RegisterFinanceCollectionsAutomationRoutes(collectionsAutomationHandler)
+	srv.RegisterContractComplianceAutomationRoutes(contractComplianceHandler)
+	srv.RegisterEventWorkflowsRoutes(eventWorkflowsHandler)
+	srv.RegisterCopilotRoutes(copilotHandler)
+	srv.RegisterAdvancedReportsRoutes(reportsAdvancedHandler)
+	srv.RegisterGovernanceRoutes(governanceHandler)
+	srv.RegisterPredictionsRoutes(predictionsHandler)
+	// External Integration Foundation & Gateway (Task 2.1)
+	integrationsRepo := integrations.NewConfigRepository(db)
+	integrationsIdempotency := integrations.NewIdempotencyManager(db)
+	webhookSecCfg := integrations.DefaultWebhookSecurityConfig(cfg.AdminAPIKey)
+	integrationsWebhookGateway := integrations.NewWebhookGateway(db, webhookSecCfg)
+	integrationsHTTPClient := integrations.NewResilientHTTPClient(integrations.DefaultHTTPClientConfig())
+	twilioProvider := integrations.NewTwilioNotificationProvider(db, integrationsRepo, integrationsHTTPClient)
+	sesProvider := integrations.NewSESNotificationProvider(db, integrationsRepo, integrationsHTTPClient)
+	compositeNotificationPv := integrations.NewCompositeNotificationProvider(twilioProvider, sesProvider)
+	carrierTrackingPv := integrations.NewCarrierGatewayTrackingProvider(carrierIntegrationSvc, carrierIntegrationRepo)
+	s3Provider := integrations.NewS3StorageProvider(db, integrationsRepo, integrationsHTTPClient)
+	textractProvider := integrations.NewAWSTextractProvider(db, integrationsRepo, integrationsHTTPClient)
+	integrationsSvc := integrations.NewGatewayService(
+		db,
+		integrationsRepo,
+		compositeNotificationPv,
+		carrierTrackingPv,
+		s3Provider,
+		integrationsWebhookGateway,
+		integrationsIdempotency,
+		integrationsHTTPClient,
+		actionsService,
+		textractProvider,
+	)
+	integrationsHandler := integrations.NewHandler(integrationsSvc)
+	_ = actionsRegistry.Register(integrations.NewSendSMSAction(integrationsSvc))
+	_ = actionsRegistry.Register(integrations.NewSendEmailAction(integrationsSvc))
+	_ = actionsRegistry.Register(integrations.NewFetchTrackingAction(integrationsSvc))
+	_ = actionsRegistry.Register(integrations.NewUploadDocumentAction(integrationsSvc))
+	_ = actionsRegistry.Register(integrations.NewDownloadDocumentAction(integrationsSvc))
+	_ = actionsRegistry.Register(integrations.NewExtractTextAction(integrationsSvc))
+
+	srv.RegisterAutonomyRoutes(autonomyHandler)
+	srv.RegisterWorkforceRoutes(workforceHandler)
+	srv.RegisterEnterpriseAutonomyRoutes(enterpriseHandler)
+	srv.RegisterIntegrationsRoutes(integrationsHandler)
+
+	// SPortal Internal Platform Foundation (Task S1)
+	sportalRepo := sportal.NewRepository(db)
+	sportalSvc := sportal.NewServiceWithDeps(sportalRepo, cfg.Environment, filesSvc, emailNotifSvc, cfg.FrontendURL)
+	sportalHandler := sportal.NewHandler(sportalSvc)
+	srv.RegisterSPortalRoutes(sportalHandler)
+
+	// Background non-blocking recovery of interrupted enterprise workflows
+	go func() {
+		report, err := enterpriseSvc.RecoverInterruptedWorkflows(context.Background())
+		if err != nil {
+			log.Printf("[EnterpriseAutonomy] Recovery warning: %v", err)
+		} else if report != nil && report.ScannedCount > 0 {
+			log.Printf("[EnterpriseAutonomy] Interrupted workflow recovery: %d scanned, %d recovered, %d blocked",
+				report.ScannedCount, report.RecoveredCount, report.BlockedCount)
+		}
+	}()
 
 	if err := srv.Start(); err != nil {
 		log.Fatalf("Server failed to start: %v", err)

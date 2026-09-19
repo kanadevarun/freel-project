@@ -16,7 +16,7 @@ export default function OnboardingChecklist() {
     'Send First Quotation',
     'Configure Email',
     'Connect Carrier APIs',
-    'AI Setup (Coming Soon)'
+    'AI Workforce Configuration'
   ];
 
   return (

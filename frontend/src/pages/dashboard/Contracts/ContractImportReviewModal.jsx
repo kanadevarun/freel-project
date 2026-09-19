@@ -5,6 +5,7 @@ import {
   ArrowLeft, ChevronDown, Check, Layers, AlertCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAuth } from '../../../context/AuthContext';
 import { contractsService } from '../../../services/contractsService';
 import './ContractImportReviewModal.css';
 
@@ -38,6 +39,14 @@ export default function ContractImportReviewModal({
 }) {
   const extracted = importData?.extracted_draft || {};
   const candidates = importData?.candidate_parties || [];
+  const { user } = useAuth();
+  const defaultOwner =
+    user?.full_name ||
+    (user?.name && !user.name.includes('@') ? user.name : null) ||
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) ||
+    user?.email ||
+    'Contract Owner';
+
   const initialDupWarning = importData?.duplicate_detection?.is_duplicate 
     ? importData.duplicate_detection.message 
     : (extracted?.duplicate_warning || null);
@@ -55,7 +64,7 @@ export default function ContractImportReviewModal({
     contract_value: extracted.contract_value || '',
     effective_date: extracted.effective_date || '',
     expiry_date: extracted.expiry_date || '',
-    owner: 'Varun Kanade',
+    owner: defaultOwner,
     description: extracted.description || '',
     notes: extracted.notes || `Created via AI Document Import from ${extracted.file_name || 'agreement.pdf'}`
   });

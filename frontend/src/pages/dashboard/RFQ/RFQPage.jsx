@@ -8,6 +8,7 @@ import RFQStatusLegend from './components/RFQStatusLegend';
 import { calculateRFQCompleteness } from './utils/completeness';
 import { RFQ_STAGES } from './constants';
 import { useAuth } from '../../../context/AuthContext';
+import RfqPricingOptimizationDrawer from '../../../components/autonomy/RfqPricingOptimizationDrawer';
 import './RFQPage.css';
 
 export default function RFQPage() {
@@ -17,6 +18,7 @@ export default function RFQPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('ALL');
   const [showBuilder, setShowBuilder] = useState(false);
+  const [selectedPricingRfq, setSelectedPricingRfq] = useState(null);
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,6 +51,10 @@ export default function RFQPage() {
     const paramRfqId = searchParams.get('rfqId') || searchParams.get('openRfq');
     if (paramRfqId) {
       navigate(`/dashboard/rfqs/${paramRfqId}`);
+    }
+    const paramPricingRfq = searchParams.get('pricingRfq') || searchParams.get('openPricing');
+    if (paramPricingRfq) {
+      setSelectedPricingRfq({ id: parseInt(paramPricingRfq, 10), rfq_number: `RFQ-${paramPricingRfq}` });
     }
   }, [navigate]);
 
@@ -147,7 +153,33 @@ export default function RFQPage() {
     return filteredRFQs.slice(start, start + pageSize);
   }, [filteredRFQs, currentPage, pageSize]);
 
-  const userName = user?.first_name || 'Varun';
+  const userName = user?.first_name || (user?.email ? user.email.split('@')[0] : null) || 'User';
+
+  const handleExportCSV = () => {
+    if (!filteredRFQs.length) {
+      toast.error('No RFQs available to export');
+      return;
+    }
+    const headers = ['RFQ Number', 'Customer', 'Origin', 'Destination', 'Incoterm', 'Stage', 'Created At'];
+    const rows = filteredRFQs.map(r => [
+      `"${r.rfq_number || ''}"`,
+      `"${(r.customer_name || '').replace(/"/g, '""')}"`,
+      `"${r.origin || ''}"`,
+      `"${r.destination || ''}"`,
+      `"${r.incoterms || ''}"`,
+      `"${r.stage || ''}"`,
+      `"${r.created_at || ''}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `rfqs_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Exported ${filteredRFQs.length} RFQ records to CSV`);
+  };
 
   return (
     <div className="rfq-page-container">
@@ -160,12 +192,15 @@ export default function RFQPage() {
 
         <div className="rfq-header-actions">
           <button
+            type="button"
             className="rfq-btn rfq-btn-outline"
-            onClick={() => toast('CSV import wizard will open in the next update.', { icon: '📥' })}
+            onClick={handleExportCSV}
+            title="Export filtered RFQs to CSV"
           >
-            <span>📥 Import CSV</span>
+            <span>📊 Export CSV</span>
           </button>
           <button
+            type="button"
             className="rfq-btn rfq-btn-primary"
             onClick={() => setShowBuilder(true)}
           >
@@ -319,6 +354,7 @@ export default function RFQPage() {
         isLoading={isLoading}
         onRowClick={(rfq) => navigate(`/dashboard/rfqs/${rfq.id}`)}
         onNewRFQ={() => setShowBuilder(true)}
+        onOpenPricing={setSelectedPricingRfq}
       />
 
       {/* 5. Pagination */}
@@ -391,6 +427,16 @@ export default function RFQPage() {
           }}
         />
       )}
+
+      {/* RFQ Pricing Optimization Drawer */}
+      <RfqPricingOptimizationDrawer
+        rfq={selectedPricingRfq}
+        isOpen={!!selectedPricingRfq}
+        onClose={() => setSelectedPricingRfq(null)}
+        onQuotationExecuted={() => {
+          fetchRFQs();
+        }}
+      />
     </div>
   );
 }

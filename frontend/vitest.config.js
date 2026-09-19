@@ -13,9 +13,6 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/__tests__/setup.js'],
     css: false,
-    // Disable Node 22+/26's experimental Web Storage API which shadows
-    // jsdom's localStorage implementation causing tests to fail.
-    execArgv: ['--no-webstorage'],
     environmentOptions: {
       jsdom: {
         url: 'http://localhost:3000',

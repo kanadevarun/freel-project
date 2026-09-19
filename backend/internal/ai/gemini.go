@@ -57,11 +57,9 @@ func (g *geminiProvider) GenerateCompletion(ctx context.Context, prompt string) 
 	// We build the HTTP API endpoint URL, appending your Google AI Studio API Key.
 	geminiModel := os.Getenv("GEMINI_MODEL")
 	if geminiModel == "" {
-		geminiModel = "gemini-3.1-flash-lite"
+		geminiModel = "gemini-1.5-flash"
 	}
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", geminiModel, g.apiKey)
-
-
 
 	// ── STEP 2: BUILD JSON REQUEST BODY ───────────────────────────────────────
 	// Format the prompt text into the nested structure Gemini API expects.

@@ -9,11 +9,15 @@ import {
   Ship, Plane, Truck, Box, Globe, CheckCircle2, ThumbsUp,
   ThumbsDown, RotateCcw, FileSignature, History, UserCheck,
   Printer, ExternalLink, Ban, Share2, CheckSquare, Briefcase,
-  CheckCheck, ArrowUpRight, Compass, ShieldCheck, BarChart3, GitBranch
+  CheckCheck, ArrowUpRight, Compass, ShieldCheck, BarChart3, GitBranch,
+  Sliders
 } from 'lucide-react';
 import quotationService from '../../../services/quotationService';
 import QuotationAnalyticsWorkspace from './QuotationAnalyticsWorkspace';
 import RateSelectionSection from './RateSelectionSection';
+import AutonomousCommercialLifecycleCard from './components/AutonomousCommercialLifecycleCard';
+import AutonomousRevenueOptimizationCard from './components/AutonomousRevenueOptimizationCard';
+import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
 import './QuotationsPage.css';
 
@@ -2040,6 +2044,10 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [conversionSuccessResult, setConversionSuccessResult] = useState(null);
 
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [previewingPDF, setPreviewingPDF] = useState(false);
+  const [sendingQuotation, setSendingQuotation] = useState(false);
+
   const fetchDetail = useCallback(() => {
     if (!quotationId) return;
     setLoading(true);
@@ -2101,6 +2109,58 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
     if (onQuotationUpdated) onQuotationUpdated();
   };
 
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloadingPDF(true);
+      const res = await quotationService.downloadQuotationPDF(quotationId);
+      const blob = res instanceof Blob ? res : new Blob([res?.data || res], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `Quotation_${q?.quotation_number || quotationId}.pdf`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('PDF download error:', err);
+      window.alert('Failed to download quotation PDF: ' + (err?.response?.data?.error?.message || err.message));
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
+  const handleViewPDF = async () => {
+    try {
+      setPreviewingPDF(true);
+      const res = await quotationService.downloadQuotationPDF(quotationId);
+      const blob = res instanceof Blob ? res : new Blob([res?.data || res], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error('PDF view error:', err);
+      window.alert('Failed to preview quotation PDF: ' + (err?.response?.data?.error?.message || err.message));
+    } finally {
+      setPreviewingPDF(false);
+    }
+  };
+
+  const handleSendQuotation = async () => {
+    if (!window.confirm(`Mark quotation ${q?.quotation_number || quotationId} as SENT to customer?`)) return;
+    try {
+      setSendingQuotation(true);
+      await quotationService.sendQuotation(quotationId, {});
+      if (onQuotationUpdated) onQuotationUpdated();
+      fetchDetail();
+    } catch (err) {
+      console.error('Send quotation error:', err);
+      window.alert('Failed to send quotation: ' + (err?.response?.data?.error?.message || err.message));
+    } finally {
+      setSendingQuotation(false);
+    }
+  };
+
   return (
     <div className="qt-detail-panel">
       <div className="qt-detail-header">
@@ -2138,16 +2198,33 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
             <Copy size={14} />
             <span>Save as Template</span>
           </button>
-          {[
-            { icon: Eye,      label: 'View' },
-            { icon: Send,     label: 'Send' },
-            { icon: Download, label: 'Download' },
-          ].map(({ icon: Icon, label }) => (
-            <button key={label} className="qt-action-btn">
-              <Icon size={14} />
-              <span>{label}</span>
-            </button>
-          ))}
+          <button
+            className="qt-action-btn"
+            onClick={handleViewPDF}
+            disabled={previewingPDF}
+            title="Preview Customer-Safe Quotation PDF in new tab"
+          >
+            <Eye size={14} />
+            <span>{previewingPDF ? 'Loading...' : 'View PDF'}</span>
+          </button>
+          <button
+            className="qt-action-btn"
+            onClick={handleSendQuotation}
+            disabled={sendingQuotation || q?.status === 'SENT' || q?.status === 'ACCEPTED'}
+            title="Mark quotation as Sent to Customer"
+          >
+            <Send size={14} />
+            <span>{sendingQuotation ? 'Sending...' : 'Send'}</span>
+          </button>
+          <button
+            className="qt-action-btn qt-action-btn--highlight"
+            onClick={handleDownloadPDF}
+            disabled={downloadingPDF}
+            title="Download Customer-Safe Quotation PDF"
+          >
+            <Download size={14} />
+            <span>{downloadingPDF ? 'Generating...' : 'Download PDF'}</span>
+          </button>
         </div>
 
         {/* Tabs */}
@@ -2171,6 +2248,14 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
       </div>
 
       <div className="qt-detail-body">
+        {!loading && (
+          <ModuleRecommendationsWidget
+            sourceType="QUOTATION"
+            sourceId={quotationId}
+            sourceRef={q?.quotation_number}
+            onRefreshNeeded={fetchDetail}
+          />
+        )}
         {loading ? (
           <div className="qt-detail-skeleton">
             {[80, 60, 90, 50, 70].map((w, i) => (
@@ -3199,36 +3284,48 @@ export default function QuotationsPage() {
           />
         ) : (
           <>
-            {/* KPI Strip */}
+            {/* KPI Strip - Immediately visible upon entering Quotations workspace */}
             <div className="qt-kpi-strip">
-          {KPI_CONFIG.map(kpi => {
-            const IconComp = kpi.icon;
-            const val = summary ? (summary[kpi.key] ?? 0) : 0;
-            const totalQuotes = summary ? (summary.total_quotations ?? 0) : 0;
-            const pct = totalQuotes > 0 ? Math.round((val / totalQuotes) * 100) : 0;
+              {KPI_CONFIG.map(kpi => {
+                const IconComp = kpi.icon;
+                const val = summary ? (summary[kpi.key] ?? 0) : 0;
+                const totalQuotes = summary ? (summary.total_quotations ?? 0) : 0;
+                const pct = totalQuotes > 0 ? Math.round((val / totalQuotes) * 100) : 0;
 
-            return (
-              <div key={kpi.key} className="qt-kpi-card">
-                <div className="qt-kpi-top-row">
-                  <div className="qt-kpi-icon" style={{ background: kpi.iconBg, color: kpi.iconColor }}>
-                    <IconComp size={18} />
+                return (
+                  <div key={kpi.key} className="qt-kpi-card">
+                    <div className="qt-kpi-top-row">
+                      <div className="qt-kpi-icon" style={{ background: kpi.iconBg, color: kpi.iconColor }}>
+                        <IconComp size={18} />
+                      </div>
+                      <span className="qt-kpi-tag" style={{ color: kpi.iconColor, background: kpi.iconBg }}>
+                        {kpi.badge}
+                      </span>
+                    </div>
+                    <div className="qt-kpi-body">
+                      <div className="qt-kpi-value">{summary ? val : '—'}</div>
+                      <div className="qt-kpi-label">{kpi.label}</div>
+                      <div className={`qt-kpi-trend ${kpi.negative && val > 0 ? 'negative' : ''}`}>
+                        <span>{kpi.negative && val > 0 ? '↓' : '↑'} {totalQuotes > 0 ? `${pct}%` : '0'}</span>
+                        <span className="qt-kpi-trend-sub">{totalQuotes > 0 ? 'of total' : 'no active quotes'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="qt-kpi-tag" style={{ color: kpi.iconColor, background: kpi.iconBg }}>
-                    {kpi.badge}
-                  </span>
-                </div>
-                <div className="qt-kpi-body">
-                  <div className="qt-kpi-value">{summary ? val : '—'}</div>
-                  <div className="qt-kpi-label">{kpi.label}</div>
-                  <div className={`qt-kpi-trend ${kpi.negative && val > 0 ? 'negative' : ''}`}>
-                    <span>{kpi.negative && val > 0 ? '↓' : '↑'} {totalQuotes > 0 ? `${pct}%` : '0'}</span>
-                    <span className="qt-kpi-trend-sub">{totalQuotes > 0 ? 'of total' : 'no active quotes'}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+
+            {/* Phase 7.3 Autonomous Quote-to-Cash Commercial Lifecycle Operations */}
+            <AutonomousCommercialLifecycleCard
+              rfqId={quotes?.[0]?.rfq_number || quotes?.[0]?.rfq_id || "RFQ-2026-DEV-001"}
+              quotationId={selectedId || quotes?.[0]?.id}
+            />
+
+            {/* Phase 7.6 Autonomous Revenue & Margin Optimization Operations */}
+            <AutonomousRevenueOptimizationCard
+              entityType={selectedId ? "QUOTATION" : "RFQ"}
+              entityId={selectedId ? `QT-${selectedId}` : (quotes?.[0]?.rfq_number || "RFQ-2026-DEV-001")}
+            />
 
         {/* Status Tabs */}
         <div className="qt-tabs">

@@ -11,6 +11,7 @@ import (
 	carrierAdapters "github.com/freel/backend/internal/carrier/adapters"
 	carrierDomain "github.com/freel/backend/internal/carrier/domain"
 	carrierService "github.com/freel/backend/internal/carrier/service"
+	"github.com/freel/backend/internal/common/events"
 	"github.com/freel/backend/internal/shipments/spec"
 	"github.com/jmoiron/sqlx"
 )
@@ -62,15 +63,17 @@ type CarrierTrackingEngine struct {
 	repo       Repository
 	carrierSvc carrierService.CarrierService
 	registry   *carrierAdapters.AdapterRegistry
+	eventBus   events.Bus
 }
 
 // NewCarrierTrackingEngine initializes a new tracking engine.
-func NewCarrierTrackingEngine(db *sqlx.DB, repo Repository, carrierSvc carrierService.CarrierService) *CarrierTrackingEngine {
+func NewCarrierTrackingEngine(db *sqlx.DB, repo Repository, carrierSvc carrierService.CarrierService, eventBus events.Bus) *CarrierTrackingEngine {
 	return &CarrierTrackingEngine{
 		db:         db,
 		repo:       repo,
 		carrierSvc: carrierSvc,
 		registry:   carrierAdapters.GetDefaultRegistry(),
+		eventBus:   eventBus,
 	}
 }
 
@@ -381,6 +384,22 @@ func (e *CarrierTrackingEngine) SyncShipmentTracking(ctx context.Context, orgID 
 			fmt.Sprintf("Shipment status updated to %s based on %s carrier milestone", newStatus, actualMilestone),
 			actor,
 		)
+	}
+
+	if e.eventBus != nil && (newEventCount > 0 || newStatus != sh.Status) {
+		e.eventBus.Publish(events.Event{
+			Type: "shipment.milestone_updated",
+			Payload: map[string]interface{}{
+				"shipment_id":    shipmentID,
+				"org_id":         orgID,
+				"carrier_scac":   scac,
+				"milestone_code": actualMilestone,
+				"status":         newStatus,
+				"new_events":     newEventCount,
+				"location":       trackingResult.LatestLocation,
+			},
+			Timestamp: time.Now(),
+		})
 	}
 
 	return &spec.TrackingRefreshResult{

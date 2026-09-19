@@ -75,7 +75,7 @@ func TestActivityEngine_Retrieval(t *testing.T) {
 			Category:    "LEAD",
 			Action:      "CREATED",
 			Description: "Lead was manually added to the system.",
-			Actor:       "Varun Kanade",
+			Actor:       "Operations Officer",
 			Timestamp:   time.Now().Add(-3 * time.Hour),
 		},
 		{

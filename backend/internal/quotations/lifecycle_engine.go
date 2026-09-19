@@ -16,6 +16,14 @@ var allowedTransitions = map[string]map[string]bool{
 	},
 	QuotationStatusReadyForReview: {
 		QuotationStatusApproved:         true,
+		QuotationStatusSent:             true,
+		QuotationStatusChangesRequested: true,
+		QuotationStatusCancelled:        true,
+		QuotationStatusExpired:          true,
+	},
+	"PENDING_APPROVAL": {
+		QuotationStatusApproved:         true,
+		QuotationStatusSent:             true,
 		QuotationStatusChangesRequested: true,
 		QuotationStatusCancelled:        true,
 		QuotationStatusExpired:          true,

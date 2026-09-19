@@ -14,6 +14,7 @@ import (
 
 // smtpServiceImpl is the concrete implementation of the notifications Service using SMTP.
 type smtpServiceImpl struct {
+	UnimplementedInAppService
 	host        string
 	port        string
 	username    string

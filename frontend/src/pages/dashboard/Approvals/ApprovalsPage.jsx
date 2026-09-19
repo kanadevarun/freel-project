@@ -7,22 +7,33 @@ import ApprovalRow from './ApprovalRow';
 import NewApprovalModal from './NewApprovalModal';
 import ApprovalDetailsModal from './ApprovalDetailsModal';
 import RejectionModal from './RejectionModal';
+import ReturnModal from './ReturnModal';
 import { approvalsService } from '../../../services/approvalsService';
-import { INITIAL_APPROVAL_STATS, INITIAL_APPROVALS } from './constants';
+import { useAuth } from '../../../context/AuthContext';
+import { INITIAL_APPROVAL_STATS } from './constants';
+import WorkloadCapacityPredictiveCard from '../../../components/predictions/WorkloadCapacityPredictiveCard';
+import ResourceBottleneckPredictiveCard from '../../../components/predictions/ResourceBottleneckPredictiveCard';
 import './ApprovalsPage.css';
 
 export default function ApprovalsPage() {
+  const { user } = useAuth();
   const [approvals, setApprovals] = useState([]);
   const [stats, setStats] = useState(INITIAL_APPROVAL_STATS);
 
-  // Current logged in user context
-  const currentUser = 'Varun Kanade';
+  // Current logged in user context fetched dynamically
+  const currentUser = user?.full_name || 
+    (user?.name && !user.name.includes('@') ? user.name : null) || 
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) || 
+    user?.email || 
+    '<IdentifiedUser>';
 
   // Filters State
   const [activeCategory, setActiveCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [riskFilter, setRiskFilter] = useState('ALL');
+  const [moduleFilter, setModuleFilter] = useState('ALL');
   const [requesterFilter, setRequesterFilter] = useState('ALL');
   const [dateFilter, setDateFilter] = useState('ANYTIME');
   const [sortBy, setSortBy] = useState('NEWEST');
@@ -34,6 +45,7 @@ export default function ApprovalsPage() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [rejectingApproval, setRejectingApproval] = useState(null);
+  const [returningApproval, setReturningApproval] = useState(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -53,26 +65,27 @@ export default function ApprovalsPage() {
         approvalsService.getApprovalStats(),
       ]);
 
-      if (Array.isArray(listData) && listData.length > 0) {
+      if (Array.isArray(listData)) {
         setApprovals(normalizeApprovals(listData));
       } else {
-        setApprovals(INITIAL_APPROVALS);
+        setApprovals([]);
       }
 
       if (statsData) {
         setStats({
-          pending: statsData.pending ?? 12,
-          pendingTrend: statsData.pending_trend || '↑ 3 from last 7 days',
-          approved: statsData.approved ?? 28,
-          approvedTrend: statsData.approved_trend || '↑ 8 from last 7 days',
-          rejected: statsData.rejected ?? 4,
-          rejectedTrend: statsData.rejected_trend || '↓ 2 from last 7 days',
-          overdue: statsData.overdue ?? 3,
+          pending: statsData.pending ?? 0,
+          pendingTrend: statsData.pending_trend || '',
+          approved: statsData.approved ?? 0,
+          approvedTrend: statsData.approved_trend || '',
+          rejected: statsData.rejected ?? 0,
+          rejectedTrend: statsData.rejected_trend || '',
+          overdue: statsData.overdue ?? 0,
         });
       }
     } catch (err) {
       console.error('Failed to load backend approvals:', err);
-      setApprovals(INITIAL_APPROVALS);
+      setError('Failed to load approval requests from the server.');
+      setApprovals([]);
     } finally {
       setLoading(false);
     }
@@ -113,11 +126,13 @@ export default function ApprovalsPage() {
         category: item.category || 'DOCUMENTS',
         type: item.type || 'Document Approval',
         relatedRef: item.related_ref || (item.shipment_id ? `Shipment #${item.shipment_id}` : 'General Context'),
+        relatedEntityType: item.related_entity_type || (item.shipment_id ? 'SHIPMENT' : ''),
+        relatedEntityId: item.related_entity_id || item.shipment_id || null,
         customerName: item.customer_name || 'Associated Customer',
-        requesterName: item.requested_by_name || 'Varun Kanade',
-        department: item.department || 'Operations',
-        assignedTo: item.assigned_to || 'Arjun Singh (Operations Manager)',
-        avatar: item.avatar || 'VK',
+        requesterName: item.requested_by_name || (item.actor_type === 'AI_AGENT' ? `🤖 ${item.source || 'AI Agent'}` : currentUser),
+        department: item.department || (item.actor_type === 'AI_AGENT' ? 'AI HITL Bridge' : 'Operations'),
+        assignedTo: item.assigned_to || 'Operations Desk',
+        avatar: item.avatar || (item.actor_type === 'AI_AGENT' ? '🤖' : (item.requested_by_name ? item.requested_by_name.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase() : 'AP')),
         dueDate: item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 20, 2026',
         dueText: isOverdue ? 'Overdue' : dueText,
         isOverdue,
@@ -127,23 +142,75 @@ export default function ApprovalsPage() {
         rejectionReason: item.rejection_reason || '',
         description: item.description || item.comments || '',
         createdAt: item.created_at || new Date().toISOString(),
+        actorType: item.actor_type,
+        source: item.source,
+        actionName: item.action_name,
+        riskLevel: item.risk_level,
+        requiredPermission: item.required_permission,
+        aiTaskId: item.ai_task_id,
+        threadId: item.thread_id,
+        proposedPayload: item.proposed_payload,
+        expiresAt: item.expires_at,
+        cancelledBy: item.cancelled_by,
+        cancelledAt: item.cancelled_at,
+        executionStatus: item.execution_status || 'NOT_STARTED',
+        executionResult: item.execution_result,
+        executionError: item.execution_error,
+        executionRetries: item.execution_retries || 0,
+        sourceModule: item.source_module,
+        sourceRecordType: item.source_record_type,
+        sourceRecordId: item.source_record_id,
+        evidence: item.evidence,
+        impactSummary: item.impact_summary,
+        isReversible: Boolean(item.is_reversible),
+        externalCommunication: Boolean(item.external_communication),
+        requiredApprovalLevel: item.required_approval_level,
+        returnedBy: item.returned_by,
+        returnedAt: item.returned_at,
+        returnedReason: item.returned_reason,
       };
     });
   };
 
+  // User identifiers for matching assignments
+  const userKeywords = useMemo(() => {
+    return [
+      currentUser !== '<IdentifiedUser>' ? currentUser.toLowerCase() : '',
+      user?.first_name ? user.first_name.toLowerCase() : '',
+      user?.last_name ? user.last_name.toLowerCase() : '',
+      user?.email ? user.email.toLowerCase() : '',
+    ].filter(Boolean);
+  }, [currentUser, user]);
+
   // Category & Tab Counts Calculation
   const categoryCounts = useMemo(() => {
-    const counts = { ALL: approvals.length, ASSIGNED_TO_ME: 0, DOCUMENTS: 0, COMMERCIAL: 0, OPERATIONS: 0, FINANCE: 0 };
+    const counts = { ALL: approvals.length, PENDING: 0, ASSIGNED_TO_ME: 0, RETURNED_FOR_CHANGES: 0, DOCUMENTS: 0, COMMERCIAL: 0, OPERATIONS: 0, FINANCE: 0 };
     approvals.forEach((item) => {
       const cat = item.category ? item.category.toUpperCase() : 'DOCUMENTS';
       if (counts[cat] !== undefined) {
         counts[cat] += 1;
       }
-      if ((item.assignedTo || '').toLowerCase().includes('varun') || (item.assignedTo || '').toLowerCase().includes('arjun')) {
+      if (item.status === 'Pending' || item.status === 'PENDING_APPROVAL' || item.isDueSoon || item.isOverdue) {
+        counts.PENDING += 1;
+      }
+      if (item.status === 'Returned for Changes' || item.status === 'RETURNED_FOR_CHANGES') {
+        counts.RETURNED_FOR_CHANGES += 1;
+      }
+      const assigned = (item.assignedTo || '').toLowerCase();
+      if (userKeywords.some((kw) => kw && assigned.includes(kw)) || assigned.includes('operations manager') || assigned.includes('me')) {
         counts.ASSIGNED_TO_ME += 1;
       }
     });
     return counts;
+  }, [approvals, userKeywords]);
+
+  // Dynamic Requester Options
+  const requesterOptions = useMemo(() => {
+    const set = new Set();
+    approvals.forEach((a) => {
+      if (a.requesterName) set.add(a.requesterName);
+    });
+    return Array.from(set);
   }, [approvals]);
 
   // Filtering & Sorting logic
@@ -152,7 +219,11 @@ export default function ApprovalsPage() {
       // 1. Category tab filter
       if (activeCategory === 'ASSIGNED_TO_ME') {
         const assigned = (item.assignedTo || '').toLowerCase();
-        if (!assigned.includes('varun') && !assigned.includes('arjun')) return false;
+        if (!userKeywords.some((kw) => kw && assigned.includes(kw)) && !assigned.includes('operations manager') && !assigned.includes('me')) return false;
+      } else if (activeCategory === 'PENDING') {
+        if (item.status !== 'Pending' && item.status !== 'PENDING_APPROVAL' && !item.isDueSoon && !item.isOverdue) return false;
+      } else if (activeCategory === 'RETURNED_FOR_CHANGES') {
+        if (item.status !== 'Returned for Changes' && item.status !== 'RETURNED_FOR_CHANGES') return false;
       } else if (activeCategory !== 'ALL') {
         if ((item.category || '').toUpperCase() !== activeCategory) return false;
       }
@@ -164,9 +235,26 @@ export default function ApprovalsPage() {
       if (statusFilter !== 'ALL') {
         if (statusFilter === 'Overdue' && !item.isOverdue && item.status !== 'Overdue') return false;
         if (statusFilter === 'Due Soon' && !item.isDueSoon) return false;
-        if (statusFilter === 'Pending' && item.status !== 'Pending') return false;
-        if (statusFilter === 'Approved' && item.status !== 'Approved') return false;
-        if (statusFilter === 'Rejected' && item.status !== 'Rejected') return false;
+        if (statusFilter === 'Pending' && item.status !== 'Pending' && item.status !== 'PENDING_APPROVAL') return false;
+        if (statusFilter === 'Approved' && item.status !== 'Approved' && item.status !== 'APPROVED') return false;
+        if (statusFilter === 'Rejected' && item.status !== 'Rejected' && item.status !== 'REJECTED') return false;
+        if (statusFilter === 'Returned for Changes' && item.status !== 'Returned for Changes' && item.status !== 'RETURNED_FOR_CHANGES') return false;
+        if (statusFilter === 'Executing' && item.status !== 'Executing' && item.executionStatus !== 'EXECUTING') return false;
+        if (statusFilter === 'Completed' && item.status !== 'Completed' && item.executionStatus !== 'COMPLETED') return false;
+        if (statusFilter === 'Failed' && item.status !== 'Failed' && item.executionStatus !== 'FAILED') return false;
+        if (statusFilter === 'Cancelled' && item.status !== 'Cancelled' && item.status !== 'CANCELLED') return false;
+        if (statusFilter === 'Expired' && item.status !== 'Expired' && item.status !== 'EXPIRED') return false;
+      }
+
+      // 3b. Risk filter
+      if (riskFilter !== 'ALL') {
+        if ((item.riskLevel || '').toUpperCase() !== riskFilter.toUpperCase()) return false;
+      }
+
+      // 3c. Module filter
+      if (moduleFilter !== 'ALL') {
+        const itemModule = ((item.sourceModule || item.category || '')).toUpperCase();
+        if (!itemModule.includes(moduleFilter.toUpperCase())) return false;
       }
 
       // 4. Requester filter
@@ -185,13 +273,15 @@ export default function ApprovalsPage() {
         const cust = (item.customerName || '').toLowerCase();
         const ref = (item.relatedRef || '').toLowerCase();
         const req = (item.requesterName || '').toLowerCase();
+        const act = (item.actionName || '').toLowerCase();
 
         return (
           title.includes(q) ||
           id.includes(q) ||
           cust.includes(q) ||
           ref.includes(q) ||
-          req.includes(q)
+          req.includes(q) ||
+          act.includes(q)
         );
       }
 
@@ -207,13 +297,17 @@ export default function ApprovalsPage() {
         const rank = { URGENT: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
         return (rank[b.priority] || 0) - (rank[a.priority] || 0);
       }
+      if (sortBy === 'RISK') {
+        const riskRank = { CRITICAL: 4, HIGH_RISK: 3, MEDIUM: 2, LOW: 1 };
+        return (riskRank[b.riskLevel] || 0) - (riskRank[a.riskLevel] || 0);
+      }
       if (sortBy === 'OLDEST') {
         return new Date(a.createdAt) - new Date(b.createdAt);
       }
       // NEWEST default
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
-  }, [approvals, activeCategory, typeFilter, statusFilter, requesterFilter, dateFilter, searchQuery, sortBy]);
+  }, [approvals, activeCategory, typeFilter, statusFilter, riskFilter, moduleFilter, requesterFilter, dateFilter, searchQuery, sortBy]);
 
   const paginatedApprovals = useMemo(() => {
     const startIndex = (currentPage - 1) * rowsPerPage;
@@ -296,11 +390,66 @@ export default function ApprovalsPage() {
     }
   };
 
+  const handleConfirmReturn = async (item, reason, notes) => {
+    try {
+      if (item.dbId) {
+        await approvalsService.returnRequest(item.dbId, reason, notes);
+        await fetchData();
+      } else {
+        setApprovals((prev) =>
+          prev.map((a) => (a.id === item.id ? { ...a, status: 'Returned for Changes', dueText: 'Returned', returnedReason: reason } : a))
+        );
+      }
+      setActionSuccess(`Request ${item.id} has been returned for changes.`);
+      setTimeout(() => setActionSuccess(''), 4000);
+    } catch (err) {
+      console.error('Failed to return request:', err);
+      setActionSuccess(`Failed to return request: ${err.message || 'Error'}`);
+      setTimeout(() => setActionSuccess(''), 4000);
+    }
+  };
+
+  const handleRetryExecution = async (item) => {
+    try {
+      if (item.dbId) {
+        await approvalsService.retryExecution(item.dbId);
+        await fetchData();
+        setActionSuccess(`Execution retry triggered for ${item.id}.`);
+        setTimeout(() => setActionSuccess(''), 4000);
+      }
+    } catch (err) {
+      console.error('Failed to retry execution:', err);
+      setActionSuccess(`Retry failed: ${err.message || 'Error'}`);
+      setTimeout(() => setActionSuccess(''), 4000);
+    }
+  };
+
+  const handleCancel = async (item, notes) => {
+    try {
+      if (item.dbId) {
+        await approvalsService.cancelRequest(item.dbId, notes);
+        await fetchData();
+      } else {
+        setApprovals((prev) =>
+          prev.map((a) => (a.id === item.id ? { ...a, status: 'Cancelled', dueText: 'Cancelled' } : a))
+        );
+      }
+      setActionSuccess(`Request ${item.id} has been cancelled.`);
+      setTimeout(() => setActionSuccess(''), 4000);
+    } catch (err) {
+      console.error('Failed to cancel request:', err);
+      setActionSuccess(`Failed to cancel request: ${err.message || 'Error'}`);
+      setTimeout(() => setActionSuccess(''), 4000);
+    }
+  };
+
   const handleClearAll = () => {
     setActiveCategory('ALL');
     setSearchQuery('');
     setTypeFilter('ALL');
     setStatusFilter('ALL');
+    setRiskFilter('ALL');
+    setModuleFilter('ALL');
     setRequesterFilter('ALL');
     setDateFilter('ANYTIME');
     setSortBy('NEWEST');
@@ -331,6 +480,12 @@ export default function ApprovalsPage() {
         }}
       />
 
+      {/* Predictive Planning Intelligence (Phase 4 Task 4.10) */}
+      <WorkloadCapacityPredictiveCard defaultTab="approvals" />
+
+      {/* Predictive Resource Allocation & Bottleneck Intelligence (Phase 4 Task 4.11) */}
+      <ResourceBottleneckPredictiveCard defaultTab="approvals" />
+
       {/* Category Tabs & Toolbar Filters */}
       <ApprovalFilters
         activeCategory={activeCategory}
@@ -342,8 +497,13 @@ export default function ApprovalsPage() {
         onTypeFilterChange={setTypeFilter}
         statusFilter={statusFilter}
         onStatusFilterChange={setStatusFilter}
+        riskFilter={riskFilter}
+        onRiskFilterChange={setRiskFilter}
+        moduleFilter={moduleFilter}
+        onModuleFilterChange={setModuleFilter}
         requesterFilter={requesterFilter}
         onRequesterFilterChange={setRequesterFilter}
+        requesterOptions={requesterOptions}
         dateFilter={dateFilter}
         onDateFilterChange={setDateFilter}
         sortBy={sortBy}
@@ -469,9 +629,13 @@ export default function ApprovalsPage() {
       {/* Approval Details Modal */}
       <ApprovalDetailsModal
         item={selectedApproval}
+        currentUser={currentUser}
         onClose={() => setSelectedApproval(null)}
         onApprove={handleApprove}
         onOpenRejectModal={setRejectingApproval}
+        onOpenReturnModal={setReturningApproval}
+        onCancel={handleCancel}
+        onRetryExecution={handleRetryExecution}
       />
 
       {/* Rejection Reason Modal */}
@@ -480,6 +644,14 @@ export default function ApprovalsPage() {
         item={rejectingApproval}
         onClose={() => setRejectingApproval(null)}
         onConfirmReject={handleConfirmReject}
+      />
+
+      {/* Return for Changes Modal */}
+      <ReturnModal
+        isOpen={Boolean(returningApproval)}
+        item={returningApproval}
+        onClose={() => setReturningApproval(null)}
+        onConfirmReturn={handleConfirmReturn}
       />
     </div>
   );

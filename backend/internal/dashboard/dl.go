@@ -97,7 +97,7 @@ func formatFileSize(bytes int64) string {
 func computeTrend(curr, prev int) (float64, string) {
 	if prev == 0 {
 		if curr > 0 {
-			return 100.0, "up"
+			return 0.0, "no_data"
 		}
 		return 0.0, "neutral"
 	}
@@ -621,44 +621,105 @@ func (d *dataLayer) GetApprovalQueue(ctx context.Context, orgID int64) ([]spec.P
 func (d *dataLayer) GetAttentionItems(ctx context.Context, orgID int64) ([]spec.AttentionItem, error) {
 	var items []spec.AttentionItem
 
-	// 1. RFQs awaiting quotation
-	var rfqCount int
-	var latestRFQNo, latestCustomer string
-	var latestRFQTime sql.NullTime
+	// ── 1. CRITICAL: Delayed / Exception Shipments ──
+	var delayedShipmentCount int
+	var delayedRoute string
+	var latestShipID int64
+	var latestShipNo, latestShipStatus string
 	_ = d.db.QueryRowContext(ctx, `
-		SELECT r.rfq_number, COALESCE(c.name, c.trading_name, 'Direct Client'), r.created_at
-		FROM rfqs r
-		LEFT JOIN customers c ON c.id = r.customer_id
-		WHERE r.org_id = ? AND r.stage IN ('STAGE_QUOTE_DRAFTING', 'STAGE_RATE_INTELLIGENCE_MATCHING', 'STAGE_DOCUMENT_EXTRACTION', 'DRAFT', 'NEW', 'IN_PROGRESS')
-		ORDER BY r.created_at DESC
+		SELECT s.id, COALESCE(s.mbl_number, s.booking_number, CONCAT('SHP-', s.id)), s.status,
+		       COALESCE(CONCAT(s.origin_port, ' → ', s.destination_port), '')
+		FROM shipments s
+		WHERE s.org_id = ? AND s.status IN ('DELAYED', 'CUSTOMS_HOLD', 'EXCEPTION')
+		ORDER BY s.updated_at DESC, s.created_at DESC
 		LIMIT 1
-	`, orgID).Scan(&latestRFQNo, &latestCustomer, &latestRFQTime)
+	`, orgID).Scan(&latestShipID, &latestShipNo, &latestShipStatus, &delayedRoute)
 
 	_ = d.db.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM rfqs 
-		WHERE org_id = ? AND stage IN ('STAGE_QUOTE_DRAFTING', 'STAGE_RATE_INTELLIGENCE_MATCHING', 'STAGE_DOCUMENT_EXTRACTION', 'DRAFT', 'NEW', 'IN_PROGRESS')
-	`, orgID).Scan(&rfqCount)
+		SELECT COUNT(*) 
+		FROM shipments 
+		WHERE org_id = ? AND status IN ('DELAYED', 'CUSTOMS_HOLD', 'EXCEPTION')
+	`, orgID).Scan(&delayedShipmentCount)
 
-	if rfqCount > 0 {
-		subtitle := "Active freight requests awaiting carrier rate quoting"
-		if latestRFQNo != "" {
-			subtitle = fmt.Sprintf("Latest: %s from %s", latestRFQNo, latestCustomer)
+	if delayedShipmentCount > 0 {
+		statusDisplay := strings.ReplaceAll(strings.ToLower(latestShipStatus), "_", " ")
+		explanation := fmt.Sprintf("Shipment %s is on %s requiring immediate clearance.", latestShipNo, statusDisplay)
+		if delayedRoute != "" {
+			explanation = fmt.Sprintf("Shipment %s (%s) is on %s requiring clearance.", latestShipNo, delayedRoute, statusDisplay)
 		}
 		items = append(items, spec.AttentionItem{
-			ID:        "rfqs_awaiting_quote",
-			Priority:  "HIGH",
-			Category:  "RFQs",
-			Title:     fmt.Sprintf("%d RFQ(s) are awaiting your quotation", rfqCount),
-			Subtitle:  subtitle,
-			Count:     rfqCount,
-			ActionURL: "/dashboard/rfqs",
-			Timestamp: "2h ago",
+			ID:               fmt.Sprintf("crit_shipment_exception_%d", latestShipID),
+			Urgency:          "CRITICAL",
+			Priority:         "CRITICAL",
+			Category:         "Shipments",
+			Module:           "shipments",
+			Title:            "Shipment exception needs review",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            delayedShipmentCount,
+			SourceReference:  latestShipNo,
+			SourceEntityID:   latestShipID,
+			ActionURL:        "/dashboard/shipments",
+			ActionLabel:      "Review Exception",
+			Timestamp:        "1h ago",
+			AgeText:          "1h ago",
+			RequiresApproval: false,
+			Capability:       "read_only",
+			RequiredRole:     "SHIPMENTS:READ",
 		})
 	}
 
-	// 2. Overdue Invoices
+	// ── 2. CRITICAL: Pending Approvals Blocking Operations ──
+	var pendingApprovals int
+	var latestAppID int64
+	var latestAppCode, latestAppTitle string
+	_ = d.db.QueryRowContext(ctx, `
+		SELECT id, request_code, title 
+		FROM approval_requests 
+		WHERE org_id = ? AND status = 'Pending' 
+		ORDER BY created_at DESC 
+		LIMIT 1
+	`, orgID).Scan(&latestAppID, &latestAppCode, &latestAppTitle)
+
+	_ = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM approval_requests WHERE org_id = ? AND status = 'Pending'`, orgID).Scan(&pendingApprovals)
+	if pendingApprovals > 0 {
+		explanation := fmt.Sprintf("%d approval request(s) awaiting manager sign-off before operational execution.", pendingApprovals)
+		items = append(items, spec.AttentionItem{
+			ID:               fmt.Sprintf("crit_pending_approvals_%d", latestAppID),
+			Urgency:          "CRITICAL",
+			Priority:         "CRITICAL",
+			Category:         "Approvals",
+			Module:           "approvals",
+			Title:            "Approvals blocking operational release",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            pendingApprovals,
+			SourceReference:  latestAppCode,
+			SourceEntityID:   latestAppID,
+			ActionURL:        "/dashboard/approvals",
+			ActionLabel:      "Review Approvals",
+			Timestamp:        "58m ago",
+			AgeText:          "58m ago",
+			RequiresApproval: true,
+			ApprovalID:       latestAppID,
+			Capability:       "approval_gated",
+			RequiredRole:     "APPROVALS:READ",
+		})
+	}
+
+	// ── 3. CRITICAL: Overdue Invoices Requiring Finance Attention ──
 	var overdueCount int
 	var overdueSum float64
+	var latestInvID int64
+	var latestInvNo string
+	_ = d.db.QueryRowContext(ctx, `
+		SELECT id, invoice_number 
+		FROM customer_invoices 
+		WHERE org_id = ? AND (status = 'Overdue' OR (due_date < CURRENT_DATE() AND status NOT IN ('Paid', 'Cancelled', 'Draft') AND balance_due > 0))
+		ORDER BY due_date ASC
+		LIMIT 1
+	`, orgID).Scan(&latestInvID, &latestInvNo)
+
 	_ = d.db.QueryRowContext(ctx, `
 		SELECT COUNT(*), COALESCE(SUM(balance_due), 0) 
 		FROM customer_invoices 
@@ -666,97 +727,148 @@ func (d *dataLayer) GetAttentionItems(ctx context.Context, orgID int64) ([]spec.
 	`, orgID).Scan(&overdueCount, &overdueSum)
 
 	if overdueCount > 0 {
+		explanation := fmt.Sprintf("%d invoice(s) overdue totaling $%.2f past settlement maturity terms.", overdueCount, overdueSum)
 		items = append(items, spec.AttentionItem{
-			ID:        "overdue_invoices",
-			Priority:  "HIGH",
-			Category:  "Finance",
-			Title:     fmt.Sprintf("%d Invoice(s) are overdue", overdueCount),
-			Subtitle:  fmt.Sprintf("Total overdue amount: $%.2f", overdueSum),
-			Count:     overdueCount,
-			ActionURL: "/dashboard/invoices?primary_tab=ALL&status=Overdue",
-			Timestamp: "2h ago",
+			ID:               fmt.Sprintf("crit_overdue_invoices_%d", latestInvID),
+			Urgency:          "CRITICAL",
+			Priority:         "CRITICAL",
+			Category:         "Finance",
+			Module:           "invoices",
+			Title:            "Customer invoice is overdue",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            overdueCount,
+			SourceReference:  latestInvNo,
+			SourceEntityID:   latestInvID,
+			ActionURL:        "/dashboard/invoices?primary_tab=ALL&status=Overdue",
+			ActionLabel:      "Review Invoices",
+			Timestamp:        "Overdue",
+			AgeText:          "Overdue",
+			RequiresApproval: false,
+			Capability:       "read_only",
+			RequiredRole:     "FINANCE:READ",
 		})
 	}
 
-	// 3. Delayed / Exception Shipments
-	var delayedShipmentCount int
-	var delayedRoute string
+	// ── 4. IMPORTANT: RFQs Awaiting Quotation Preparation ──
+	var rfqCount int
+	var latestRFQID int64
+	var latestRFQNo, latestCustomer string
 	_ = d.db.QueryRowContext(ctx, `
-		SELECT COUNT(*), COALESCE(MIN(CONCAT(origin_port, ' → ', destination_port)), '') 
-		FROM shipments 
-		WHERE org_id = ? AND status IN ('DELAYED', 'CUSTOMS_HOLD', 'EXCEPTION')
-	`, orgID).Scan(&delayedShipmentCount, &delayedRoute)
+		SELECT r.id, r.rfq_number, COALESCE(c.name, c.trading_name, 'Direct Client')
+		FROM rfqs r
+		LEFT JOIN customers c ON c.id = r.customer_id
+		WHERE r.org_id = ? AND r.stage IN ('STAGE_QUOTE_DRAFTING', 'STAGE_RATE_INTELLIGENCE_MATCHING', 'STAGE_DOCUMENT_EXTRACTION', 'DRAFT', 'NEW', 'IN_PROGRESS')
+		ORDER BY r.created_at DESC
+		LIMIT 1
+	`, orgID).Scan(&latestRFQID, &latestRFQNo, &latestCustomer)
 
-	if delayedShipmentCount > 0 {
-		subtitle := "Operational exception or carrier schedule disruption"
-		if delayedRoute != "" {
-			subtitle = fmt.Sprintf("Route: %s", delayedRoute)
-		}
+	_ = d.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM rfqs 
+		WHERE org_id = ? AND stage IN ('STAGE_QUOTE_DRAFTING', 'STAGE_RATE_INTELLIGENCE_MATCHING', 'STAGE_DOCUMENT_EXTRACTION', 'DRAFT', 'NEW', 'IN_PROGRESS')
+	`, orgID).Scan(&rfqCount)
+
+	if rfqCount > 0 {
+		explanation := fmt.Sprintf("%d freight request(s) awaiting rate quotation, latest %s from %s.", rfqCount, latestRFQNo, latestCustomer)
 		items = append(items, spec.AttentionItem{
-			ID:        "delayed_shipments",
-			Priority:  "HIGH",
-			Category:  "Shipments",
-			Title:     fmt.Sprintf("%d Shipment(s) delayed or on hold", delayedShipmentCount),
-			Subtitle:  subtitle,
-			Count:     delayedShipmentCount,
-			ActionURL: "/dashboard/shipments",
-			Timestamp: "2h ago",
+			ID:               fmt.Sprintf("imp_rfqs_awaiting_quote_%d", latestRFQID),
+			Urgency:          "IMPORTANT",
+			Priority:         "IMPORTANT",
+			Category:         "RFQs",
+			Module:           "rfqs",
+			Title:            "RFQ is ready for quotation",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            rfqCount,
+			SourceReference:  latestRFQNo,
+			SourceEntityID:   latestRFQID,
+			ActionURL:        "/dashboard/rfqs",
+			ActionLabel:      "Prepare Quote",
+			Timestamp:        "3h ago",
+			AgeText:          "3h ago",
+			RequiresApproval: false,
+			Capability:       "draft_only",
+			RequiredRole:     "RFQS:READ",
 		})
 	}
 
-	// 4. Pending Approvals
-	var pendingApprovals int
-	_ = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM approval_requests WHERE org_id = ? AND status = 'Pending'`, orgID).Scan(&pendingApprovals)
-	if pendingApprovals > 0 {
-		items = append(items, spec.AttentionItem{
-			ID:        "pending_approvals",
-			Priority:  "HIGH",
-			Category:  "Approvals",
-			Title:     fmt.Sprintf("%d Approvals are pending", pendingApprovals),
-			Subtitle:  "Quotation, Contract & Shipment approvals",
-			Count:     pendingApprovals,
-			ActionURL: "/dashboard/approvals",
-			Timestamp: "2h ago",
-		})
-	}
-
-	// 5. Expiring Contracts (within next 30 days)
+	// ── 5. IMPORTANT: Expiring Contracts Within 30 Days ──
 	var expiringContracts int
+	var latestContractID int64
 	var nextContractRef string
 	var daysUntilExpiry int
 	_ = d.db.QueryRowContext(ctx, `
-		SELECT COUNT(*), COALESCE(MIN(contract_reference), ''), COALESCE(MIN(DATEDIFF(expiry_date, CURRENT_DATE())), 0)
+		SELECT id, contract_reference, COALESCE(DATEDIFF(expiry_date, CURRENT_DATE()), 0)
 		FROM contracts
 		WHERE org_id = ? AND expiry_date BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY) AND status = 'ACTIVE'
-	`, orgID).Scan(&expiringContracts, &nextContractRef, &daysUntilExpiry)
+		ORDER BY expiry_date ASC
+		LIMIT 1
+	`, orgID).Scan(&latestContractID, &nextContractRef, &daysUntilExpiry)
+
+	_ = d.db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM contracts
+		WHERE org_id = ? AND expiry_date BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL 30 DAY) AND status = 'ACTIVE'
+	`, orgID).Scan(&expiringContracts)
 
 	if expiringContracts > 0 {
-		subtitle := fmt.Sprintf("Next expiry: Contract %s in %d days", nextContractRef, daysUntilExpiry)
+		explanation := fmt.Sprintf("Contract %s expires in %d day(s) requiring rate review or renewal.", nextContractRef, daysUntilExpiry)
 		items = append(items, spec.AttentionItem{
-			ID:        "expiring_contracts",
-			Priority:  "MEDIUM",
-			Category:  "Contracts",
-			Title:     fmt.Sprintf("%d Contract(s) are expiring soon", expiringContracts),
-			Subtitle:  subtitle,
-			Count:     expiringContracts,
-			ActionURL: "/dashboard/contracts",
-			Timestamp: "2h ago",
+			ID:               fmt.Sprintf("imp_expiring_contracts_%d", latestContractID),
+			Urgency:          "IMPORTANT",
+			Priority:         "IMPORTANT",
+			Category:         "Contracts",
+			Module:           "contracts",
+			Title:            "Contract rate expires soon",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            expiringContracts,
+			SourceReference:  nextContractRef,
+			SourceEntityID:   latestContractID,
+			ActionURL:        "/dashboard/contracts",
+			ActionLabel:      "Review Contract",
+			Timestamp:        fmt.Sprintf("%dd left", daysUntilExpiry),
+			AgeText:          fmt.Sprintf("%dd left", daysUntilExpiry),
+			RequiresApproval: false,
+			Capability:       "read_only",
+			RequiredRole:     "CONTRACTS:READ",
 		})
 	}
 
-	// 6. Open Leads requiring outreach
+	// ── 6. INFORMATIONAL: Qualified Leads in Pipeline ──
 	var newLeadsCount int
+	var latestLeadID int64
+	var latestLeadName string
+	_ = d.db.QueryRowContext(ctx, `
+		SELECT id, COALESCE(company_name, contact_name, 'New Prospect')
+		FROM leads
+		WHERE org_id = ? AND status = 'NEW'
+		ORDER BY created_at DESC
+		LIMIT 1
+	`, orgID).Scan(&latestLeadID, &latestLeadName)
+
 	_ = d.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM leads WHERE org_id = ? AND status = 'NEW'`, orgID).Scan(&newLeadsCount)
 	if newLeadsCount > 0 {
+		explanation := fmt.Sprintf("%d prospect lead(s) awaiting sales qualification and discovery outreach.", newLeadsCount)
 		items = append(items, spec.AttentionItem{
-			ID:        "new_leads",
-			Priority:  "MEDIUM",
-			Category:  "Leads",
-			Title:     fmt.Sprintf("%d New Lead(s) require outreach", newLeadsCount),
-			Subtitle:  "Prospect inquiries waiting for sales follow-up",
-			Count:     newLeadsCount,
-			ActionURL: "/dashboard/leads",
-			Timestamp: "2h ago",
+			ID:               fmt.Sprintf("info_new_leads_%d", latestLeadID),
+			Urgency:          "INFORMATIONAL",
+			Priority:         "INFORMATIONAL",
+			Category:         "Leads",
+			Module:           "leads",
+			Title:            "New customer inquiry in pipeline",
+			Explanation:      explanation,
+			Subtitle:         explanation,
+			Count:            newLeadsCount,
+			SourceReference:  latestLeadName,
+			SourceEntityID:   latestLeadID,
+			ActionURL:        "/dashboard/leads",
+			ActionLabel:      "View Leads",
+			Timestamp:        "Today",
+			AgeText:          "Today",
+			RequiresApproval: false,
+			Capability:       "read_only",
+			RequiredRole:     "LEADS:READ",
 		})
 	}
 
@@ -1153,73 +1265,88 @@ func (d *dataLayer) GetRecentActivity(ctx context.Context, orgID int64) ([]spec.
 func (d *dataLayer) GetUpcomingReminders(ctx context.Context, orgID int64) ([]spec.UpcomingReminder, error) {
 	var reminders []spec.UpcomingReminder
 
-	// 1. Follow up on latest lead / rfq
-	var leadID int64
-	var leadCompany, contactName string
-	var leadCreatedAt time.Time
-	err := d.db.QueryRowContext(ctx, `
+	// 1. Follow up on upcoming leads
+	leadRows, err := d.db.QueryContext(ctx, `
 		SELECT id, company_name, COALESCE(contact_name, 'Lead Contact'), created_at
 		FROM leads
 		WHERE org_id = ? AND status = 'NEW'
 		ORDER BY created_at DESC
-		LIMIT 1
-	`, orgID).Scan(&leadID, &leadCompany, &contactName, &leadCreatedAt)
+		LIMIT 3
+	`, orgID)
 	if err == nil {
-		reminders = append(reminders, spec.UpcomingReminder{
-			ID:        fmt.Sprintf("lead_rem_%d", leadID),
-			Type:      "FOLLOW_UP",
-			Title:     fmt.Sprintf("Follow up with %s", leadCompany),
-			Subtitle:  fmt.Sprintf("Regarding Lead inquiry • %s", contactName),
-			DueText:   "Today, 03:00 PM",
-			DueDate:   time.Now().Format("2006-01-02"),
-			ActionURL: "/dashboard/leads",
-		})
+		defer leadRows.Close()
+		for leadRows.Next() {
+			var leadID int64
+			var leadCompany, contactName string
+			var leadCreatedAt time.Time
+			if err := leadRows.Scan(&leadID, &leadCompany, &contactName, &leadCreatedAt); err == nil {
+				reminders = append(reminders, spec.UpcomingReminder{
+					ID:        fmt.Sprintf("lead_rem_%d", leadID),
+					Type:      "FOLLOW_UP",
+					Title:     fmt.Sprintf("Follow up with %s", leadCompany),
+					Subtitle:  fmt.Sprintf("Regarding Lead inquiry • %s", contactName),
+					DueText:   "Today, 03:00 PM",
+					DueDate:   time.Now().Format("2006-01-02"),
+					ActionURL: "/dashboard/leads",
+				})
+			}
+		}
 	}
 
 	// 2. Upcoming contract expiry
-	var contractID int64
-	var contractRef, contractName, partyName string
-	var contractExpiry time.Time
-	err = d.db.QueryRowContext(ctx, `
+	contractRows, err := d.db.QueryContext(ctx, `
 		SELECT id, contract_reference, contract_name, COALESCE(party_name, 'Carrier'), expiry_date
 		FROM contracts
 		WHERE org_id = ? AND expiry_date >= CURRENT_DATE() AND status = 'ACTIVE'
 		ORDER BY expiry_date ASC
-		LIMIT 1
-	`, orgID).Scan(&contractID, &contractRef, &contractName, &partyName, &contractExpiry)
+		LIMIT 3
+	`, orgID)
 	if err == nil {
-		reminders = append(reminders, spec.UpcomingReminder{
-			ID:        fmt.Sprintf("contract_rem_%d", contractID),
-			Type:      "CONTRACT_EXPIRY",
-			Title:     fmt.Sprintf("Contract %s expires", contractRef),
-			Subtitle:  fmt.Sprintf("Party: %s • %s", partyName, contractName),
-			DueText:   formatFutureTime(contractExpiry),
-			DueDate:   contractExpiry.Format("2006-01-02"),
-			ActionURL: "/dashboard/contracts",
-		})
+		defer contractRows.Close()
+		for contractRows.Next() {
+			var contractID int64
+			var contractRef, contractName, partyName string
+			var contractExpiry time.Time
+			if err := contractRows.Scan(&contractID, &contractRef, &contractName, &partyName, &contractExpiry); err == nil {
+				reminders = append(reminders, spec.UpcomingReminder{
+					ID:        fmt.Sprintf("contract_rem_%d", contractID),
+					Type:      "CONTRACT_EXPIRY",
+					Title:     fmt.Sprintf("Contract %s expires", contractRef),
+					Subtitle:  fmt.Sprintf("Party: %s • %s", partyName, contractName),
+					DueText:   formatFutureTime(contractExpiry),
+					DueDate:   contractExpiry.Format("2006-01-02"),
+					ActionURL: "/dashboard/contracts",
+				})
+			}
+		}
 	}
 
 	// 3. Upcoming invoice payment due
-	var invID int64
-	var invNumber, customerName string
-	var invDueDate time.Time
-	err = d.db.QueryRowContext(ctx, `
+	invRows, err := d.db.QueryContext(ctx, `
 		SELECT id, invoice_number, customer_name, due_date
 		FROM customer_invoices
 		WHERE org_id = ? AND due_date >= CURRENT_DATE() AND status NOT IN ('Paid', 'Cancelled')
 		ORDER BY due_date ASC
-		LIMIT 1
-	`, orgID).Scan(&invID, &invNumber, &customerName, &invDueDate)
+		LIMIT 3
+	`, orgID)
 	if err == nil {
-		reminders = append(reminders, spec.UpcomingReminder{
-			ID:        fmt.Sprintf("inv_rem_%d", invID),
-			Type:      "PAYMENT_DUE",
-			Title:     fmt.Sprintf("Payment due from %s", customerName),
-			Subtitle:  fmt.Sprintf("Invoice %s", invNumber),
-			DueText:   formatFutureTime(invDueDate),
-			DueDate:   invDueDate.Format("2006-01-02"),
-			ActionURL: fmt.Sprintf("/dashboard/invoices?id=%d", invID),
-		})
+		defer invRows.Close()
+		for invRows.Next() {
+			var invID int64
+			var invNumber, customerName string
+			var invDueDate time.Time
+			if err := invRows.Scan(&invID, &invNumber, &customerName, &invDueDate); err == nil {
+				reminders = append(reminders, spec.UpcomingReminder{
+					ID:        fmt.Sprintf("inv_rem_%d", invID),
+					Type:      "PAYMENT_DUE",
+					Title:     fmt.Sprintf("Payment due from %s", customerName),
+					Subtitle:  fmt.Sprintf("Invoice %s", invNumber),
+					DueText:   formatFutureTime(invDueDate),
+					DueDate:   invDueDate.Format("2006-01-02"),
+					ActionURL: fmt.Sprintf("/dashboard/invoices?id=%d", invID),
+				})
+			}
+		}
 	}
 
 	return reminders, nil

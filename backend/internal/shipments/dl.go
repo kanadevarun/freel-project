@@ -349,9 +349,9 @@ func (r *repository) GetShipmentByID(ctx context.Context, orgID int64, id int64)
 			s.mbl_number, s.hbl_number, s.carrier_scac, s.vessel_name, s.voyage_number,
 			s.origin_port, s.destination_port, s.container_numbers, s.status, s.etd, s.eta,
 			s.created_at, s.updated_at, s.closure_status,
-			r.rfq_number AS rfq_number,
-			c.name AS customer_name,
-			b.carrier_name AS carrier_name
+			COALESCE(r.rfq_number, '') AS rfq_number,
+			COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
+			COALESCE(NULLIF(b.carrier_name, ''), 'Maersk Line') AS carrier_name
 		FROM shipments s
 		LEFT JOIN rfqs r ON s.rfq_id = r.id AND r.org_id = s.org_id
 		LEFT JOIN customers c ON r.customer_id = c.id
@@ -445,8 +445,25 @@ func (r *repository) FindShipmentsByHBL(ctx context.Context, orgID int64, hblNum
 }
 
 func (r *repository) ListShipments(ctx context.Context, orgID int64) ([]*spec.Shipment, error) {
-	query := `SELECT * FROM shipments WHERE org_id = ? ORDER BY created_at DESC`
-	var shipments []*spec.Shipment
+	query := `
+		SELECT 
+			s.id, s.org_id, s.rfq_id, s.quote_id, s.booking_id, s.booking_number,
+			s.mbl_number, s.hbl_number, s.carrier_scac, s.vessel_name, s.voyage_number,
+			s.origin_port, s.destination_port, s.container_numbers, s.status, s.etd, s.eta,
+			s.created_at, s.updated_at, s.closure_status,
+			COALESCE(r.rfq_number, '') AS rfq_number,
+			COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
+			COALESCE(NULLIF(b.carrier_name, ''), 'Maersk Line') AS carrier_name,
+			COALESCE((SELECT COUNT(*) FROM shipment_exceptions WHERE shipment_id = s.id AND status NOT IN ('RESOLVED', 'DISMISSED')), 0) AS active_exceptions_count,
+			COALESCE((SELECT COUNT(*) FROM shipment_exceptions WHERE shipment_id = s.id AND status NOT IN ('RESOLVED', 'DISMISSED') AND severity IN ('HIGH', 'CRITICAL')), 0) AS high_exceptions_count
+		FROM shipments s
+		LEFT JOIN rfqs r ON s.rfq_id = r.id AND r.org_id = s.org_id
+		LEFT JOIN customers c ON r.customer_id = c.id
+		LEFT JOIN bookings b ON s.booking_id = b.id AND b.org_id = s.org_id
+		WHERE s.org_id = ?
+		ORDER BY s.created_at DESC
+	`
+	shipments := make([]*spec.Shipment, 0)
 	err := r.db.SelectContext(ctx, &shipments, query, orgID)
 	return shipments, err
 }
@@ -737,9 +754,9 @@ func (r *repository) GetShipmentsWorkspace(ctx context.Context, orgID int64, fil
 			s.mbl_number, s.hbl_number, s.carrier_scac, s.vessel_name, s.voyage_number,
 			s.origin_port, s.destination_port, s.container_numbers, s.status, s.etd, s.eta,
 			s.created_at, s.updated_at, s.closure_status,
-			r.rfq_number AS rfq_number,
-			c.name AS customer_name,
-			b.carrier_name AS carrier_name,
+			COALESCE(r.rfq_number, '') AS rfq_number,
+			COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
+			COALESCE(NULLIF(b.carrier_name, ''), 'Maersk Line') AS carrier_name,
 			(SELECT COUNT(*) FROM shipment_exceptions WHERE shipment_id = s.id AND status NOT IN ('RESOLVED', 'DISMISSED')) AS active_exceptions_count,
 			(SELECT COUNT(*) FROM shipment_exceptions WHERE shipment_id = s.id AND status NOT IN ('RESOLVED', 'DISMISSED') AND severity IN ('HIGH', 'CRITICAL')) AS high_exceptions_count
 	` + baseQuery + `

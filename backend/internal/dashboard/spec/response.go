@@ -20,14 +20,26 @@ type GetMissionControlResponse struct {
 }
 
 type AttentionItem struct {
-	ID        string `json:"id"`
-	Priority  string `json:"priority"` // "HIGH", "MEDIUM", "INFO"
-	Category  string `json:"category"` // "Finance", "Approvals", "RFQs", "Shipments", "Contracts", "Leads"
-	Title     string `json:"title"`
-	Subtitle  string `json:"subtitle"`
-	Count     int    `json:"count"`
-	ActionURL string `json:"action_url"`
-	Timestamp string `json:"timestamp"`
+	ID               string `json:"id"`
+	Urgency          string `json:"urgency"` // "CRITICAL", "IMPORTANT", "INFORMATIONAL"
+	Priority         string `json:"priority"` // "CRITICAL", "IMPORTANT", "INFORMATIONAL" (mirrors urgency for backward compatibility)
+	Category         string `json:"category"` // "Shipments", "Approvals", "Finance", "RFQs", "Contracts", "Leads"
+	Module           string `json:"module"`   // "shipments", "approvals", "invoices", "rfqs", "contracts", "leads"
+	Title            string `json:"title"`
+	Explanation      string `json:"explanation"`
+	Subtitle         string `json:"subtitle"` // backward-compatible mirror of explanation
+	Count            int    `json:"count"`
+	SourceReference  string `json:"source_reference,omitempty"`
+	SourceEntityID   int64  `json:"source_entity_id,omitempty"`
+	ActionURL        string `json:"action_url"`
+	SecondaryURL     string `json:"secondary_url,omitempty"`
+	ActionLabel      string `json:"action_label"`
+	Timestamp        string `json:"timestamp"`
+	AgeText          string `json:"age_text,omitempty"`
+	RequiresApproval bool   `json:"requires_approval"`
+	ApprovalID       int64  `json:"approval_id,omitempty"`
+	Capability       string `json:"capability"` // "read_only", "draft_only", "approval_gated"
+	RequiredRole     string `json:"required_role,omitempty"`
 }
 
 type Stats struct {

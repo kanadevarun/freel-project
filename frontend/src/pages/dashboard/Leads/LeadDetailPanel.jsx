@@ -22,11 +22,12 @@ import {
   SendHorizontal,
   FileText
 } from 'lucide-react';
-import { updateLead, deleteLead, getLeadTimeline, retryClarificationEmail, getLeadInteractions, replyToInteraction, retryEmailInteraction, getEmailDraft, saveEmailDraft, deleteEmailDraft, getConnectedMailboxes } from '../../../services/leadsService';
+import { updateLead, deleteLead, getLeadTimeline, retryClarificationEmail, getLeadInteractions, replyToInteraction, retryEmailInteraction, getEmailDraft, saveEmailDraft, deleteEmailDraft, getConnectedMailboxes, approveClarificationDraft, rejectClarificationDraft } from '../../../services/leadsService';
 import { getLeadOutreachActivity } from '../../../services/outreachService';
 import StatusBadge from '../../../components/dashboard/StatusBadge';
 import LocationPickerMap from '../../../components/dashboard/LocationPickerMap';
 import { LEAD_STATUS } from './LeadsPage';
+import CustomerLeadPredictiveIntelligenceCard from '../../../components/predictions/CustomerLeadPredictiveIntelligenceCard';
 
 
 
@@ -570,6 +571,64 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
     };
   }, [replyForm, replyingToId, lead?.id]);
 
+  // Draft states and approval management
+  const [draftsMap, setDraftsMap] = useState({});
+  const [approvingDraftId, setApprovingDraftId] = useState(null);
+
+  const fetchDraftsForInteractions = async (interactionList) => {
+    if (!interactionList || !lead?.id) return;
+    const inboundItems = interactionList.filter(i => i.direction === 'INBOUND');
+    const map = {};
+    for (const item of inboundItems) {
+      try {
+        const res = await getEmailDraft(lead.id, item.id);
+        const draft = res?.data || res;
+        if (draft && draft.id) {
+          map[item.id] = draft;
+        }
+      } catch (err) {
+        // Not a clarification draft or doesn't exist
+      }
+    }
+    setDraftsMap(map);
+  };
+
+  const handleApproveDraft = async (interactionId) => {
+    if (approvingDraftId) return;
+    setApprovingDraftId(interactionId);
+    try {
+      await approveClarificationDraft(lead.id, interactionId, 'Approved by user via Lead Detail Panel');
+      const freshData = await getLeadInteractions(lead.id, 'asc');
+      const list = freshData?.data || freshData || [];
+      setInteractions(list);
+      fetchDraftsForInteractions(list);
+      const freshTimeline = await getLeadTimeline(lead.id);
+      setTimeline(freshTimeline?.data || freshTimeline || []);
+    } catch (err) {
+      console.error('Failed to approve draft:', err);
+      alert(err.message || 'Failed to approve clarification email.');
+    } finally {
+      setApprovingDraftId(null);
+    }
+  };
+
+  const handleRejectDraft = async (interactionId) => {
+    const reason = prompt('Please enter rejection reason:');
+    if (reason === null) return;
+    try {
+      await rejectClarificationDraft(lead.id, interactionId, reason || 'Rejected by operator');
+      const freshData = await getLeadInteractions(lead.id, 'asc');
+      const list = freshData?.data || freshData || [];
+      setInteractions(list);
+      fetchDraftsForInteractions(list);
+      const freshTimeline = await getLeadTimeline(lead.id);
+      setTimeline(freshTimeline?.data || freshTimeline || []);
+    } catch (err) {
+      console.error('Failed to reject draft:', err);
+      alert(err.message || 'Failed to reject draft.');
+    }
+  };
+
   // Load interactions chronologically on mount / lead id change
   useEffect(() => {
     if (!lead?.id) return;
@@ -579,7 +638,9 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
       try {
         const data = await getLeadInteractions(lead.id, 'asc');
         if (active) {
-          setInteractions(data?.data || data || []);
+          const list = data?.data || data || [];
+          setInteractions(list);
+          fetchDraftsForInteractions(list);
         }
       } catch (err) {
         console.error('Failed to load interactions:', err);
@@ -1101,6 +1162,14 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
 
         {activeTab === 'overview' && (
           <div className="overview-tab-content">
+            {/* Predictive Lead Intelligence (Phase 4 Task 4.4) */}
+            {lead.id && (
+              <CustomerLeadPredictiveIntelligenceCard
+                recordType="lead"
+                recordId={lead.id}
+              />
+            )}
+
             {/* 1. Basic Lead Details */}
             <div className="panel-card">
               <div className="card-header">
@@ -2587,121 +2656,200 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
                                   )}
                                 </div>
 
-                                {/* AI Suggested Reply Box inside inbound email card */}
-                                {inter.direction === 'INBOUND' && inter.drafted_reply && !isDiscarded && replyingToId !== inter.id && (
-                                  <div className="suggested-reply-box">
-                                    <div className="suggested-reply-header">
-                                      <span className="suggested-reply-badge">
-                                        <Sparkles size={14} /> AI Suggested Reply
-                                      </span>
-                                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '500' }}>
-                                        Auto-generated based on customer email
-                                      </span>
-                                    </div>
+                                {/* AI Clarification Email Draft Box inside inbound email card */}
+                                {inter.direction === 'INBOUND' && (inter.drafted_reply || draftsMap[inter.id]) && !isDiscarded && replyingToId !== inter.id && (() => {
+                                  const draft = draftsMap[inter.id];
+                                  const draftStatus = draft?.status || 'AWAITING_APPROVAL';
+                                  const draftContent = draft?.content || inter.drafted_reply;
 
-                                    {/* Incomplete RFQ warning banner */}
-                                    {workflowState.missingFields?.length > 0 && (
-                                      <div style={{
-                                        margin: '0 0 12px 0',
-                                        padding: '10px 14px',
-                                        backgroundColor: '#FFFBEB',
-                                        borderLeft: '4px solid #F59E0B',
-                                        borderRadius: '6px',
-                                        fontSize: '12px',
-                                        color: '#D97706'
-                                      }} className="rfq-still-need-banner">
-                                        <strong style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                                          <AlertCircle size={14} /> Shipment info still required:
-                                        </strong>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px' }}>
-                                          {workflowState.missingFields.map(field => (
-                                            <span key={field} style={{
-                                              backgroundColor: '#FEF3C7',
-                                              padding: '2px 8px',
-                                              borderRadius: '4px',
-                                              fontSize: '11px',
-                                              fontWeight: '600'
-                                            }}>
-                                              • {field}
-                                            </span>
-                                          ))}
+                                  const getDraftBadge = (status) => {
+                                    switch (status) {
+                                      case 'AWAITING_APPROVAL':
+                                        return { label: '⏳ Awaiting Approval', bg: '#FEF3C7', color: '#92400E', border: '#FDE68A' };
+                                      case 'APPROVED':
+                                        return { label: '✓ Approved', bg: '#EFF6FF', color: '#1E40AF', border: '#BFDBFE' };
+                                      case 'SENT':
+                                        return { label: '✓ Sent to Customer', bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
+                                      case 'REJECTED':
+                                        return { label: '✕ Rejected', bg: '#FEF2F2', color: '#991B1B', border: '#FECACA' };
+                                      case 'FAILED':
+                                        return { label: '⚠️ Delivery Failed', bg: '#FEF2F2', color: '#DC2626', border: '#FCA5A5' };
+                                      default:
+                                        return { label: 'Draft', bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+                                    }
+                                  };
+
+                                  const badge = getDraftBadge(draftStatus);
+
+                                  return (
+                                    <div className="suggested-reply-box" style={{ border: `1.5px solid ${badge.border}`, background: '#FFFFFF', marginTop: '16px' }}>
+                                      <div className="suggested-reply-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <span className="suggested-reply-badge">
+                                            <Sparkles size={14} /> AI Clarification Draft
+                                          </span>
+                                          <span style={{
+                                            fontSize: '11px',
+                                            fontWeight: '700',
+                                            padding: '2px 8px',
+                                            borderRadius: '6px',
+                                            background: badge.bg,
+                                            color: badge.color,
+                                            border: `1px solid ${badge.border}`
+                                          }}>
+                                            {badge.label}
+                                          </span>
                                         </div>
+                                        <span style={{ fontSize: '11px', color: '#64748B', fontWeight: '500' }}>
+                                          Explicit operator approval required
+                                        </span>
                                       </div>
-                                    )}
 
-                                    <div className="suggested-reply-content">
-                                      {inter.drafted_reply}
-                                    </div>
+                                      {draft?.subject && (
+                                        <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#1E293B', margin: '4px 0 8px 0' }}>
+                                          Draft Subject: {draft.subject}
+                                        </div>
+                                      )}
 
-                                    <div className="suggested-reply-actions">
-                                      <button
-                                        className="btn btn-sm"
-                                        onClick={() => handleOpenComposer(inter, inter.drafted_reply)}
-                                        style={{
-                                          fontSize: '12px',
-                                          padding: '6px 14px',
+                                      {/* Incomplete RFQ warning banner */}
+                                      {workflowState.missingFields?.length > 0 && (
+                                        <div style={{
+                                          margin: '0 0 12px 0',
+                                          padding: '10px 14px',
+                                          backgroundColor: '#FFFBEB',
+                                          borderLeft: '4px solid #F59E0B',
                                           borderRadius: '6px',
-                                          backgroundColor: '#4F46E5',
-                                          color: '#fff',
-                                          border: 'none',
-                                          cursor: 'pointer',
-                                          fontWeight: '600',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '5px'
-                                        }}
-                                      >
-                                        <Edit3 size={13} /> Edit in Composer
-                                      </button>
-                                      <button
-                                        className="btn btn-sm"
-                                        onClick={() => handleSendSuggestedReplyDirect(inter, inter.drafted_reply)}
-                                        disabled={sendingReply}
-                                        style={{
                                           fontSize: '12px',
-                                          padding: '6px 14px',
-                                          borderRadius: '6px',
-                                          backgroundColor: '#059669',
-                                          color: '#fff',
-                                          border: 'none',
-                                          cursor: 'pointer',
-                                          fontWeight: '600',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '5px'
-                                        }}
-                                      >
-                                        <Send size={13} />
-                                        {sendingReply && replyingToId === inter.id ? 'Sending...' : 'Send Direct Reply'}
-                                      </button>
-                                      <button
-                                        className="btn btn-sm"
-                                        onClick={() => {
-                                          setDiscardedSuggestionIds(prev => {
-                                            const next = new Set(prev);
-                                            next.add(inter.id);
-                                            return next;
-                                          });
-                                        }}
-                                        style={{
-                                          fontSize: '12px',
-                                          padding: '6px 14px',
-                                          borderRadius: '6px',
-                                          backgroundColor: '#E2E8F0',
-                                          color: '#475569',
-                                          border: 'none',
-                                          cursor: 'pointer',
-                                          fontWeight: '600',
-                                          display: 'inline-flex',
-                                          alignItems: 'center',
-                                          gap: '5px'
-                                        }}
-                                      >
-                                        <XCircle size={13} /> Discard
-                                      </button>
+                                          color: '#D97706'
+                                        }} className="rfq-still-need-banner">
+                                          <strong style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                                            <AlertCircle size={14} /> Shipment info still required:
+                                          </strong>
+                                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px' }}>
+                                            {workflowState.missingFields.map(field => (
+                                              <span key={field} style={{
+                                                backgroundColor: '#FEF3C7',
+                                                padding: '2px 8px',
+                                                borderRadius: '4px',
+                                                fontSize: '11px',
+                                                fontWeight: '600'
+                                              }}>
+                                                • {field}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="suggested-reply-content" style={{ whiteSpace: 'pre-line', fontSize: '12.5px', color: '#334155' }}>
+                                        {draftContent}
+                                      </div>
+
+                                      {/* Actions based on approval status */}
+                                      <div className="suggested-reply-actions" style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                                        {(draftStatus === 'AWAITING_APPROVAL' || draftStatus === 'DRAFT') && (
+                                          <>
+                                            <button
+                                              className="btn btn-sm"
+                                              onClick={() => handleApproveDraft(inter.id)}
+                                              disabled={approvingDraftId === inter.id}
+                                              style={{
+                                                fontSize: '12px',
+                                                padding: '6px 14px',
+                                                borderRadius: '6px',
+                                                backgroundColor: '#059669',
+                                                color: '#fff',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                              }}
+                                            >
+                                              <CheckCircle2 size={13} />
+                                              {approvingDraftId === inter.id ? 'Approving & Sending...' : 'Approve & Send Clarification'}
+                                            </button>
+                                            <button
+                                              className="btn btn-sm"
+                                              onClick={() => handleOpenComposer(inter, draftContent)}
+                                              style={{
+                                                fontSize: '12px',
+                                                padding: '6px 14px',
+                                                borderRadius: '6px',
+                                                backgroundColor: '#4F46E5',
+                                                color: '#fff',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                              }}
+                                            >
+                                              <Edit3 size={13} /> Edit in Composer
+                                            </button>
+                                            <button
+                                              className="btn btn-sm"
+                                              onClick={() => handleRejectDraft(inter.id)}
+                                              style={{
+                                                fontSize: '12px',
+                                                padding: '6px 14px',
+                                                borderRadius: '6px',
+                                                backgroundColor: '#FEF2F2',
+                                                color: '#DC2626',
+                                                border: '1px solid #FECACA',
+                                                cursor: 'pointer',
+                                                fontWeight: '600',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                              }}
+                                            >
+                                              <XCircle size={13} /> Reject Draft
+                                            </button>
+                                          </>
+                                        )}
+
+                                        {draftStatus === 'SENT' && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#047857', fontWeight: '600', fontSize: '12px' }}>
+                                            <CheckCircle2 size={15} /> Clarification email approved and transmitted to recipient.
+                                          </div>
+                                        )}
+
+                                        {draftStatus === 'REJECTED' && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '12px', color: '#991B1B', fontWeight: '600' }}>
+                                              ✕ Draft rejected by operator{draft?.error_message ? `: ${draft.error_message}` : ''}
+                                            </span>
+                                            <button
+                                              className="btn btn-sm"
+                                              onClick={() => handleOpenComposer(inter, draftContent)}
+                                              style={{ fontSize: '11.5px', padding: '4px 10px', borderRadius: '4px', background: '#F1F5F9', border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                                            >
+                                              Compose Custom Message
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        {draftStatus === 'FAILED' && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                            <span style={{ fontSize: '12px', color: '#DC2626', fontWeight: '600' }}>
+                                              ⚠️ Delivery failed: {draft?.error_message || 'Mailbox error'}
+                                            </span>
+                                            <button
+                                              className="btn btn-sm"
+                                              onClick={() => handleApproveDraft(inter.id)}
+                                              style={{ fontSize: '11.5px', padding: '4px 10px', borderRadius: '4px', background: '#DC2626', color: '#fff', border: 'none', cursor: 'pointer' }}
+                                            >
+                                              Retry Send
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  );
+                                })()}
 
                                 {/* Inline Reply Composer */}
                                 {replyingToId === inter.id && (

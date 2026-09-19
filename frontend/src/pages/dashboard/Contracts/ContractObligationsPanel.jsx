@@ -466,7 +466,7 @@ export default function ContractObligationsPanel({ contract }) {
                   <input 
                     type="text"
                     className="ob-input"
-                    placeholder="e.g. Varun Kanade"
+                    placeholder="e.g. Compliance Officer"
                     value={formData.owner}
                     onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
                   />

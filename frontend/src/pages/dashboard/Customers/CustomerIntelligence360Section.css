@@ -1,0 +1,763 @@
+/* =========================================================
+   CUSTOMER INTELLIGENCE 360° SECTION — LIGHT THEME SAAS
+   LogisticsHQ Phase 1 Task 1.2
+========================================================= */
+
+.cust-intel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Top Header Bar ── */
+.cust-intel-header {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.cust-intel-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cust-intel-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cust-intel-badge-readonly {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.cust-intel-trend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+}
+
+.badge-trend-high {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-trend-mod {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-trend-low {
+  background: #fefce8;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.badge-trend-inactive {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.cust-intel-confidence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+}
+
+.cust-intel-header-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.cust-intel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cust-intel-freshness {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.cust-intel-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cust-intel-refresh-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.cust-intel-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cust-intel-spin {
+  animation: custIntelSpin 0.75s linear infinite;
+}
+
+@keyframes custIntelSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Base Card ── */
+.cust-intel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+/* ── AI Executive Summary Card (Strictly Light!) ── */
+.cust-intel-ai-summary-card {
+  border-top: 3px solid #2563eb;
+}
+
+.cust-intel-ai-header {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #fafafa;
+}
+
+.cust-intel-ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cust-intel-ai-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cust-intel-ai-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cust-intel-ai-classification {
+  font-size: 0.6875rem;
+  color: #64748b;
+  display: block;
+}
+
+.cust-intel-corrid {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: #f1f5f9;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cust-intel-ai-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+.cust-intel-ai-lead {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.cust-intel-ai-columns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.cust-intel-ai-column {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cust-intel-column-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cust-intel-ai-column p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.45;
+}
+
+/* Attention Items */
+.cust-intel-attention-box {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cust-intel-attention-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  color: #92400e;
+}
+
+.cust-intel-attention-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.cust-intel-attention-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #78350f;
+  line-height: 1.4;
+}
+
+.cust-intel-bullet {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d97706;
+  margin-top: 0.4rem;
+  flex-shrink: 0;
+}
+
+.cust-intel-good-standing-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  color: #166534;
+  font-weight: 500;
+}
+
+/* Recommendations */
+.cust-intel-recommendations-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cust-intel-rec-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+  letter-spacing: 0.04em;
+}
+
+.cust-intel-rec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.65rem;
+}
+
+.cust-intel-rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+}
+
+.cust-intel-rec-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cust-intel-rec-text {
+  font-size: 0.8125rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+/* Warnings */
+.cust-intel-warnings-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.cust-intel-warnings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.cust-intel-warn-line {
+  line-height: 1.4;
+}
+
+/* ── 4-Quadrant Metric Breakdown ── */
+.cust-intel-quad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.cust-intel-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cust-intel-card-header {
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cust-intel-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cust-intel-card-tag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #64748b;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.cust-intel-metric-rows {
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cust-intel-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.metric-label {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.metric-value {
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.metric-sub {
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: right;
+}
+
+.cust-intel-credit-tag {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #047857;
+  background: #ecfdf5;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+}
+
+/* ── Traceability & Supporting Records ── */
+.cust-intel-traceability-card {
+  padding: 0;
+}
+
+.cust-intel-verified-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #059669;
+}
+
+.cust-intel-observations-table-wrapper {
+  overflow-x: auto;
+}
+
+.cust-intel-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.8125rem;
+}
+
+.cust-intel-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cust-intel-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.cust-intel-table tr:last-child td {
+  border-bottom: none;
+}
+
+.cust-intel-module-badge {
+  display: inline-block;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cust-intel-type-cell {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #334155;
+}
+
+.cust-intel-record-id-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.cust-intel-date-cell {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.cust-intel-explanation-cell {
+  color: #334155;
+  line-height: 1.45;
+  max-width: 480px;
+}
+
+/* ── Authorized Contacts Grid ── */
+.cust-intel-contacts-card {
+  padding: 0;
+}
+
+.cust-intel-contacts-grid {
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.85rem;
+}
+
+.cust-intel-contact-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+}
+
+.cust-intel-contact-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cust-intel-contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cust-intel-contact-name {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+.badge-primary-contact {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+}
+
+.cust-intel-contact-role {
+  font-size: 0.6875rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cust-intel-contact-email {
+  font-size: 0.6875rem;
+  color: #2563eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Loading and Error States ── */
+.cust-intel-loading-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.cust-intel-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: custIntelSpin 0.75s linear infinite;
+}
+
+.cust-intel-loading-text strong {
+  display: block;
+  font-size: 0.9375rem;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.cust-intel-loading-text span {
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.cust-intel-error-card {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cust-intel-error-text {
+  flex: 1;
+  min-width: 200px;
+}
+
+.cust-intel-error-text strong {
+  display: block;
+  font-size: 0.875rem;
+  color: #9f1239;
+  margin-bottom: 0.25rem;
+}
+
+.cust-intel-error-text p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #be123c;
+}
+
+.cust-intel-btn-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #ffffff;
+  border: 1px solid #f43f5e;
+  color: #e11d48;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cust-intel-btn-retry:hover {
+  background: #ffe4e6;
+}
+
+/* ── Responsive Adaptations ── */
+@media (max-width: 1100px) {
+  .cust-intel-quad-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cust-intel-ai-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .cust-intel-quad-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cust-intel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cust-intel-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}

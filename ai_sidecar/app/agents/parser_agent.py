@@ -66,50 +66,16 @@ def parser_node(state: ContractExtractionState) -> Dict[str, Any]:
         message="Extracting rates, note quotes, and surcharge columns..."
     ))
 
-    parser_prompt = f"""
-You are an expert freight forwarding operations executive. Read the following shipping contract text and extract all port-pair rates.
-
-Document Text:
-{state.raw_text}
-
-For each rate found, construct a JSON object matching this structure:
-{{
-  "origin_port": "UN/LOCODE or port name (e.g. INNSA)",
-  "destination_port": "UN/LOCODE or port name (e.g. DEHAM)",
-  "via_port": "transshipment port LOCODE or null",
-  "service_code": "route code or service name or null",
-  "carrier_scac": "{state.carrier_scac}",
-  "carrier_name": "{state.carrier_name}",
-  "vessel_name": "vessel name if specified or null",
-  "equipment_type": "40GP",
-  "ocean_freight": <ocean freight base amount as float>,
-  "origin_charges": <origin terminal handling fee as float>,
-  "destination_charges": <destination terminal handling fee as float>,
-  "surcharges": [
-     {{
-       "code": "BAF|CAF|PSS|etc",
-       "description": "fuel adjust factor or currency surcharge description",
-       "amount": <surcharge amount as float>,
-       "unit": "PER_TEU|PER_CONTAINER|PER_SHIPMENT",
-       "included": true/false
-     }}
-  ],
-  "total_buy_price": <ocean_freight + origin_charges + destination_charges + all non-included surcharges>,
-  "free_days_origin": <free detention days POL or 0>,
-  "free_days_destination": <free demurrage days POD or 14>,
-  "transit_days": <transit time in days as integer or null>,
-  "incoterms": "FOB|CIF|DDP|EXW|null",
-  "valid_from": "YYYY-MM-DD",
-  "valid_until": "YYYY-MM-DD"
-}}
-
-Rules:
-- Port codes must be standard UN/LOCODEs if possible.
-- If a rate is extremely high/low or suspicious, still extract it exactly as written.
-
-Return a JSON object with a single key "rates" containing a list of these objects:
-{{"rates": [...]}}
-"""
+    from app.prompts.prompt_registry import get_prompt
+    parser_prompt = get_prompt(
+        "contracts.rate_extraction",
+        "1.0.0",
+        {
+            "RawText": state.raw_text,
+            "CarrierSCAC": state.carrier_scac,
+            "CarrierName": state.carrier_name,
+        }
+    )
     extracted_data = execute_llm_json(parser_prompt)
     rates_list = []
     

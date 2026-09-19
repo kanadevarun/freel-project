@@ -29,6 +29,20 @@ EXCEPTION_TITLES = {
 }
 
 
+EXCEPTION_TYPE_MAP = {
+    "DELAY": "ETA_DELAY",
+    "ROLLOVER": "VESSEL_ROLLOVER",
+    "CUSTOMS_HOLD": "CUSTOMS_HOLD",
+    "PORT_CONGESTION": "PORT_CONGESTION",
+    "WEATHER": "OTHER",
+}
+
+SEVERITY_MAP = {
+    "CRITICAL": "CRITICAL",
+    "WARNING": "HIGH",
+    "INFO": "LOW",
+}
+
 def _classify_severity(exception_type: str, delay_hours: int) -> str:
     """
     Deterministic severity classification.
@@ -41,15 +55,15 @@ def _classify_severity(exception_type: str, delay_hours: int) -> str:
     if exception_type == "WEATHER":
         return "CRITICAL"
     if exception_type == "PORT_CONGESTION":
-        return "WARNING"
+        return "HIGH"
     if exception_type == "DELAY":
         if delay_hours >= 96:
             return "CRITICAL"
         elif delay_hours >= 48:
-            return "WARNING"
+            return "HIGH"
         else:
-            return "INFO"
-    return "INFO"
+            return "LOW"
+    return "LOW"
 
 
 def ops_exception_node(state: OperationsAgentState) -> Dict[str, Any]:
@@ -73,17 +87,18 @@ def ops_exception_node(state: OperationsAgentState) -> Dict[str, Any]:
 
     has_critical = False
     for exc in detected_exceptions:
-        exc_type = exc.get("type", "DELAY")
+        raw_exc_type = exc.get("type", "DELAY")
         delay_hours = exc.get("delay_hours", 0)
         details = exc.get("details", "")
 
-        severity = _classify_severity(exc_type, delay_hours)
-        title = EXCEPTION_TITLES.get(exc_type, f"Shipment Exception: {exc_type}")
+        severity = _classify_severity(raw_exc_type, delay_hours)
+        mapped_type = EXCEPTION_TYPE_MAP.get(raw_exc_type, "OTHER")
+        title = EXCEPTION_TITLES.get(raw_exc_type, f"Shipment Exception: {raw_exc_type}")
         description = details or state.get("raw_description", "")[:500]
 
         success = create_exception(
             shipment_id=shipment_id,
-            exception_type=exc_type,
+            exception_type=mapped_type,
             severity=severity,
             title=title,
             description=description,

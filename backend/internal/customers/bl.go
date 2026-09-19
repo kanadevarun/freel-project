@@ -370,6 +370,10 @@ func (b *businessLogic) ConvertLeadToCustomer(ctx context.Context, orgID int64, 
 		return nil, fmt.Errorf("lead not found: %w", err)
 	}
 
+	if strings.ToUpper(lead.Status) == "CONVERTED" && !req.ForceCreateNew && (req.LinkToExistingCustomerID == nil || *req.LinkToExistingCustomerID <= 0) {
+		return nil, fmt.Errorf("lead #%d has already been converted; specify link_to_existing_customer_id or set force_create_new to proceed", lead.ID)
+	}
+
 	tx, err := b.dl.BeginTx(ctx)
 	if err != nil {
 		return nil, err

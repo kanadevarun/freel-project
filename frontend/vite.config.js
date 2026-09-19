@@ -8,6 +8,17 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    port: 5173,
+    strictPort: true,
+    host: true,
+    allowedHosts: true,
+  },
+  preview: {
+    port: 5173,
+    host: true,
+    allowedHosts: true,
+  },
   test: {
     // Vitest configuration
     environment: 'jsdom',

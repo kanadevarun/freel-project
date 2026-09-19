@@ -81,11 +81,11 @@ func BuildQuotesResponse(
 		}
 	}
 
-	// Determine primary dominant currency
+	// Determine primary dominant currency with deterministic tie-breaker
 	maxCount := 0
 	primaryCurrency := "USD"
 	for curr, count := range currencyCounts {
-		if count > maxCount {
+		if count > maxCount || (count == maxCount && (curr == "USD" || (primaryCurrency != "USD" && curr < primaryCurrency))) {
 			maxCount = count
 			primaryCurrency = curr
 		}

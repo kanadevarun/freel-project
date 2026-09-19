@@ -4,7 +4,7 @@ import {
   ShieldAlert, FileEdit, ChevronRight, AlertTriangle, 
   AlertCircle, Plane, Ship, Truck, Layers, Calendar, 
   Clock, DollarSign, ArrowUpRight, Sparkles, ShieldCheck,
-  RefreshCw, X, ArrowUpDown, ArrowUp, ArrowDown
+  RefreshCw, X, ArrowUpDown, ArrowUp, ArrowDown, Scale
 } from 'lucide-react';
 import { contractsService } from '../../../services/contractsService';
 import PageHeader from '../../../components/dashboard/PageHeader';
@@ -14,6 +14,8 @@ import ContractAttentionPanel from './ContractAttentionPanel';
 import ContractCreationChoiceModal from './ContractCreationChoiceModal';
 import ContractImportModal from './ContractImportModal';
 import ContractImportReviewModal from './ContractImportReviewModal';
+import ContractComplianceMonitoringDrawer from '../../../components/autonomy/ContractComplianceMonitoringDrawer';
+import AutonomousRiskGovernanceCard from './AutonomousRiskGovernanceCard';
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
 import './ContractsPage.css';
 
@@ -48,6 +50,15 @@ export default function ContractsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [contractToEdit, setContractToEdit] = useState(null);
+  
+  // Phase 5 Task 5.7: Contract & Compliance Monitoring Drawer State
+  const [complianceContract, setComplianceContract] = useState(null);
+  const [isComplianceDrawerOpen, setIsComplianceDrawerOpen] = useState(false);
+
+  const handleOpenComplianceDrawer = (contract) => {
+    setComplianceContract(contract);
+    setIsComplianceDrawerOpen(true);
+  };
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -433,6 +444,48 @@ export default function ContractsPage() {
         onSelectContract={handleSelectContractById}
       />
 
+      {/* ── Phase 7.7: Enterprise Autonomous Contract, Compliance & Risk Governance ── */}
+      <AutonomousRiskGovernanceCard
+        entityType="CONTRACT"
+        entityId={selectedContract ? String(selectedContract.id) : (contracts.length > 0 ? String(contracts[0].id) : "CTR-2026-001")}
+        contractNumber={selectedContract ? selectedContract.contract_number : (contracts.length > 0 ? contracts[0].contract_number : "CTR-2026-001")}
+      />
+
+      {/* ── Phase 5 Task 5.7: AI Contract & Compliance Monitoring Control Strip ── */}
+      <div className="mb-6 p-4 bg-white border border-blue-200 rounded-xl shadow-xs flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="p-2.5 bg-blue-100 text-blue-700 rounded-lg">
+            <Scale size={20} />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-sm font-bold text-slate-900">
+                Autonomous Contract & Compliance Monitoring
+              </h3>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                ACTIVE AUDIT GATE
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Continuously monitors rate agreements, statutory filing expirations, GDP cold-chain requirements, and commercial deviations with 7-step remediation planning.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          {contracts.length > 0 && (
+            <button
+              type="button"
+              onClick={() => handleOpenComplianceDrawer(contracts[0])}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors"
+            >
+              <Sparkles size={14} />
+              <span>Launch Compliance Monitor</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ── Main Workspace Table Card ── */}
       <div className="contracts-workspace">
         <div className="workspace-toolbar">
@@ -525,13 +578,18 @@ export default function ContractsPage() {
                     {getSortIcon('attention')}
                   </div>
                 </th>
+                <th style={{ width: '11%' }}>
+                  <div className="th-content">
+                    <span>AI Monitor</span>
+                  </div>
+                </th>
                 <th style={{ width: '4%' }}></th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="table-status-cell">
+                  <td colSpan="9" className="table-status-cell">
                     <div className="loading-spinner-wrap">
                       <Clock size={20} className="spin-animate text-muted" />
                       <span>Loading commercial agreements...</span>
@@ -540,7 +598,7 @@ export default function ContractsPage() {
                 </tr>
               ) : sortedContracts.length === 0 && !searchQuery && activeTab === 'ALL' ? (
                 <tr>
-                  <td colSpan="8" style={{ padding: '0', border: 'none' }}>
+                  <td colSpan="9" style={{ padding: '0', border: 'none' }}>
                     <ModuleHeroEmptyState
                       icon={<FileText size={28} />}
                       badgeTheme="emerald"
@@ -584,7 +642,7 @@ export default function ContractsPage() {
                 </tr>
               ) : sortedContracts.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="table-status-cell">
+                  <td colSpan="9" className="table-status-cell">
                     <div className="table-empty-wrap">
                       <FileText size={32} className="text-muted mb-2" />
                       <p className="empty-head">No Contracts Found</p>
@@ -638,6 +696,20 @@ export default function ContractsPage() {
                       </td>
                       <td>
                         {attention}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenComplianceDrawer(contract);
+                          }}
+                          className="btn-ai-compliance-pill"
+                          title="Open AI Contract & Compliance Monitor"
+                        >
+                          <Scale size={12} className="text-blue-600" />
+                          <span>AI Monitor</span>
+                        </button>
                       </td>
                       <td className="row-action-cell">
                         <ChevronRight size={15} className="row-chevron" />
@@ -704,6 +776,16 @@ export default function ContractsPage() {
           onClose={() => setIsReviewModalOpen(false)}
           onReupload={handleReupload}
           onSuccess={handleImportSuccess}
+        />
+      )}
+
+      {/* ── Phase 5 Task 5.7: AI Contract & Compliance Monitoring Drawer ── */}
+      {isComplianceDrawerOpen && (
+        <ContractComplianceMonitoringDrawer
+          contract={complianceContract}
+          isOpen={isComplianceDrawerOpen}
+          onClose={() => setIsComplianceDrawerOpen(false)}
+          onActionExecuted={fetchData}
         />
       )}
     </div>

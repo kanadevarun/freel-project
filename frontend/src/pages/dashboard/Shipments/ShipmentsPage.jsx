@@ -572,12 +572,12 @@ export default function ShipmentsPage() {
 
                     {/* 2. Customer */}
                     <td>
-                      <span className="sl-customer-name">{s.customer_name || 'E2E Convert Corp - Updated'}</span>
+                      <span className="sl-customer-name">{s.customer_name || '—'}</span>
                     </td>
 
                     {/* 3. Booking Ref */}
                     <td>
-                      <span className="sl-booking-ref">{s.booking_number || `BK-QA-${s.id}78784`}</span>
+                      <span className="sl-booking-ref">{s.booking_number || '—'}</span>
                     </td>
 
                     {/* 4. Carrier / Vessel */}

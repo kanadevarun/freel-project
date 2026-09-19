@@ -82,10 +82,10 @@ sales_builder.add_edge("callback", END)
 
 # ── Checkpointer setup ─────────────────────────────────────────────────────
 
-from langgraph.checkpoint.memory import MemorySaver
+from app.persistence.checkpointer import get_checkpointer
 
-saver = MemorySaver()
-print("[AI Sidecar Sales] Successfully initialized MemorySaver checkpointer.")
+saver = get_checkpointer()
+print("[AI Sidecar Sales] Successfully initialized checkpointer.")
 
 # Compile the Sales Graph
 sales_graph = sales_builder.compile(

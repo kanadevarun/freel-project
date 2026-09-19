@@ -408,3 +408,105 @@
   color: #475569;
 }
 
+/* AI Compliance Status Banner */
+.ai-compliance-status-banner {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s ease;
+}
+
+.ai-compliance-status-banner:hover {
+  border-color: #cbd5e1;
+}
+
+.ai-compliance-status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-compliance-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #f5f3ff;
+  border: 1px solid #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ai-compliance-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ai-compliance-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.ai-compliance-subtext {
+  font-size: 0.68rem;
+  color: #64748b;
+}
+
+.ai-compliance-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-ai-comp-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.15s ease;
+}
+
+.btn-ai-comp-action.retry {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.btn-ai-comp-action.retry:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-ai-comp-action.refresh {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #64748b;
+  padding: 4px;
+}
+
+.btn-ai-comp-action.refresh:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+

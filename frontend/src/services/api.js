@@ -96,7 +96,26 @@ export async function refreshAccessToken() {
  * @param {Response} response
  * @returns {Promise<any>}
  */
-async function parseResponse(response) {
+async function parseResponse(response, opts = {}) {
+  // Support binary / blob responses (e.g. PDF downloads, document exports)
+  if (opts?.responseType === 'blob' || response?.headers?.get?.('content-type')?.includes('application/pdf')) {
+    if (!response.ok) {
+      let errMsg = 'Failed to download file.';
+      try {
+        const errJson = await response.json();
+        errMsg = errJson?.error?.message || errJson?.message || errMsg;
+      } catch {
+        // non-json error body
+      }
+      throw {
+        code: 'DOWNLOAD_ERROR',
+        message: errMsg,
+        status: response.status,
+      };
+    }
+    return await response.blob();
+  }
+
   // Try to parse JSON body
   let data;
   try {
@@ -177,7 +196,7 @@ async function request(path, opts = {}, isRetry = false) {
     };
   }
 
-  return parseResponse(response);
+  return parseResponse(response, opts);
 }
 
 // ── Public HTTP method helpers ────────────────────────────────────────────────

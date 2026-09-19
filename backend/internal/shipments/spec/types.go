@@ -48,13 +48,16 @@ type Shipment struct {
 	DestinationPort  string          `db:"destination_port" json:"destination_port"`
 	VesselName       *string         `db:"vessel_name" json:"vessel_name,omitempty"`
 	VoyageNumber     *string         `db:"voyage_number" json:"voyage_number,omitempty"`
-	ETD              *time.Time      `db:"etd" json:"etd,omitempty"`
-	ETA              *time.Time      `db:"eta" json:"eta,omitempty"`
-	SourceQuotationID *string        `db:"source_quotation_id" json:"source_quotation_id,omitempty"`
-	SourceBookingID   *string        `db:"source_booking_id" json:"source_booking_id,omitempty"`
-	CustomerID       *int64          `db:"customer_id" json:"customer_id,omitempty"`
-	CreatedAt        time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
+	ETD                    *time.Time      `db:"etd" json:"etd,omitempty"`
+	ETA                    *time.Time      `db:"eta" json:"eta,omitempty"`
+	CustomerCommitmentDate *time.Time      `db:"customer_commitment_date" json:"customer_commitment_date,omitempty"`
+	CurrentRiskLevel       *string         `db:"current_risk_level" json:"current_risk_level,omitempty"`
+	AdaptiveStatus         *string         `db:"adaptive_status" json:"adaptive_status,omitempty"`
+	SourceQuotationID      *int64          `db:"source_quotation_id" json:"source_quotation_id,omitempty"`
+	SourceBookingID        *int64          `db:"source_booking_id" json:"source_booking_id,omitempty"`
+	CustomerID             *int64          `db:"customer_id" json:"customer_id,omitempty"`
+	CreatedAt              time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt              time.Time       `db:"updated_at" json:"updated_at"`
 
 	// Joined Metadata Fields
 	RFQNumber    *string `db:"rfq_number" json:"rfq_number,omitempty"`

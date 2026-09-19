@@ -4,6 +4,7 @@ import { ChevronDown, Check, Filter } from 'lucide-react';
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'All Statuses', dot: '#64748b', bg: '#f1f5f9' },
   { value: 'ACTIVE', label: 'Active Only', dot: '#10b981', bg: '#ecfdf5' },
+  { value: 'DISCONNECTED', label: 'Disconnected', dot: '#64748b', bg: '#f1f5f9' },
   { value: 'ERROR', label: 'Needs Attention', dot: '#f59e0b', bg: '#fffbeb' },
   { value: 'DISABLED', label: 'Disabled Only', dot: '#94a3b8', bg: '#f8fafc' },
 ];

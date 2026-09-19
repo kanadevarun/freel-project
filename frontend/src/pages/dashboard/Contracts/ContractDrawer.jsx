@@ -20,6 +20,10 @@ import ContractTermsPanel from './ContractTermsPanel';
 import ContractObligationsPanel from './ContractObligationsPanel';
 import ContractCompliancePanel from './ContractCompliancePanel';
 import ContractPerformancePanel from './ContractPerformancePanel';
+import ContractComplianceIntelligenceSection from './ContractComplianceIntelligenceSection';
+import ContractComplianceAutomationSection from './ContractComplianceAutomationSection';
+import PricingMarginPredictiveIntelligenceCard from '../../../components/predictions/PricingMarginPredictiveIntelligenceCard';
+import ContractCompliancePredictiveIntelligenceCard from '../../../components/predictions/ContractCompliancePredictiveIntelligenceCard';
 import './ContractDrawer.css';
 
 export default function ContractDrawer({ contract, onClose, onEdit, onUpdate }) {
@@ -392,6 +396,8 @@ export default function ContractDrawer({ contract, onClose, onEdit, onUpdate }) 
             <div className="cd-tabs-strip">
               {[
                 { id: 'OVERVIEW', label: 'Overview' },
+                { id: 'COMPLIANCE_AUTOMATION', label: 'Compliance & Document AI' },
+                { id: 'INTELLIGENCE', label: 'Intelligence 360°' },
                 { id: 'OBLIGATIONS', label: 'Obligations & SLAs' },
                 { id: 'COMPLIANCE', label: 'Compliance & Risks' },
                 { id: 'PERFORMANCE', label: 'Performance' },
@@ -540,6 +546,12 @@ export default function ContractDrawer({ contract, onClose, onEdit, onUpdate }) 
                   <div className="cd-hb-progress-fill" style={{ width: `${health.progress}%` }}></div>
                 </div>
               </div>
+
+              {/* Phase 4 Task 4.5: Predictive Contract & Rate Pressure Intelligence */}
+              <PricingMarginPredictiveIntelligenceCard recordType="contract" recordId={contract.id} />
+
+              {/* Phase 4 Task 4.7: Predictive Contract, Compliance & Documentation Risk Intelligence */}
+              <ContractCompliancePredictiveIntelligenceCard contractId={contract.id} contract={contract} />
 
               {/* Renewal In-Progress Banner (if applicable) */}
               {renewalTracking && renewalTracking.renewal_status === 'IN_PROGRESS' && (
@@ -999,6 +1011,8 @@ export default function ContractDrawer({ contract, onClose, onEdit, onUpdate }) 
           {/* TAB: COMPLIANCE */}
           {activeTab === 'COMPLIANCE' && (
             <div className="cd-tab-panel-container">
+              {/* Phase 4 Task 4.7: Predictive Contract, Compliance & Documentation Risk Intelligence */}
+              <ContractCompliancePredictiveIntelligenceCard contractId={contract.id} contract={contract} />
               <ContractCompliancePanel contract={contract} />
             </div>
           )}
@@ -1021,6 +1035,20 @@ export default function ContractDrawer({ contract, onClose, onEdit, onUpdate }) 
           {activeTab === 'DOCUMENTS' && (
             <div className="cd-tab-panel-container">
               <ContractDocumentsPanel contract={contract} />
+            </div>
+          )}
+
+          {/* TAB: INTELLIGENCE */}
+          {activeTab === 'INTELLIGENCE' && (
+            <div className="cd-tab-panel-container">
+              <ContractComplianceIntelligenceSection contractId={contract.id} />
+            </div>
+          )}
+
+          {/* TAB: COMPLIANCE AUTOMATION & DOCUMENT AI */}
+          {activeTab === 'COMPLIANCE_AUTOMATION' && (
+            <div className="cd-tab-panel-container">
+              <ContractComplianceAutomationSection contract={contract} onUpdate={onUpdate} />
             </div>
           )}
 

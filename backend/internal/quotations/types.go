@@ -548,6 +548,7 @@ type CustomerQuotationPreview struct {
 	CompanyName     string                       `json:"company_name"`
 	CompanyAddress  string                       `json:"company_address"`
 	CompanyContact  string                       `json:"company_contact"`
+	CompanyLogoURL  string                       `json:"company_logo_url,omitempty"`
 }
 
 // CustomerQuotationChargeItem represents a single charge item formatted safely for customer display.

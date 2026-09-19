@@ -66,6 +66,7 @@ export default function RolesPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedPerms, setEditedPerms] = useState({}); // { 'RESOURCE.ACTION': true/false }
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   // Create Role state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -215,13 +216,14 @@ export default function RolesPage() {
         permissions: permList,
       });
 
+      setSaveError('');
       setIsEditing(false);
       // Reload permissions and stats to update counts
       await fetchPermissions(selectedRoleId, selectedRoleName, selectedRoleDesc);
       await fetchRoles(); // to update permission count in the sidebar
       await fetchStats(); // to update global stats
-    } catch {
-      // TODO: show error toast
+    } catch (err) {
+      setSaveError(err.message || 'Failed to save permissions. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -229,6 +231,7 @@ export default function RolesPage() {
 
   const cancelEditing = () => {
     setIsEditing(false);
+    setSaveError('');
     setEditedPerms({});
   };
 
@@ -552,6 +555,20 @@ export default function RolesPage() {
               )}
             </div>
           </div>
+
+          {saveError && (
+            <div style={{
+              margin: '0 0 1rem 0',
+              padding: '0.75rem 1rem',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '6px',
+              color: '#991b1b',
+              fontSize: '0.875rem'
+            }}>
+              {saveError}
+            </div>
+          )}
 
           <div className="matrix-table-container">
             {isLoadingPerms ? (

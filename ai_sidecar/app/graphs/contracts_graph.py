@@ -16,7 +16,7 @@ from app.agents.classifier_agent import classify_node
 from app.agents.parser_agent import parser_node
 from app.agents.validator_agent import validator_node
 from app.agents.ingest_agent import ingest_node
-from langgraph.checkpoint.memory import MemorySaver
+from app.persistence.checkpointer import get_checkpointer
 
 # --- State Graph Assembly ---
 workflow_builder = StateGraph(ContractExtractionState)
@@ -31,15 +31,11 @@ workflow_builder.add_edge("ocr", "classify")
 workflow_builder.add_edge("classify", "parser")
 workflow_builder.add_edge("parser", "validator")
 
-def route_validator(state: ContractExtractionState):
-    if state.is_anomaly_detected:
-        return END  # Pauses for manual review (compiled with interrupt_before=["ingest"])
-    return "ingest"
-
-workflow_builder.add_conditional_edges("validator", route_validator)
+# Route validator to ingest (compiled with interrupt_before=["ingest"] for HITL review)
+workflow_builder.add_edge("validator", "ingest")
 workflow_builder.add_edge("ingest", END)
 
-saver = MemorySaver()
-print("[AI Sidecar] Successfully initialized MemorySaver checkpointer.")
+saver = get_checkpointer()
+print("[AI Sidecar Contracts] Successfully initialized checkpointer.")
 
 contracts_graph = workflow_builder.compile(checkpointer=saver, interrupt_before=["ingest"])

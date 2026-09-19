@@ -2,13 +2,15 @@ import os
 import httpx
 from typing import Optional, Dict, Any
 
-go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
-service_token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+from app.tools.auth_utils import get_internal_service_token
 
-HEADERS = {
-    "X-LogisticsHQ-Service-Key": service_token,
-    "Content-Type": "application/json"
-}
+go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
+
+def get_headers():
+    return {
+        "X-LogisticsHQ-Service-Key": get_internal_service_token(),
+        "Content-Type": "application/json"
+    }
 
 
 import random
@@ -51,7 +53,7 @@ def get_shipment(shipment_id: int, org_id: int = 1) -> Optional[Dict[str, Any]]:
     url = f"{go_backend_url}/internal/shipments/{shipment_id}?org_id={org_id}"
     def _call():
         try:
-            response = httpx.get(url, headers=HEADERS, timeout=10.0)
+            response = httpx.get(url, headers=get_headers(), timeout=10.0)
             if response.status_code == 200:
                 return _make_result(True, data=response.json().get("data"))
             retry = response.status_code in RETRYABLE_STATUS_CODES
@@ -67,91 +69,79 @@ def update_milestone(shipment_id: int, milestone_code: str, actual_date: str,
                      location: Optional[str] = None, notes: Optional[str] = None,
                      org_id: int = 1) -> bool:
     """
-    Update a specific milestone as COMPLETED with actual date.
+    Update a specific milestone as COMPLETED with actual date through Centralized Action System.
     Returns True if successful.
     """
-    url = f"{go_backend_url}/internal/shipments/{shipment_id}/milestones"
-    payload: Dict[str, Any] = {
+    from app.tools.action_bridge import execute_action
+
+    input_data: Dict[str, Any] = {
+        "shipment_id": shipment_id,
         "milestone_code": milestone_code,
         "actual_date": actual_date,
-        "org_id": org_id,
     }
     if location:
-        payload["location"] = location
+        input_data["location"] = location
     if notes:
-        payload["notes"] = notes
+        input_data["notes"] = notes
 
-    def _call():
-        try:
-            response = httpx.post(url, json=payload, headers=HEADERS, timeout=10.0)
-            if response.status_code == 200:
-                return _make_result(True)
-            retry = response.status_code in RETRYABLE_STATUS_CODES
-            return _make_result(False, response.status_code, response.text, retry)
-        except Exception as e:
-            return _make_result(False, message=str(e), retryable=True)
-
-    res = _call_with_retry(_call)
-    return res["success"]
+    res = execute_action(
+        action_name="shipments.update_milestone",
+        org_id=org_id,
+        input_data=input_data,
+        source="langgraph.operations"
+    )
+    return bool(res.get("success", False))
 
 
 def create_exception(shipment_id: int, exception_type: str, severity: str,
                      title: str, description: str, org_id: int = 1, source_event_id: Optional[str] = None) -> bool:
     """
-    Create a new exception entry for a shipment.
+    Create a new exception entry for a shipment through Centralized Action System.
     exception_type: ROLLOVER | DELAY | CUSTOMS_HOLD | PORT_CONGESTION | WEATHER
     severity: INFO | WARNING | CRITICAL
     Returns True if successful.
     """
-    url = f"{go_backend_url}/internal/shipments/{shipment_id}/exceptions"
-    payload = {
+    from app.tools.action_bridge import execute_action
+
+    input_data: Dict[str, Any] = {
+        "shipment_id": shipment_id,
         "exception_type": exception_type,
         "severity": severity,
         "title": title,
         "description": description,
-        "org_id": org_id,
     }
     if source_event_id:
-        payload["source_event_id"] = source_event_id
+        input_data["source_event_id"] = source_event_id
 
-    def _call():
-        try:
-            response = httpx.post(url, json=payload, headers=HEADERS, timeout=10.0)
-            if response.status_code == 200:
-                return _make_result(True)
-            retry = response.status_code in RETRYABLE_STATUS_CODES
-            return _make_result(False, response.status_code, response.text, retry)
-        except Exception as e:
-            return _make_result(False, message=str(e), retryable=True)
-
-    res = _call_with_retry(_call)
-    return res["success"]
+    res = execute_action(
+        action_name="shipments.create_exception",
+        org_id=org_id,
+        input_data=input_data,
+        source="langgraph.operations"
+    )
+    return bool(res.get("success", False))
 
 
 def send_operations_callback(callback_url: str, shipment_id: int, org_id: int,
                               has_critical: bool, ai_summary: str, event_id: Optional[str] = None) -> bool:
     """
-    Send the final callback to the Go backend when OperationsAgent is done.
+    Send the final operations callback through Centralized Action System.
     """
-    payload = {
+    from app.tools.action_bridge import execute_action
+
+    input_data: Dict[str, Any] = {
         "shipment_id": shipment_id,
-        "org_id": org_id,
         "has_critical_exception": has_critical,
         "ai_summary": ai_summary,
     }
     if event_id:
-        payload["event_id"] = event_id
+        input_data["event_id"] = event_id
 
-    def _call():
-        try:
-            response = httpx.post(callback_url, json=payload, headers=HEADERS, timeout=10.0)
-            if response.status_code == 200:
-                return _make_result(True)
-            retry = response.status_code in RETRYABLE_STATUS_CODES
-            return _make_result(False, response.status_code, response.text, retry)
-        except Exception as e:
-            return _make_result(False, message=str(e), retryable=True)
-
-    res = _call_with_retry(_call)
-    return res["success"]
+    res = execute_action(
+        action_name="operations.send_callback",
+        org_id=org_id,
+        input_data=input_data,
+        source="langgraph.operations"
+    )
+    return bool(res.get("success", False))
 

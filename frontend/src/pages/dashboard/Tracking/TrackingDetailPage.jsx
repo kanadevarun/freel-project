@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
+import ShipmentPredictiveETACard from '../../../components/predictions/ShipmentPredictiveETACard';
+import ShipmentDisruptionForecastCard from '../../../components/predictions/ShipmentDisruptionForecastCard';
+import ShipmentReadinessPredictiveIntelligenceCard from '../../../components/predictions/ShipmentReadinessPredictiveIntelligenceCard';
+import NetworkPerformancePredictiveCard from '../../../components/predictions/NetworkPerformancePredictiveCard';
 import {
   Ship,
   MapPin,
@@ -140,6 +145,13 @@ const formatEventDateHeader = (dateStr) => {
 export default function TrackingDetailPage() {
   const { shipmentId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const currentUserName =
+    user?.full_name ||
+    (user?.name && !user.name.includes('@') ? user.name : null) ||
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) ||
+    user?.email ||
+    'Operations Desk';
 
   // State
   const [loading, setLoading] = useState(true);
@@ -186,7 +198,7 @@ export default function TrackingDetailPage() {
   const [notes, setNotes] = useState([
     {
       id: 1,
-      author: 'Varun Kanade (Lead Ops)',
+      author: 'Operations Desk Lead',
       role: 'Operations Dispatcher',
       time: 'Aug 23, 2026 · 09:00 AM',
       type: 'Operational',
@@ -468,7 +480,7 @@ export default function TrackingDetailPage() {
     if (!newNoteText.trim()) return;
     const newEntry = {
       id: Date.now(),
-      author: 'Varun Kanade',
+      author: currentUserName,
       role: 'Operations Desk',
       time: 'Just now',
       type: newNoteType,
@@ -533,25 +545,7 @@ export default function TrackingDetailPage() {
 
   // Operational Alerts list from Task 17.4 Engine
   const alertsList = useMemo(() => {
-    if (intelligence?.alerts && intelligence.alerts.length > 0) {
-      return intelligence.alerts;
-    }
-    return [
-      {
-        id: 'alert-dep-1',
-        type: 'DELAYED_DEPARTURE',
-        severity: 'WARNING',
-        title: 'Delayed Origin Departure',
-        description: 'Vessel departed 1.0 day later than planned due to berth congestion at origin.',
-      },
-      {
-        id: 'alert-fresh-1',
-        type: 'LIVE_TELEMETRY',
-        severity: 'INFO',
-        title: 'Live Telemetry Synchronized',
-        description: 'Vessel position updated via Satellite AIS Feed (Speed: 18.7 kts, Heading: 312° NW).',
-      },
-    ];
+    return intelligence?.alerts || [];
   }, [intelligence]);
 
   // Normalized Events with Date Grouping (Task 17.4)
@@ -1124,6 +1118,23 @@ export default function TrackingDetailPage() {
               ))}
           </div>
         </div>
+      )}
+
+      {/* ── Phase 4: Predictive Shipment ETA & Delay Intelligence ─────────── */}
+      <ShipmentPredictiveETACard shipmentId={shipmentId} authoritativeEta={shipment?.eta} />
+
+      {/* ── Phase 4: Predictive Exception & Disruption Forecasting ─────────── */}
+      <ShipmentDisruptionForecastCard shipmentId={shipmentId} />
+
+      {/* ── Phase 4: Predictive Documentation, Readiness & Compliance Intelligence ── */}
+      <ShipmentReadinessPredictiveIntelligenceCard shipmentId={shipmentId} shipment={shipment} />
+
+      {/* ── Phase 4: Predictive Carrier & Trade Corridor Intelligence ───────── */}
+      {shipment?.carrier_scac && (
+        <NetworkPerformancePredictiveCard
+          entityType="carrier"
+          entityId={shipment.carrier_scac}
+        />
       )}
 
       {/* ── Top Intelligence Identity Card ─────────────────────────────────── */}
@@ -2368,7 +2379,7 @@ export default function TrackingDetailPage() {
                 <p>Monitor ECT Delta berth dispatch and confirm container delivery confirmation with European consignee warehouse.</p>
               </div>
               <div className="trkd-shp-info">
-                <span>Desk Lead:</span> <strong>Varun Kanade</strong>
+                <span>Desk Lead:</span> <strong>{currentUserName}</strong>
               </div>
               <div className="trkd-shp-info">
                 <span>Carrier Contact:</span> <strong>Maersk Rotterdam Ops Desk</strong>

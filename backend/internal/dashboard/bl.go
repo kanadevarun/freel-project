@@ -2,6 +2,8 @@ package dashboard
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/freel/backend/internal/dashboard/spec"
 	"github.com/freel/backend/internal/svcerror"
@@ -78,7 +80,7 @@ func (b *businessLogic) GetMissionControl(ctx context.Context, orgID int64, star
 		HealthScore:   98,
 	}
 
-	return &spec.GetMissionControlResponse{
+	resp := &spec.GetMissionControlResponse{
 		Stats:             stats,
 		Pipeline:          pipeline,
 		ShipmentStatus:    shipmentStatus,
@@ -95,5 +97,93 @@ func (b *businessLogic) GetMissionControl(ctx context.Context, orgID int64, star
 		Organization:      orgInfo,
 		AIStatus:          aiStatus,
 		DateRange:         dateRangeInfo,
-	}, nil
+	}
+
+	// Authoritative Deduplication and Information Density Optimization
+	deduplicateMissionControl(resp)
+
+	return resp, nil
+}
+
+// deduplicateMissionControl ensures every section provides unique, high-density business value
+// without repeating the exact same underlying entities across Priority Actions, Reminders, and Approvals.
+func deduplicateMissionControl(resp *spec.GetMissionControlResponse) {
+	if resp == nil {
+		return
+	}
+
+	// 1. Build set of claimed entity IDs from Priority Actions
+	claimedEntities := make(map[string]bool)
+	for _, item := range resp.AttentionItems {
+		if item.SourceEntityID > 0 {
+			claimedEntities[fmt.Sprintf("%s:%d", strings.ToLower(item.Category), item.SourceEntityID)] = true
+		}
+		if item.ApprovalID > 0 {
+			claimedEntities[fmt.Sprintf("approvals:%d", item.ApprovalID)] = true
+		}
+	}
+
+	// 2. Deduplicate Upcoming Reminders:
+	// Filter out reminders whose underlying record is already featured as an urgent Priority Action.
+	if len(resp.UpcomingReminders) > 0 {
+		var dedupedReminders []spec.UpcomingReminder
+		seenReminderTypes := make(map[string]bool)
+
+		for _, rem := range resp.UpcomingReminders {
+			var entityKey string
+			if strings.HasPrefix(rem.ID, "lead_rem_") {
+				entityKey = "leads:" + strings.TrimPrefix(rem.ID, "lead_rem_")
+			} else if strings.HasPrefix(rem.ID, "contract_rem_") {
+				entityKey = "contracts:" + strings.TrimPrefix(rem.ID, "contract_rem_")
+			} else if strings.HasPrefix(rem.ID, "inv_rem_") {
+				entityKey = "finance:" + strings.TrimPrefix(rem.ID, "inv_rem_")
+			}
+
+			// If the underlying entity is already featured as an urgent Priority Action, omit it
+			if entityKey != "" && claimedEntities[entityKey] {
+				continue
+			}
+
+			// Keep at most 1 distinct reminder per type, up to 3 total
+			if !seenReminderTypes[rem.Type] && len(dedupedReminders) < 3 {
+				seenReminderTypes[rem.Type] = true
+				dedupedReminders = append(dedupedReminders, rem)
+			}
+		}
+		resp.UpcomingReminders = dedupedReminders
+	}
+
+	// 3. Deduplicate Pending Approvals in Finance column:
+	// If the top pending approval is already featured in Priority Actions,
+	// prioritize other pending approvals in the Finance & Approvals section so users see distinct tasks.
+	if len(resp.PendingApprovals) > 1 {
+		var otherApprovals []spec.PendingApprovalItem
+		var priorityMatchedApprovals []spec.PendingApprovalItem
+
+		for _, app := range resp.PendingApprovals {
+			key := fmt.Sprintf("approvals:%d", app.ID)
+			if claimedEntities[key] {
+				priorityMatchedApprovals = append(priorityMatchedApprovals, app)
+			} else {
+				otherApprovals = append(otherApprovals, app)
+			}
+		}
+
+		if len(otherApprovals) > 0 {
+			resp.PendingApprovals = append(otherApprovals, priorityMatchedApprovals...)
+		}
+	}
+
+	// 4. Deduplicate Recent Activity by event ID
+	if len(resp.RecentActivity) > 1 {
+		seenActivity := make(map[string]bool)
+		var dedupedActivity []spec.RecentActivity
+		for _, act := range resp.RecentActivity {
+			if !seenActivity[act.ID] {
+				seenActivity[act.ID] = true
+				dedupedActivity = append(dedupedActivity, act)
+			}
+		}
+		resp.RecentActivity = dedupedActivity
+	}
 }

@@ -5,7 +5,7 @@ import RFQStatusBadge from './components/RFQStatusBadge';
 import { ArrowRight, Ship, Plane, Truck, Tag, ExternalLink, Clock, Building2, MapPin, CheckCircle2, AlertCircle, Plus, Zap, Package, FileText } from 'lucide-react';
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
 
-export default function RFQList({ rfqs, isLoading, onRowClick, onNewRFQ }) {
+export default function RFQList({ rfqs, isLoading, onRowClick, onNewRFQ, onOpenPricing }) {
   const navigate = useNavigate();
 
   const handleRowNavigate = (rfq) => {
@@ -279,17 +279,33 @@ export default function RFQList({ rfqs, isLoading, onRowClick, onNewRFQ }) {
                 </td>
 
                 {/* 8. Action Button */}
-                <td className="rfq-cell-actions" style={{ textAlign: 'right' }}>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRowNavigate(rfq);
-                    }}
-                    className="rfq-view-btn"
-                  >
-                    <span>View</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
+                <td className="rfq-cell-actions" style={{ textAlign: 'right', position: 'relative', zIndex: 5 }}>
+                  <div className="flex items-center justify-end gap-1.5">
+                    {onOpenPricing && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenPricing(rfq);
+                        }}
+                        className="px-2 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded hover:bg-indigo-100 flex items-center gap-1"
+                        data-testid={`btn-ai-pricing-${rfq.id}`}
+                        title="Open AI Pricing Optimization"
+                      >
+                        <Zap className="w-3 h-3 text-indigo-600" />
+                        <span>AI Pricing</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRowNavigate(rfq);
+                      }}
+                      className="rfq-view-btn"
+                    >
+                      <span>View</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             );

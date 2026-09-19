@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -27,9 +27,11 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  MessageSquare,
 } from 'lucide-react';
 import customerService from '../../../services/customerService';
 import CustomerModal from './CustomerModal';
+import CustomerFollowupDrawer from '../../../components/autonomy/CustomerFollowupDrawer';
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
 import './CustomersPage.css';
 
@@ -47,6 +49,7 @@ const COUNTRY_FLAGS = {
   'United Kingdom': '🇬🇧',
   China: '🇨🇳',
   Japan: '🇯🇵',
+  Netherlands: '🇳🇱',
 };
 
 export default function CustomersPage() {
@@ -67,6 +70,17 @@ export default function CustomersPage() {
   const [limit, setLimit] = useState(10);
   const [total, setTotal] = useState(0);
 
+  const availableCountries = useMemo(() => {
+    const defaults = ['India', 'UAE', 'Sweden', 'Singapore', 'USA', 'Germany', 'United Kingdom', 'Netherlands'];
+    const set = new Set(defaults);
+    customers.forEach((c) => {
+      if (c.country && c.country.trim()) {
+        set.add(c.country.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [customers]);
+
   // Attention Panel Active Tab
   const [attentionTab, setAttentionTab] = useState('WARNING');
 
@@ -75,6 +89,10 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [activeKebabId, setActiveKebabId] = useState(null);
   const [kebabPos, setKebabPos] = useState({ top: 0, right: 0 });
+
+  // Phase 5 Task 5.4: Autonomous Customer Follow-Up Drawer State
+  const [isFollowupDrawerOpen, setIsFollowupDrawerOpen] = useState(false);
+  const [followupCustomer, setFollowupCustomer] = useState(null);
 
   useEffect(() => {
     const handleOutsideClick = () => setActiveKebabId(null);
@@ -100,9 +118,18 @@ export default function CustomersPage() {
           page,
           limit,
         }),
-        customerService.getCustomerKPIs(),
-        customerService.getIntelligenceSummary(),
-        customerService.getAttentionItems(),
+        customerService.getCustomerKPIs().catch((kpiErr) => {
+          console.warn('Customer KPIs non-critical fetch warning:', kpiErr);
+          return {};
+        }),
+        customerService.getIntelligenceSummary().catch((sumErr) => {
+          console.warn('Customer Intelligence summary non-critical fetch warning:', sumErr);
+          return {};
+        }),
+        customerService.getAttentionItems().catch((attErr) => {
+          console.warn('Customer Attention items non-critical fetch warning:', attErr);
+          return [];
+        }),
       ]);
 
       const listData = Array.isArray(listRes?.customers)
@@ -456,11 +483,11 @@ export default function CustomersPage() {
               }}
             >
               <option value="ALL">All Countries</option>
-              <option value="India">India 🇮🇳</option>
-              <option value="UAE">UAE 🇦🇪</option>
-              <option value="Sweden">Sweden 🇸🇪</option>
-              <option value="Singapore">Singapore 🇸🇬</option>
-              <option value="USA">USA 🇺🇸</option>
+              {availableCountries.map((c) => (
+                <option key={c} value={c}>
+                  {c} {COUNTRY_FLAGS[c] || ''}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -607,6 +634,29 @@ export default function CustomersPage() {
                         >
                           View 360°
                         </button>
+                        <button
+                          className="btn-followup-action"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '4px 8px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            borderRadius: '6px',
+                            border: '1px solid #bfdbfe',
+                            backgroundColor: '#eff6ff',
+                            color: '#1d4ed8',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onClick={() => {
+                            setFollowupCustomer(c);
+                            setIsFollowupDrawerOpen(true);
+                          }}
+                        >
+                          <MessageSquare size={13} /> Follow-Up
+                        </button>
                         <div className="kebab-wrapper">
                           <button
                             className="btn-kebab"
@@ -687,6 +737,15 @@ export default function CustomersPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={fetchData}
         initialData={selectedCustomer}
+      />
+
+      {/* Phase 5 Task 5.4: Autonomous Customer Follow-Up Drawer */}
+      <CustomerFollowupDrawer
+        isOpen={isFollowupDrawerOpen}
+        onClose={() => setIsFollowupDrawerOpen(false)}
+        customerId={followupCustomer?.id}
+        customerData={followupCustomer}
+        onFollowupUpdated={fetchData}
       />
     </div>
   );

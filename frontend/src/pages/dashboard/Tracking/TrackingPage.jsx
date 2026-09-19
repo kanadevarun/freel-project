@@ -31,6 +31,7 @@ import {
   ArrowUpRight,
   TrendingUp,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import api from '../../../services/api';
 import { shipmentService } from '../../../services/shipmentService';
@@ -476,6 +477,14 @@ export default function TrackingPage() {
 
           {workspaceView === 'fleet' && (
             <>
+              <button
+                className="trk-btn-secondary"
+                onClick={() => navigate('/dashboard/recommendations?category=OPERATIONS')}
+                title="Open Operations Copilot"
+              >
+                <Sparkles size={13} style={{ color: '#2563eb' }} />
+                <span>Operations Copilot</span>
+              </button>
               <button
                 className={`trk-btn-secondary ${justRefreshed ? 'trk-btn-refreshed' : ''}`}
                 onClick={() => loadShipments(true)}

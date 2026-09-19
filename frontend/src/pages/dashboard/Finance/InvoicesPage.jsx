@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus,
   Filter,
@@ -10,22 +10,34 @@ import {
   ChevronsLeft,
   ChevronsRight,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  RefreshCw,
+  RotateCcw,
+  CheckCircle2,
+  Sparkles,
+  ExternalLink,
+  ShieldCheck,
+  AlertTriangle
 } from 'lucide-react';
 
 import api from '../../../services/api';
+import aiTaskService from '../../../services/aiTaskService';
+import AgentStatusBadge from '../../../components/agent/AgentStatusBadge';
 import InvoiceKpiCards from './components/InvoiceKpiCards';
 import InvoiceTable from './components/InvoiceTable';
 import InvoiceDetailsPanel from './components/InvoiceDetailsPanel';
 import InvoiceFilterDrawer from './components/InvoiceFilterDrawer';
 import CreateInvoiceModal from './components/CreateInvoiceModal';
 import RecordPaymentModal from './components/RecordPaymentModal';
+import FinanceCollectionsAdaptiveDrawer from '../../../components/autonomy/FinanceCollectionsAdaptiveDrawer';
 
 import { INITIAL_KPI_STATS, INVOICE_STATUSES } from './mockInvoiceData';
 import './InvoicesPage.css';
 
 export default function InvoicesPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   // State management
   const [invoices, setInvoices] = useState([]);
@@ -33,6 +45,7 @@ export default function InvoicesPage() {
   const [kpiStats, setKpiStats] = useState(INITIAL_KPI_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedAdaptiveInvoice, setSelectedAdaptiveInvoice] = useState(null);
 
   // Tabs & Filter states
   const [primaryTab, setPrimaryTab] = useState('ALL'); // 'ALL' | 'MY'
@@ -52,6 +65,9 @@ export default function InvoicesPage() {
 
   // Table & Panel selection
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+
+  // Auto-open invoice if specified in URL query params (?invoice_id=X)
+  const invoiceIdParam = searchParams.get('invoice_id') || searchParams.get('id');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -76,6 +92,57 @@ export default function InvoicesPage() {
 
   // Action toast state
   const [toastMessage, setToastMessage] = useState(null);
+
+  // AI Finance audit state
+  const [aiFinanceTasks, setAiFinanceTasks] = useState([]);
+  const [aiFinanceLoading, setAiFinanceLoading] = useState(false);
+
+  const fetchAiFinanceTasks = useCallback(async () => {
+    try {
+      setAiFinanceLoading(true);
+      const res = await aiTaskService.getWorkforceTasks({ module: 'FINANCE', limit: 8 });
+      const raw = res?.data?.tasks || res?.data?.items || res?.tasks || [];
+      const tasksList = raw.map((t) => ({
+        ...t,
+        task_id: t.task_id || t.id,
+        id: t.task_id || t.id,
+        workforce_status: t.workforce_status || t.status || 'unknown',
+        status: t.workforce_status || t.status || 'unknown',
+        safe_error_msg: t.safe_error_msg || t.error_message || '',
+      }));
+      setAiFinanceTasks(tasksList);
+    } catch (err) {
+      console.warn('Failed to fetch AI finance tasks:', err);
+    } finally {
+      setAiFinanceLoading(false);
+    }
+  }, []);
+
+  const handleRetryAiTask = async (taskId) => {
+    try {
+      await aiTaskService.retryTask(taskId);
+      showToast('AI Invoice Audit task queued for retry', 'info');
+      fetchAiFinanceTasks();
+    } catch (err) {
+      showToast('Failed to retry AI audit task', 'warning');
+    }
+  };
+
+  const aiTasksByRef = useMemo(() => {
+    const map = {};
+    aiFinanceTasks.forEach((t) => {
+      if (t.related_ref) map[t.related_ref] = t;
+      if (t.related_id) map[t.related_id] = t;
+    });
+    return map;
+  }, [aiFinanceTasks]);
+
+  const primaryAiTask =
+    aiFinanceTasks.find((t) => t.workforce_status === 'processing' || t.status === 'processing') ||
+    aiFinanceTasks.find((t) => t.workforce_status === 'waiting_for_approval' || t.status === 'waiting_for_approval') ||
+    aiFinanceTasks.find((t) => t.workforce_status === 'failed' || t.status === 'failed' || t.workforce_status === 'stale') ||
+    aiFinanceTasks[0] ||
+    null;
 
   const showToast = (msg, type = 'info') => {
     setToastMessage({ text: msg, type });
@@ -155,14 +222,14 @@ export default function InvoicesPage() {
       const formatted = invList.map((inv) => ({
         id: inv.id,
         invoiceNumber: inv.invoice_number || `INV-${inv.id}`,
-        creator: inv.creator_name || 'By Varun Sharma',
+        creator: inv.creator_name ? (inv.creator_name.startsWith('By ') ? inv.creator_name : `By ${inv.creator_name}`) : 'By Billing Desk',
         customer: inv.customer_name || '—',
-        customerCountry: inv.customer_country || 'USA',
+        customerCountry: inv.customer_country || '—',
         shipmentId: inv.shipment_number || (inv.shipment_id ? `SH-2026-${inv.shipment_id}` : '—'),
-        route: inv.route || 'Shanghai ➔ Los Angeles',
-        invoiceDate: inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 15, 2026',
-        dueDate: inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 30, 2026',
-        daysLeft: inv.days_left || '15 days left',
+        route: inv.route || (inv.origin && inv.destination ? `${inv.origin} ➔ ${inv.destination}` : '—'),
+        invoiceDate: inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+        dueDate: inv.due_date ? new Date(inv.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+        daysLeft: inv.days_left || (inv.due_date ? `${Math.max(0, Math.ceil((new Date(inv.due_date) - new Date()) / (1000 * 60 * 60 * 24)))} days left` : '—'),
         amount: Number(inv.total_amount || 0),
         currency: inv.currency || 'USD',
         status: inv.status || 'Draft',
@@ -206,14 +273,14 @@ export default function InvoicesPage() {
         const fullDetail = {
           id: res.id,
           invoiceNumber: res.invoice_number,
-          creator: res.creator_name || 'By Varun Sharma',
+          creator: res.creator_name ? (res.creator_name.startsWith('By ') ? res.creator_name : `By ${res.creator_name}`) : 'By Billing Desk',
           customer: res.customer_name,
-          customerCountry: res.customer_country || 'USA',
+          customerCountry: res.customer_country || '—',
           shipmentId: res.shipment_number || (res.shipment_id ? `SH-2026-${res.shipment_id}` : '—'),
-          route: res.route || 'Shanghai ➔ Los Angeles',
-          invoiceDate: res.invoice_date ? new Date(res.invoice_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 15, 2026',
-          dueDate: res.due_date ? new Date(res.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Aug 30, 2026',
-          daysLeft: res.days_left || '15 days left',
+          route: res.route || (res.origin && res.destination ? `${res.origin} ➔ ${res.destination}` : '—'),
+          invoiceDate: res.invoice_date ? new Date(res.invoice_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+          dueDate: res.due_date ? new Date(res.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—',
+          daysLeft: res.days_left || (res.due_date ? `${Math.max(0, Math.ceil((new Date(res.due_date) - new Date()) / (1000 * 60 * 60 * 24)))} days left` : '—'),
           amount: Number(res.total_amount || 0),
           currency: res.currency || 'USD',
           status: res.status || 'Draft',
@@ -263,10 +330,39 @@ export default function InvoicesPage() {
     }
   };
 
+  // Auto-fetch details if URL param specified (?invoice_id=X)
+  useEffect(() => {
+    if (invoiceIdParam) {
+      const parsed = parseInt(invoiceIdParam, 10);
+      if (!isNaN(parsed)) {
+        fetchInvoiceDetails(parsed);
+      }
+    }
+  }, [invoiceIdParam]);
+
   useEffect(() => {
     fetchInvoices();
     fetchKpiStats();
-  }, [fetchInvoices, fetchKpiStats]);
+    fetchAiFinanceTasks();
+
+    let intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAiFinanceTasks();
+      }
+    }, 30000);
+
+    const handleVis = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAiFinanceTasks();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVis);
+
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVis);
+    };
+  }, [fetchInvoices, fetchKpiStats, fetchAiFinanceTasks]);
 
   const totalPages = Math.ceil(totalResults / pageSize) || 1;
 
@@ -326,6 +422,9 @@ export default function InvoicesPage() {
       case 'recordPayment':
         setRecordingPaymentInvoice(payload);
         setIsRecordPaymentOpen(true);
+        break;
+      case 'adaptiveCollections':
+        setSelectedAdaptiveInvoice(payload);
         break;
       case 'sendInvoice':
         showToast(`Send invoice ${payload?.invoiceNumber} to ${payload?.customer}`, 'info');
@@ -399,8 +498,170 @@ export default function InvoicesPage() {
             </div>
           </div>
 
+          {/* ── AI Finance & Reconciliation Visibility Strip ── */}
+          <div className="ai-finance-audit-banner">
+            <div className="ai-finance-audit-left">
+              <div className="ai-finance-audit-icon">
+                <Bot size={18} />
+              </div>
+              <div className="ai-finance-audit-info">
+                <div className="ai-finance-audit-title">
+                  <span>AI Finance & Discrepancy Reconciliation</span>
+                  {primaryAiTask ? (
+                    <AgentStatusBadge
+                      status={primaryAiTask.workforce_status}
+                      error={primaryAiTask.safe_error_msg}
+                      mockMode={primaryAiTask.mock_mode}
+                      providerFailover={primaryAiTask.provider_failover}
+                    />
+                  ) : (
+                    <span className="ai-finance-badge-idle">● Idle & Ready</span>
+                  )}
+                </div>
+                <span className="ai-finance-audit-desc">
+                  {primaryAiTask?.workforce_status === 'processing'
+                    ? `Currently reconciling ledger items for ${primaryAiTask.related_ref || 'invoices'}...`
+                    : primaryAiTask?.workforce_status === 'waiting_for_approval'
+                    ? 'Invoice discrepancy flagged — human sign-off required before ledger posting'
+                    : primaryAiTask?.workforce_status === 'failed'
+                    ? `Audit fault: ${primaryAiTask.safe_error_msg || 'Execution interrupted'}`
+                    : 'Automated 3-way matching and discrepancy checks active across customer billings.'}
+                </span>
+              </div>
+            </div>
+            <div className="ai-finance-audit-actions">
+              {primaryAiTask?.can_retry && (
+                <button
+                  className="btn-ai-audit-action retry"
+                  onClick={() => handleRetryAiTask(primaryAiTask.task_id)}
+                >
+                  <RotateCcw size={12} /> Retry Audit
+                </button>
+              )}
+              {primaryAiTask?.requires_approval && (
+                <button
+                  className="btn-ai-audit-action approval"
+                  onClick={() => navigate('/dashboard/approvals')}
+                >
+                  <CheckCircle2 size={12} /> Sign Off
+                </button>
+              )}
+              <button
+                className="btn-ai-audit-refresh"
+                onClick={fetchAiFinanceTasks}
+                title="Refresh AI Finance Status"
+              >
+                <RefreshCw size={13} className={aiFinanceLoading ? 'spin-icon' : ''} />
+              </button>
+            </div>
+          </div>
+
           {/* ── KPI Cards ── */}
           <InvoiceKpiCards kpiData={kpiStats} />
+
+          {/* ── AI Collections & Aging Intelligence Strip (Task 2.5) ── */}
+          <div className="ai-collections-intelligence-strip" data-testid="ai-collections-overview-banner" style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderLeft: '4px solid #2563eb',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: '#eff6ff',
+                color: '#2563eb',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Sparkles size={16} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                    AI Collections & Aging Intelligence
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: '#fef2f2',
+                    color: '#991b1b',
+                    border: '1px solid #fecaca'
+                  }}>
+                    {kpiStats.overdue?.count || 0} Overdue ({kpiStats.overdue?.displayAmount || '$0.00'})
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: '#f1f5f9',
+                    color: '#475569'
+                  }}>
+                    Aging Bands: 1-15d • 16-30d • 31-60d • 60+d
+                  </span>
+                </div>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Deterministic receivables prioritization, compounding customer delinquency alerts, and controlled collection draft generation.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn-secondary-action"
+                style={{ fontSize: '12px', padding: '6px 10px', height: 'auto' }}
+                onClick={() => {
+                  setStatusFilter('Overdue');
+                  setCurrentPage(1);
+                }}
+                data-testid="btn-quick-filter-overdue"
+              >
+                <AlertTriangle size={13} className="text-rose-600" />
+                <span>Show Overdue Only</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary-action"
+                style={{ fontSize: '12px', padding: '6px 12px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                onClick={() => navigate('/dashboard/recommendations?category=finance')}
+                data-testid="btn-open-recommendation-collections"
+              >
+                <span>Collections Assistant</span>
+                <ExternalLink size={12} />
+              </button>
+
+              <button
+                type="button"
+                className="btn-primary-action"
+                style={{ fontSize: '12px', padding: '6px 12px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#2563eb', color: '#ffffff' }}
+                onClick={() => {
+                  const targetInv = invoices.find(i => i.status === 'Overdue') || invoices[0];
+                  if (targetInv) setSelectedAdaptiveInvoice(targetInv);
+                }}
+                data-testid="btn-open-adaptive-collections-banner"
+              >
+                <Sparkles size={13} />
+                <span>Adaptive Collections AI</span>
+              </button>
+            </div>
+          </div>
 
           {/* ── Primary View Tabs & Action Toolbar ── */}
           <div className="invoices-toolbar-card">
@@ -549,6 +810,8 @@ export default function InvoicesPage() {
                 selectedInvoice={selectedInvoice}
                 onSelectInvoice={(inv) => fetchInvoiceDetails(inv.id)}
                 onActionClick={handleActionClick}
+                onOpenAdaptiveCollection={(inv) => setSelectedAdaptiveInvoice(inv)}
+                aiTasksByRef={aiTasksByRef}
               />
 
               {/* ── Pagination Footer ── */}
@@ -690,6 +953,17 @@ export default function InvoicesPage() {
           if (updatedInv && updatedInv.id) {
             fetchInvoiceDetails(updatedInv.id);
           }
+        }}
+      />
+
+      {/* Phase 5 Task 5.6: Adaptive Finance and Collections Drawer */}
+      <FinanceCollectionsAdaptiveDrawer
+        invoice={selectedAdaptiveInvoice}
+        isOpen={Boolean(selectedAdaptiveInvoice)}
+        onClose={() => setSelectedAdaptiveInvoice(null)}
+        onActionExecuted={() => {
+          fetchInvoices();
+          fetchKpiStats();
         }}
       />
     </div>

@@ -547,7 +547,8 @@ export default function CarrierIntegrationsPage() {
     
     if (!matchQuery) return false;
     if (statusFilter === 'ACTIVE') return c.is_active && (c.connection_status === 'CONNECTED' || c.connection_status === 'Connected');
-    if (statusFilter === 'ERROR') return c.connection_status === 'ERROR' || c.connection_status === 'Error' || c.sync_status === 'Failed';
+    if (statusFilter === 'DISCONNECTED') return c.connection_status === 'DISCONNECTED' || c.health_state === 'DISCONNECTED';
+    if (statusFilter === 'ERROR') return c.connection_status === 'ERROR' || c.connection_status === 'Error' || c.sync_status === 'Failed' || c.health_state === 'ERROR' || c.health_state === 'ATTENTION';
     if (statusFilter === 'DISABLED') return c.connection_status === 'DISABLED' || c.is_active === false;
     return true;
   });
@@ -794,7 +795,7 @@ export default function CarrierIntegrationsPage() {
                             {carrier.carrier_scac?.substring(0, 2) || 'CA'}
                           </div>
                           <div className="ci-carrier-info">
-                            <span className="ci-carrier-name">{carrier.carrier_name || carrier.carrier_scac}</span>
+                            <span className="ci-carrier-name">{(carrier.carrier_name || carrier.carrier_scac || '').replace(/\uFFFD|\?+/g, '–')}</span>
                             <span className="ci-carrier-type">SCAC: {carrier.carrier_scac}</span>
                           </div>
                         </div>
@@ -861,7 +862,11 @@ export default function CarrierIntegrationsPage() {
                         <div className="ci-sync-cell">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569' }}>
                             <Lock size={12} color="#10b981" />
-                            <span>Encrypted at rest</span>
+                            <span>
+                              {carrier.has_credentials !== false && carrier.credentials_mask && Object.keys(carrier.credentials_mask).length > 0 
+                                ? `Masked credentials (${Object.keys(carrier.credentials_mask).length})` 
+                                : 'Encrypted at rest'}
+                            </span>
                           </div>
                           <span className="ci-sync-relative" style={{ marginTop: '2px', fontSize: '11.5px' }}>
                             {isSyncing ? (
@@ -881,11 +886,31 @@ export default function CarrierIntegrationsPage() {
                       </td>
                       <td>
                         <div className="ci-actions-cell ci-actions-dropdown-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {/* Direct Action: Test Connection or Reconnect */}
                           <button 
                             className="ci-btn-outline" 
                             style={{ 
                               fontSize: '12px', 
-                              padding: '4px 10px', 
+                              padding: '4px 9px', 
+                              display: 'inline-flex', 
+                              alignItems: 'center', 
+                              gap: '4px',
+                              color: isConnected ? '#059669' : '#2563eb',
+                              borderColor: isConnected ? '#a7f3d0' : '#bfdbfe',
+                              background: isConnected ? '#ecfdf5' : '#eff6ff'
+                            }}
+                            onClick={() => isConnected ? handleTestConnection(carrier.id) : handleOpenEdit(carrier)}
+                            title={isConnected ? "Test carrier API connectivity" : "Configure and reconnect carrier credentials"}
+                          >
+                            <Radio size={12} />
+                            <span>{isConnected ? 'Test' : 'Reconnect'}</span>
+                          </button>
+
+                          <button 
+                            className="ci-btn-outline" 
+                            style={{ 
+                              fontSize: '12px', 
+                              padding: '4px 9px', 
                               display: 'inline-flex', 
                               alignItems: 'center', 
                               gap: '4px',
@@ -901,7 +926,7 @@ export default function CarrierIntegrationsPage() {
                           </button>
                           
                           <button 
-                            className="ci-btn-outline"
+                            className="ci-btn-outline" 
                             style={{ fontSize: '12px', padding: '4px 8px', color: '#475569' }}
                             onClick={() => handleOpenHistory(carrier)}
                             title="View synchronization job history logs"
@@ -915,6 +940,7 @@ export default function CarrierIntegrationsPage() {
                               e.stopPropagation();
                               setOpenMenuId(openMenuId === carrier.id ? null : carrier.id);
                             }}
+                            title="More actions"
                           >
                             <MoreHorizontal size={16} />
                           </button>

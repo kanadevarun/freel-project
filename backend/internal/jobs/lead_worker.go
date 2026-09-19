@@ -2,7 +2,6 @@ package jobs
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -111,58 +110,36 @@ func (w *leadWorker) handleLeadCreated(event events.Event) {
 		return
 	}
 
-	// 4. Put the research data into a nice map that the Prompt Manager can read
-	vars := map[string]interface{}{
-		"CompanyName":           intel.Name,
-		"Industry":              intel.Industry,
-		"EstimatedRevenue":      intel.EstimatedRevenue,
-		"EmployeeCount":         intel.EmployeeCount,
-		"MonthlyShippingVolume": intel.MonthlyShippingVolume,
-		"TopSuppliers":          intel.TopSuppliers,
-		"IsExporter":            intel.IsExporter,
+	// 4. Delegate lead scoring, reasoning, and trade intelligence to the Python AI Sidecar
+	corrID := fmt.Sprintf("lead-worker-%d-%d", orgID, leadID)
+	volStr := fmt.Sprintf("%d TEU", intel.MonthlyShippingVolume)
+	suppliersStr := strings.Join(intel.TopSuppliers, ", ")
+	sidecarReq := &ai.ScoreLeadRequest{
+		LeadID:                leadID,
+		OrgID:                 orgID,
+		CompanyName:           intel.Name,
+		Industry:              &intel.Industry,
+		EstimatedRevenue:      &intel.EstimatedRevenue,
+		EmployeeCount:         &intel.EmployeeCount,
+		MonthlyShippingVolume: &volStr,
+		TopSuppliers:          &suppliersStr,
+		IsExporter:            &intel.IsExporter,
+		CorrelationID:         corrID,
 	}
 
-	// 5. Ask the Prompt Manager to write the fill-in-the-blank prompt for the AI
-	promptText, err := w.promptManager.GetPrompt("score_lead", vars)
+	sidecarClient := ai.NewSidecarClient("", "")
+	scoreResp, err := sidecarClient.ScoreLead(ctx, sidecarReq)
 	if err != nil {
-		log.Printf("Lead Worker Error: Failed to generate prompt: %v", err)
+		log.Printf("Lead Worker Error: Python AI Sidecar lead scoring failed: %v", err)
 		return
 	}
 
-	// 6. Send the prompt to the AI Gateway (like OpenAI or Claude)
-	// ── CALLING THE AI ─────────────────────────────────────────────────────────
-	// This sends our generated lead research prompt to the AI router.
-	// It will run on Google Gemini first, automatically failing over to OpenAI (ChatGPT)
-	// if Gemini fails. If no keys are set, it returns safe mock text.
-	aiResponseStr, err := w.aiGateway.ExecutePrompt(ctx, promptText)
-	if err != nil {
-		log.Printf("Lead Worker Error: AI Gateway failed: %v", err)
-		return
-	}
-
-	// 7. The AI returns a JSON string containing the score and research report. We need to decode it.
-	// We expect: {"score": 85, "research_report": "This company is..."}
-	type aiResult struct {
-		Score          int32  `json:"score"`
-		ResearchReport string `json:"research_report"`
-	}
-	
-	cleanedResponse := strings.TrimSpace(aiResponseStr)
-	if strings.HasPrefix(cleanedResponse, "```json") {
-		cleanedResponse = strings.TrimPrefix(cleanedResponse, "```json")
-		cleanedResponse = strings.TrimSuffix(cleanedResponse, "```")
-	} else if strings.HasPrefix(cleanedResponse, "```") {
-		cleanedResponse = strings.TrimPrefix(cleanedResponse, "```")
-		cleanedResponse = strings.TrimSuffix(cleanedResponse, "```")
-	}
-	cleanedResponse = strings.TrimSpace(cleanedResponse)
-
-	var result aiResult
-	if err := json.Unmarshal([]byte(cleanedResponse), &result); err != nil {
-		log.Printf("Lead Worker Error: Failed to parse AI response JSON: %v. Raw Response: %s", err, aiResponseStr)
-		// Default to something safe if the AI hallucinated invalid JSON
-		result.Score = 0
-		result.ResearchReport = fmt.Sprintf("Failed to parse AI response. Raw output: %s", aiResponseStr)
+	result := struct {
+		Score          int32
+		ResearchReport string
+	}{
+		Score:          scoreResp.Score,
+		ResearchReport: scoreResp.ResearchReport,
 	}
 
 	// 8. Update the Lead in the database with the new AI Score and Report!

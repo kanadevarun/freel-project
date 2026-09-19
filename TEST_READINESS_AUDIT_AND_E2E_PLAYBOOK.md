@@ -74,7 +74,7 @@ Trace of the active source code across the end-to-end lifecycle:
 | `DB_URL` / `DATABASE_URL` | Go, Python | **Required** | `postgres://user:password@localhost:5432/freel?sslmode=disable` | Secret manager / RDS URL | PostgreSQL connection string |
 | `GO_BACKEND_URL` | Go, Python | **Required** | `http://localhost:8080` (Python: `http://127.0.0.1:8080`) | `http://backend:8080` | Base URL used for internal callbacks and tool execution |
 | `AI_SIDECAR_URL` | Go | Optional | `http://localhost:8090` | `http://ai-sidecar:8090` | Python FastAPI sidecar endpoint for contract processing |
-| `INTERNAL_SERVICE_TOKEN` | Go, Python | **Required** | `internal-service-key-logisticshq` | 64+ char random hex string | Shared secret for `X-LogisticsHQ-Service-Key` header |
+| `INTERNAL_SERVICE_TOKEN` | Go, Python | **Required** | *None (strict in prod)* | 64+ char random hex string | Shared secret for `X-LogisticsHQ-Service-Key` header |
 | `FRONTEND_URL` | Go | Optional | `http://localhost:5173` | `https://app.logisticshq.in` | CORS allowed origin in development |
 | `FRONTEND_PROD_URL` | Go | Optional | `https://logisticshq.in` | `https://logisticshq.in` | Production CORS allowed origin |
 | `AWS_REGION` | Go | Optional | `ap-south-1` | `ap-south-1` | AWS region for Cognito & S3 |

@@ -42,14 +42,17 @@ func (s *entitlementService) CheckEntitlement(ctx context.Context, orgID int64, 
 	if err != nil {
 		return err
 	}
-	if sub == nil || (sub.Status != "active" && sub.Status != "trialing") {
-		// If no active or trialing subscription, assume limits are 0.
-		// This strictly blocks past_due, canceled, unpaid, and incomplete states.
-		return ErrLimitReached
+	var planID int64 = 1 // Default to Starter plan (ID 1) if no custom subscription configured
+	if sub != nil {
+		if sub.Status != "active" && sub.Status != "trialing" {
+			// If subscription exists but is not active or trialing (e.g. past_due, canceled, unpaid), strictly block
+			return ErrLimitReached
+		}
+		planID = sub.PlanID
 	}
 
 	// 2. Get the plan to find the limit
-	plan, err := s.repo.GetPlanByID(ctx, sub.PlanID)
+	plan, err := s.repo.GetPlanByID(ctx, planID)
 	if err != nil {
 		return err
 	}

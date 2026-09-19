@@ -615,7 +615,7 @@ export default function BookingsPage() {
 
                       {/* RFQ & Customer */}
                       <td>
-                        <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={b.customer_name}>{b.customer_name}</div>
+                        <div style={{ fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={b.customer_name || 'Direct Commercial Shipper'}>{b.customer_name || 'Direct Commercial Shipper'}</div>
                         <div style={{ fontSize: '0.8rem', marginTop: '2px' }}>
                           <Link to={`/dashboard/rfqs/${b.rfq_id}`} style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 600 }}>
                             {b.rfq_number}

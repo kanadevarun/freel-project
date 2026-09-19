@@ -1,98 +1,98 @@
-/* AgentStatusTimeline.css */
+/* AgentStatusTimeline.css — Harmonized LogisticsHQ Light Design System */
 
 .agent-timeline-wrapper {
-  margin-top: 24px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  margin-top: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
 }
 
 .agent-timeline-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
   padding-bottom: 12px;
 }
 
 .timeline-title {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: #0f172a;
   margin: 0;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.01em;
 }
 
 .status-badge {
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 9999px;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
 }
 
-.status-badge.status-confirmed, .status-badge.status-completed {
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.25);
+.status-badge.status-confirmed, 
+.status-badge.status-completed {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
 .status-badge.status-pending_review {
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .status-badge.status-failed {
-  background: rgba(239, 68, 68, 0.15);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .status-badge.status-queued {
-  background: rgba(59, 130, 246, 0.15);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 
 .timeline-nodes-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  max-height: 400px;
+  gap: 14px;
+  max-height: 380px;
   overflow-y: auto;
-  padding-right: 8px;
+  padding-right: 6px;
 }
 
-/* Custom scrollbar */
+/* Scrollbar */
 .timeline-nodes-container::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 .timeline-nodes-container::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: #f8fafc;
 }
 .timeline-nodes-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
 .timeline-node-row {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: flex-start;
-  animation: nodeFadeIn 0.3s ease-out forwards;
+  animation: nodeFadeIn 0.25s ease-out forwards;
 }
 
 @keyframes nodeFadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -109,15 +109,16 @@
 }
 
 .timeline-dot {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   z-index: 10;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .node-icon-span {
@@ -126,102 +127,95 @@
   justify-content: center;
 }
 
-/* Pulsing highlight animation for active / running nodes */
+/* Subtle active pulse without neon glow */
 .timeline-node-row:last-child .timeline-dot {
-  animation: pulseNode 2s infinite ease-in-out;
+  animation: pulseNodeLight 2s infinite ease-in-out;
 }
 
-@keyframes pulseNode {
+@keyframes pulseNodeLight {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 currentColor;
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
   }
   70% {
-    transform: scale(1.05);
-    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0);
+    transform: scale(1.04);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0);
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
   }
 }
 
-/* Color classes with glows */
+/* Standardized Light Node Status Indicators */
 .node-blue {
-  background: rgba(59, 130, 246, 0.2);
-  color: #3b82f6;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.2);
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
 }
 
 .node-indigo {
-  background: rgba(99, 102, 241, 0.2);
-  color: #6366f1;
-  border: 1px solid rgba(99, 102, 241, 0.4);
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
 }
 
 .node-teal {
-  background: rgba(20, 184, 166, 0.2);
-  color: #14b8a6;
-  border: 1px solid rgba(20, 184, 166, 0.4);
-  box-shadow: 0 0 8px rgba(20, 184, 166, 0.2);
+  background: #f0fdfa;
+  color: #0d9488;
+  border: 1px solid #99f6e4;
 }
 
 .node-purple {
-  background: rgba(168, 85, 247, 0.2);
-  color: #a855f7;
-  border: 1px solid rgba(168, 85, 247, 0.4);
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.2);
+  background: #faf5ff;
+  color: #9333ea;
+  border: 1px solid #e9d5ff;
 }
 
 .node-warning {
-  background: rgba(245, 158, 11, 0.2);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
 }
 
 .node-green {
-  background: rgba(16, 185, 129, 0.2);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.4);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .node-danger {
-  background: rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 .node-slate {
-  background: rgba(100, 116, 139, 0.2);
+  background: #f8fafc;
   color: #64748b;
-  border: 1px solid rgba(100, 116, 139, 0.4);
+  border: 1px solid #e2e8f0;
 }
 
 .timeline-connector-line {
   width: 2px;
   flex-grow: 1;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 100%);
-  margin-top: 6px;
-  min-height: 24px;
+  background: #e2e8f0;
+  margin-top: 4px;
+  min-height: 20px;
 }
 
 .timeline-content-bubble {
   flex-grow: 1;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 10px 14px;
-  transition: all 0.2s ease;
+  padding: 10px 12px;
+  transition: all 0.15s ease;
 }
 
 .timeline-content-bubble:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
 }
 
 .bubble-header {
@@ -232,26 +226,26 @@
 }
 
 .bubble-step-title {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  color: #f1f5f9;
+  color: #0f172a;
 }
 
 .bubble-timestamp {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: #64748b;
 }
 
 .bubble-message-text {
-  font-size: 0.78rem;
-  color: #94a3b8;
+  font-size: 0.76rem;
+  color: #475569;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .timeline-empty {
   text-align: center;
   padding: 24px 0;
   color: #64748b;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
 }

@@ -1,0 +1,707 @@
+/* ==============================================================================
+   SharedAI.css — LogisticsHQ Standard Light Design System for Agentic AI
+   ==============================================================================
+   Strict light enterprise visual language:
+   - Primary Surface: #ffffff
+   - Secondary Surface: #f8fafc / #f1f5f9
+   - Borders: #e2e8f0 / #cbd5e1
+   - Headings: #0f172a
+   - Body Text: #334155
+   - Muted Text: #64748b
+   - Brand Accents: #00bfa5 (Teal), #2563eb (Blue), #4f46e5 (Indigo)
+   - Zero dark glassmorphism, zero neon glows, zero black panels.
+   ============================================================================== */
+
+/* ── Base Card ── */
+.sai-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0f172a;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sai-card:hover {
+  border-color: #cbd5e1;
+}
+
+.sai-card--alert-critical {
+  border-left: 3.5px solid #ef4444;
+}
+
+.sai-card--alert-high {
+  border-left: 3.5px solid #f97316;
+}
+
+.sai-card--alert-medium {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.sai-card--alert-low {
+  border-left: 3.5px solid #3b82f6;
+}
+
+.sai-card--alert-info {
+  border-left: 3.5px solid #00bfa5;
+}
+
+/* ── Section Header ── */
+.sai-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sai-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sai-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 2px 7px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.sai-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sai-title {
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.sai-subtitle {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.sai-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.sai-meta-text {
+  font-size: 0.68rem;
+  color: #64748b;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sai-corr-pill {
+  font-size: 0.66rem;
+  font-family: monospace;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Badges & Status Pills ── */
+.sai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sai-badge--critical {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.sai-badge--high {
+  background: #fff7ed;
+  color: #ea580c;
+  border: 1px solid #fed7aa;
+}
+
+.sai-badge--medium,
+.sai-badge--warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.sai-badge--low,
+.sai-badge--info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.sai-badge--success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.sai-badge--neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* ── Confidence Indicator ── */
+.sai-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.sai-confidence--high {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.sai-confidence--medium {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.sai-confidence--low {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* ── Evidence List ── */
+.sai-evidence-container {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sai-evidence-header {
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: #475569;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sai-evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+}
+
+.sai-evidence-table th {
+  text-align: left;
+  padding: 5px 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sai-evidence-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.sai-evidence-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sai-evidence-val {
+  font-family: monospace;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* ── Source Reference Badge ── */
+.sai-source-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0284c7;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 1px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.sai-source-ref:hover {
+  background: #bae6fd;
+  color: #0369a1;
+}
+
+/* ── AI Recommendation Card ── */
+.sai-rec-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sai-rec-card-title {
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sai-rec-card-body {
+  font-size: 0.76rem;
+  color: #334155;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.sai-rec-questions {
+  margin: 4px 0 0 0;
+  padding-left: 18px;
+  font-size: 0.72rem;
+  color: #475569;
+}
+
+.sai-rec-questions li {
+  margin-bottom: 3px;
+}
+
+/* ── Workforce Summary Metric Grid ── */
+.sai-wf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sai-wf-stat-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sai-wf-stat-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.sai-wf-stat-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+/* ── Empty State ── */
+.sai-empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.sai-empty-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sai-empty-title {
+  font-size: 0.88rem;
+  font-weight: 750;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sai-empty-desc {
+  font-size: 0.74rem;
+  color: #64748b;
+  max-width: 380px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ── Error State ── */
+.sai-error-state {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sai-error-text {
+  font-size: 0.76rem;
+  color: #991b1b;
+  line-height: 1.4;
+}
+
+/* ── Buttons ── */
+.sai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sai-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.sai-btn--primary {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.sai-btn--primary:hover {
+  background: #1e293b;
+  border-color: #1e293b;
+  color: #ffffff;
+}
+
+.sai-btn--retry {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.sai-btn--retry:hover {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.sai-btn--icon {
+  padding: 4px 6px;
+}
+
+/* ── Loading Skeleton ── */
+.sai-skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: saiShimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes saiShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Freshness & Correlation Badges ── */
+.sai-freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 500;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.sai-correlation-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.sai-correlation-copy-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sai-correlation-copy-btn:hover {
+  opacity: 0.8;
+}
+
+/* ── Memory Badge ── */
+.sai-memory-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  border: 1px solid #e0e7ff;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.sai-memory-count {
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 0.6rem;
+  border-radius: 9999px;
+  padding: 0 4px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* ── Draft Panel ── */
+.sai-draft-panel {
+  background: #fffdf5;
+  border: 1px solid #fef08a;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.sai-draft-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #fef9c3;
+  flex-wrap: wrap;
+}
+
+.sai-draft-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.sai-draft-body {
+  margin-bottom: 10px;
+}
+
+.sai-draft-textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.sai-draft-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.sai-draft-preview {
+  font-size: 0.82rem;
+  color: #334155;
+  line-height: 1.5;
+  background: #ffffff;
+  border: 1px solid #fef08a;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.sai-draft-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sai-btn--secondary {
+  background: #ffffff;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.sai-btn--secondary:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+/* ── Explainability Section ── */
+.sai-explainability {
+  margin-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 6px;
+}
+
+.sai-explainability-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sai-explainability-toggle:hover {
+  opacity: 0.85;
+}
+
+.sai-explainability-content {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 6px;
+}
+
+.sai-grounding-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.sai-grounding-pill--grounded {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.sai-grounding-pill--ungrounded {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.sai-grounding-pill--unverified {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .sai-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .sai-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .sai-draft-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

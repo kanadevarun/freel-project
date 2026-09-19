@@ -3,7 +3,6 @@ package contracts
 import (
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/freel/backend/internal/middleware"
@@ -246,30 +245,8 @@ func (h *Handler) Reprocess(w http.ResponseWriter, r *http.Request) {
 // Responses:
 //   - 200 OK: Callback processed successfully.
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
-	// 1. Authenticate the caller. Verify the shared service key token in the request header.
-	//
-	// Simple meaning:
-	//   We verify that the incoming POST request actually comes from our secure
-	//   AI sidecar service. We look for a token inside the 'X-LogisticsHQ-Service-Key' header.
-	//
-	// Example:
-	//   Header 'X-LogisticsHQ-Service-Key' must match env INTERNAL_SERVICE_TOKEN.
-	token := r.Header.Get("X-LogisticsHQ-Service-Key")
-	if token == "" {
-		token = r.URL.Query().Get("service_key")
-	}
-
-	expectedToken := os.Getenv("INTERNAL_SERVICE_TOKEN")
-	if expectedToken == "" {
-		if os.Getenv("APP_ENV") == "production" {
-			http.Error(w, "Configuration error: INTERNAL_SERVICE_TOKEN must be specified in production environments", http.StatusInternalServerError)
-			return
-		}
-		expectedToken = "internal-service-key-logisticshq"
-	}
-
-	if token != expectedToken {
-		http.Error(w, "Unauthorized access: Invalid service key token", http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
@@ -289,7 +266,11 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Process the extracted rates, queue reviews, and persist results.
 	err := h.svc.HandleAICallback(r.Context(), callback)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "CALLBACK_FAILED")
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
+			utils.Error(w, http.StatusNotFound, "Document not found or organization mismatch", "NOT_FOUND")
+			return
+		}
+		utils.Error(w, http.StatusInternalServerError, "Failed to process callback", "CALLBACK_FAILED")
 		return
 	}
 
@@ -411,7 +392,15 @@ func (h *Handler) ApproveReview(w http.ResponseWriter, r *http.Request) {
 	// Process approval, update review entry status, and ingest finalized rate.
 	err := h.svc.ApproveReviewItem(r.Context(), userCtx.OrgID, id, userCtx.UserID, correctedBytes, body.Notes)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "APPROVE_FAILED")
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
+			utils.Error(w, http.StatusNotFound, "Review item not found or organization mismatch", "NOT_FOUND")
+			return
+		}
+		if strings.Contains(err.Error(), "already approved") || strings.Contains(err.Error(), "already rejected") {
+			utils.Error(w, http.StatusConflict, err.Error(), "INVALID_STATE")
+			return
+		}
+		utils.Error(w, http.StatusInternalServerError, "Failed to approve review item", "APPROVE_FAILED")
 		return
 	}
 
@@ -470,7 +459,15 @@ func (h *Handler) RejectReview(w http.ResponseWriter, r *http.Request) {
 	// Update the review entry status to 'REJECTED' in the database.
 	err := h.svc.RejectReviewItem(r.Context(), userCtx.OrgID, id, userCtx.UserID, body.Notes)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "REJECT_FAILED")
+		if strings.Contains(err.Error(), "no rows") || strings.Contains(err.Error(), "not found") {
+			utils.Error(w, http.StatusNotFound, "Review item not found or organization mismatch", "NOT_FOUND")
+			return
+		}
+		if strings.Contains(err.Error(), "already approved") || strings.Contains(err.Error(), "already rejected") {
+			utils.Error(w, http.StatusConflict, err.Error(), "INVALID_STATE")
+			return
+		}
+		utils.Error(w, http.StatusInternalServerError, "Failed to reject review item", "REJECT_FAILED")
 		return
 	}
 

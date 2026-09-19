@@ -112,10 +112,20 @@ func GetIntegrationConfig(ctx context.Context, db Queryer, orgID int64, scac str
 	}
 
 	capabilities := make(map[string]bool)
-	for _, c := range strings.Split(capsStr, ",") {
-		c = strings.TrimSpace(strings.ToUpper(c))
-		if c != "" {
-			capabilities[c] = true
+	var capsArr []string
+	if err := json.Unmarshal([]byte(capsStr), &capsArr); err == nil {
+		for _, c := range capsArr {
+			c = strings.TrimSpace(strings.ToUpper(c))
+			if c != "" {
+				capabilities[c] = true
+			}
+		}
+	} else {
+		for _, c := range strings.Split(capsStr, ",") {
+			c = strings.Trim(strings.TrimSpace(strings.ToUpper(c)), "[]\"' ")
+			if c != "" {
+				capabilities[c] = true
+			}
 		}
 	}
 

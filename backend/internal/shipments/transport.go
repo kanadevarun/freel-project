@@ -1024,6 +1024,15 @@ func decodeInboundWebhookRequest(svc Service) func(context.Context, *http.Reques
 		var err error
 		var integrationID int64
 
+		var body []byte
+		if r.Body != nil {
+			defer r.Body.Close()
+			body, err = io.ReadAll(r.Body)
+			if err != nil {
+				return nil, &WebhookError{HTTPStatus: http.StatusBadRequest, Code: "READ_ERROR", Message: "failed to read request body"}
+			}
+		}
+
 		sImpl := svc.(*serviceImpl)
 
 		if integrationIDParam != "" {
@@ -1055,31 +1064,81 @@ func decodeInboundWebhookRequest(svc Service) func(context.Context, *http.Reques
 				return nil, &WebhookError{HTTPStatus: http.StatusBadRequest, Code: "MISSING_INTEGRATION_ID", Message: "production error: integration_id is required in webhook URL path"}
 			}
 
-			dbErr := sImpl.db.GetContext(ctx, &orgID, `
-				SELECT org_id FROM carrier_integrations 
-				WHERE carrier_scac = ? AND is_active = 1 LIMIT 1
-			`, carrierParam)
-			if dbErr != nil {
-				userCtx, ok := r.Context().Value(middleware.UserContextKey).(middleware.UserContext)
-				if ok && userCtx.OrgID > 0 {
-					orgID = userCtx.OrgID
+			// 1. Check explicit X-Integration-ID header
+			if xInteg := r.Header.Get("X-Integration-ID"); xInteg != "" {
+				if parsedID, pErr := strconv.ParseInt(xInteg, 10, 64); pErr == nil && parsedID > 0 {
+					var row struct {
+						OrgID       int64  `db:"org_id"`
+						CarrierSCAC string `db:"carrier_scac"`
+						IsActive    bool   `db:"is_active"`
+					}
+					if sImpl.db.GetContext(ctx, &row, "SELECT org_id, carrier_scac, is_active FROM carrier_integrations WHERE id = ? LIMIT 1", parsedID) == nil {
+						if row.IsActive {
+							orgID = row.OrgID
+							integrationID = parsedID
+						}
+					}
+				}
+			}
+
+			// 2. Check explicit X-Org-ID header
+			if orgID <= 0 {
+				if xOrg := r.Header.Get("X-Org-ID"); xOrg != "" {
+					if parsedOrg, pErr := strconv.ParseInt(xOrg, 10, 64); pErr == nil && parsedOrg > 0 {
+						var activeCount int
+						_ = sImpl.db.GetContext(ctx, &activeCount, "SELECT COUNT(*) FROM carrier_integrations WHERE org_id = ? AND carrier_scac = ? AND is_active = 1", parsedOrg, carrierParam)
+						if activeCount > 0 {
+							orgID = parsedOrg
+						}
+					}
+				}
+			}
+
+			// 3. Inspect body for container, booking, or MBL reference across shipments
+			if orgID <= 0 && len(body) > 0 {
+				var m map[string]interface{}
+				if json.Unmarshal(body, &m) == nil {
+					var ref string
+					for _, k := range []string{"container", "container_number", "containerNumber", "equipmentNo", "equipmentReference", "booking", "booking_number", "bookingNumber", "carrierBookingReference", "mbl", "mbl_number"} {
+						if v, ok := m[k].(string); ok && v != "" {
+							ref = v
+							break
+						}
+					}
+					if ref != "" {
+						var resolvedOrg int64
+						q := `SELECT s.org_id FROM shipments s
+							  INNER JOIN carrier_integrations ci ON ci.org_id = s.org_id
+							  WHERE ci.carrier_scac = ? AND ci.is_active = 1
+							    AND (s.container_number = ? OR s.booking_number = ? OR s.mbl_number = ?)
+							  LIMIT 1`
+						if sImpl.db.GetContext(ctx, &resolvedOrg, q, carrierParam, ref, ref, ref) == nil && resolvedOrg > 0 {
+							orgID = resolvedOrg
+						}
+					}
+				}
+			}
+
+			// 4. Query active carrier integrations for this carrier SCAC
+			if orgID <= 0 {
+				var activeIntegrations []struct {
+					ID    int64 `db:"id"`
+					OrgID int64 `db:"org_id"`
+				}
+				_ = sImpl.db.SelectContext(ctx, &activeIntegrations, "SELECT id, org_id FROM carrier_integrations WHERE carrier_scac = ? AND is_active = 1", carrierParam)
+				if len(activeIntegrations) == 1 {
+					orgID = activeIntegrations[0].OrgID
+					integrationID = activeIntegrations[0].ID
+				} else if len(activeIntegrations) > 1 {
+					return nil, &WebhookError{HTTPStatus: http.StatusBadRequest, Code: "AMBIGUOUS_TENANT", Message: "ambiguous tenant resolution: multiple active integrations for carrier without qualifying integration ID or shipment reference"}
 				} else {
-					_ = sImpl.db.GetContext(ctx, &orgID, "SELECT id FROM organizations LIMIT 1")
+					return nil, &WebhookError{HTTPStatus: http.StatusNotFound, Code: "NOT_FOUND", Message: "carrier integration not configured or inactive"}
 				}
 			}
 		}
 
 		if orgID <= 0 {
 			return nil, &WebhookError{HTTPStatus: http.StatusBadRequest, Code: "RESOLVE_ERROR", Message: "unable to resolve org_id for integration credentials"}
-		}
-
-		var body []byte
-		if r.Body != nil {
-			defer r.Body.Close()
-			body, err = io.ReadAll(r.Body)
-			if err != nil {
-				return nil, &WebhookError{HTTPStatus: http.StatusBadRequest, Code: "READ_ERROR", Message: "failed to read request body"}
-			}
 		}
 
 		headers := make(map[string]string)

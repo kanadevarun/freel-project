@@ -1,37 +1,141 @@
 /* ══════════════════════════════════════════════════════════════════════
-   SIDEBAR STYLING — Dark Navy Freight Forwarder Shell (Linear / Stripe Polish)
+   SIDEBAR STYLING — Dark Navy Freight Forwarder Navigation Shell
+   Architecture: Pinned 100vh flex column, zero disconnection, expandable/collapsible
    ══════════════════════════════════════════════════════════════════════ */
 
 .app-sidebar {
   width: 240px;
+  min-width: 240px;
+  height: 100vh;
+  max-height: 100vh;
   background-color: #0A1128; /* Deep dark navy */
   color: #F8FAFC;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  border-right: 1px solid #141E3C;
   flex-shrink: 0;
+  border-right: 1px solid #141E3C;
+  position: relative;
+  z-index: 50;
   user-select: none;
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  z-index: 50;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed Icon-Only Mode */
+.app-sidebar.collapsed {
+  width: 68px;
+  min-width: 68px;
+}
+
+@media (max-width: 768px) {
+  .app-sidebar {
+    width: 68px !important;
+    min-width: 68px !important;
+  }
+  .sidebar-item-label,
+  .sidebar-section-title,
+  .sidebar-brand-text,
+  .sidebar-user-details,
+  .sidebar-user-chevron,
+  .dashboard-btn-label,
+  .sidebar-org-title,
+  .sidebar-org-arrow,
+  .sidebar-collapse-btn {
+    display: none !important;
+  }
+  .sidebar-footer-profile {
+    padding: 12px 0 !important;
+    justify-content: center !important;
+  }
+  .sidebar-dashboard-btn {
+    width: 44px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    gap: 0 !important;
+    margin: 0 auto;
+  }
+  .sidebar-org-selector {
+    margin: 0 10px 10px 10px !important;
+    padding: 7px 0 !important;
+    justify-content: center !important;
+  }
+  .sidebar-brand-header {
+    padding: 0 10px !important;
+    justify-content: center !important;
+  }
+  .sidebar-nav-scroll {
+    padding: 4px 8px 16px 8px !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+  .sidebar-nav-item,
+  .sidebar-nav-link {
+    width: 44px !important;
+    height: 40px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    margin: 0 auto;
+  }
 }
 
 /* ── Brand Header ── */
 .sidebar-brand-header {
-  height: 62px;
-  padding: 0 16px;
+  height: 64px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.app-sidebar.collapsed .sidebar-brand-header {
+  padding: 0 10px;
+  justify-content: center;
+}
+
+.sidebar-brand-logo-area {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+/* Sidebar Collapse Toggle Button */
+.sidebar-collapse-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #64748B;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-btn:hover {
+  background-color: #17254D;
+  color: #38BDF8;
+  border-color: #1E2D56;
+}
+
+.sidebar-collapse-btn:focus-visible {
+  outline: 2px solid #38BDF8;
+  outline-offset: 1px;
 }
 
 /* ── Org Selector ── */
 .sidebar-org-selector {
-  margin: 0 14px 10px 14px;
-  padding: 7px 12px;
+  margin: 0 12px 10px 12px;
+  padding: 7px 10px;
   background-color: #111C3A;
   border: 1px solid #1E2D56;
   border-radius: 8px;
@@ -40,6 +144,13 @@
   justify-content: space-between;
   cursor: pointer;
   transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.app-sidebar.collapsed .sidebar-org-selector {
+  margin: 0 10px 10px 10px;
+  padding: 7px 0;
+  justify-content: center;
 }
 
 .sidebar-org-selector:hover {
@@ -48,12 +159,27 @@
 }
 
 .sidebar-org-title {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #E2E8F0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding-right: 4px;
+}
+
+.sidebar-org-initial-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar-org-arrow {
@@ -63,7 +189,14 @@
 
 /* ── Top Dashboard Button ── */
 .sidebar-top-nav {
-  padding: 0 14px 6px 14px;
+  padding: 0 12px 8px 12px;
+  flex-shrink: 0;
+}
+
+.app-sidebar.collapsed .sidebar-top-nav {
+  padding: 0 10px 8px 10px;
+  display: flex;
+  justify-content: center;
 }
 
 .sidebar-dashboard-btn {
@@ -74,10 +207,18 @@
   border-radius: 8px;
   color: #94A3B8;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 600;
   transition: all 0.15s ease;
   background-color: transparent;
+}
+
+.app-sidebar.collapsed .sidebar-dashboard-btn {
+  width: 44px;
+  height: 40px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
 }
 
 .sidebar-dashboard-btn:hover {
@@ -99,10 +240,17 @@
 .sidebar-nav-scroll {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 14px 16px 14px;
+  overflow-x: hidden;
+  padding: 4px 12px 16px 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+}
+
+.app-sidebar.collapsed .sidebar-nav-scroll {
+  padding: 4px 8px 16px 8px;
+  gap: 8px;
+  align-items: center;
 }
 
 .sidebar-nav-scroll::-webkit-scrollbar {
@@ -120,6 +268,7 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  width: 100%;
 }
 
 .sidebar-group-heading {
@@ -132,23 +281,46 @@
   margin-bottom: 4px;
 }
 
+.sidebar-collapsed-divider {
+  width: 28px;
+  height: 1px;
+  background-color: #141E3C;
+  margin: 6px auto;
+}
+
 .sidebar-group-list {
   display: flex;
   flex-direction: column;
   gap: 1px;
+  width: 100%;
 }
 
+.app-sidebar.collapsed .sidebar-group-list {
+  align-items: center;
+  gap: 3px;
+}
+
+/* Nav Link */
 .sidebar-nav-link {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-radius: 7px;
   color: #94A3B8;
   text-decoration: none;
   font-size: 0.81rem;
   font-weight: 500;
   transition: all 0.15s ease;
+  position: relative;
+}
+
+.app-sidebar.collapsed .sidebar-nav-link {
+  width: 44px;
+  height: 38px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
 }
 
 .sidebar-nav-link:hover {
@@ -163,7 +335,7 @@
 }
 
 .sidebar-nav-link.locked {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -201,9 +373,21 @@
   border-color: #38BDF8;
 }
 
+/* Collapsed indicator dot for items with badges */
+.sidebar-collapsed-badge-dot {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #38BDF8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+}
+
 /* ── Bottom Profile Card ── */
 .sidebar-footer-profile {
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-top: 1px solid #141E3C;
   background-color: #070D1F;
   display: flex;
@@ -211,6 +395,13 @@
   gap: 10px;
   cursor: pointer;
   transition: background-color 0.15s ease;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.app-sidebar.collapsed .sidebar-footer-profile {
+  padding: 12px 0;
+  justify-content: center;
 }
 
 .sidebar-footer-profile:hover {
@@ -232,13 +423,6 @@
   border: 1.5px solid #1E2D56;
 }
 
-.avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
 .sidebar-user-details {
   flex: 1;
   overflow: hidden;
@@ -247,7 +431,7 @@
 }
 
 .sidebar-user-name {
-  font-size: 0.8rem;
+  font-size: 0.79rem;
   font-weight: 600;
   color: #F8FAFC;
   white-space: nowrap;

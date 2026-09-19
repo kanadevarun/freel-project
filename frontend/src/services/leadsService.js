@@ -163,3 +163,13 @@ export async function getConnectedMailboxes() {
   return api.get('/api/v1/organizations/mailboxes');
 }
 
+// ── APPROVE CLARIFICATION DRAFT ───────────────────────────────────────────────
+export async function approveClarificationDraft(leadId, interactionId, notes = '') {
+  return api.post(`/api/v1/leads/${leadId}/interactions/${interactionId}/approve-draft`, { notes });
+}
+
+// ── REJECT CLARIFICATION DRAFT ────────────────────────────────────────────────
+export async function rejectClarificationDraft(leadId, interactionId, reason = '') {
+  return api.post(`/api/v1/leads/${leadId}/interactions/${interactionId}/reject-draft`, { reason });
+}
+

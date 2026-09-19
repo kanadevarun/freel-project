@@ -1,8 +1,10 @@
 package documents
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -43,6 +45,36 @@ func (h *Handler) UploadGeneralDocument(w http.ResponseWriter, r *http.Request) 
 	}
 	defer file.Close()
 
+	if header.Size <= 0 {
+		utils.Error(w, http.StatusBadRequest, "Uploaded file cannot be empty (0 bytes)", "EMPTY_FILE")
+		return
+	}
+	if header.Size > 25<<20 {
+		utils.Error(w, http.StatusBadRequest, "File too large (max 25MB)", "FILE_TOO_LARGE")
+		return
+	}
+
+	safeFilename := filepath.Base(header.Filename)
+	if safeFilename == "" || safeFilename == "." || safeFilename == ".." || strings.Contains(header.Filename, "..") || strings.Contains(header.Filename, "\\") {
+		utils.Error(w, http.StatusBadRequest, "Invalid filename path traversal attempt", "INVALID_FILENAME")
+		return
+	}
+
+	// Sniff magic bytes to reject executables and inspect MIME
+	buf := make([]byte, 512)
+	n, _ := file.Read(buf)
+	if n >= 2 && bytes.Equal(buf[:2], []byte{0x4D, 0x5A}) { // DOS / Windows PE executable
+		utils.Error(w, http.StatusBadRequest, "File rejected: executable binaries are not permitted", "DANGEROUS_FILE")
+		return
+	}
+	if n >= 4 && bytes.Equal(buf[:4], []byte{0x7F, 0x45, 0x4C, 0x46}) { // Linux ELF executable
+		utils.Error(w, http.StatusBadRequest, "File rejected: executable binaries are not permitted", "DANGEROUS_FILE")
+		return
+	}
+
+	// Reconstruct stream reader from peeked buffer + remaining file
+	fullReader := io.MultiReader(bytes.NewReader(buf[:n]), file)
+
 	docType := strings.TrimSpace(r.FormValue("doc_type"))
 	if docType == "" {
 		docType = "OTHER"
@@ -71,14 +103,17 @@ func (h *Handler) UploadGeneralDocument(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	ext := filepath.Ext(header.Filename)
+	ext := filepath.Ext(safeFilename)
 	fileType := strings.ToUpper(strings.TrimPrefix(ext, "."))
 	if fileType == "" {
 		fileType = "UNKNOWN"
 	}
 	mimeType := header.Header.Get("Content-Type")
+	if mimeType == "" || mimeType == "application/octet-stream" {
+		mimeType = http.DetectContentType(buf[:n])
+	}
 
-	origName := header.Filename
+	origName := safeFilename
 	doc := &ShipmentDocument{
 		OrgID:            userCtx.OrgID,
 		ShipmentID:       shipmentIDPtr,
@@ -86,7 +121,7 @@ func (h *Handler) UploadGeneralDocument(w http.ResponseWriter, r *http.Request) 
 		LeadID:           leadIDPtr,
 		BookingID:        bookingIDPtr,
 		DocType:          strings.ToUpper(docType),
-		FileName:         header.Filename,
+		FileName:         safeFilename,
 		OriginalFileName: &origName,
 		FileType:         fileType,
 		MIMEType:         &mimeType,
@@ -94,7 +129,7 @@ func (h *Handler) UploadGeneralDocument(w http.ResponseWriter, r *http.Request) 
 		Status:           "VERIFIED",
 	}
 
-	savedDoc, err := h.svc.UploadGeneralDocument(r.Context(), userCtx.OrgID, doc, file)
+	savedDoc, err := h.svc.UploadGeneralDocument(r.Context(), userCtx.OrgID, doc, fullReader)
 	if err != nil {
 		utils.Error(w, http.StatusInternalServerError, "Failed to upload document: "+err.Error(), "INTERNAL_ERROR")
 		return
@@ -198,6 +233,76 @@ func (h *Handler) DeleteDocument(w http.ResponseWriter, r *http.Request) {
 	})
 
 	utils.Success(w, http.StatusOK, "Document deleted successfully", nil)
+}
+
+// GetDocument handles GET /api/v1/documents/{id}
+func (h *Handler) GetDocument(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Missing document id", "INVALID_PARAM")
+		return
+	}
+
+	userCtx, ok := r.Context().Value(middleware.UserContextKey).(middleware.UserContext)
+	if !ok || userCtx.OrgID <= 0 {
+		utils.Error(w, http.StatusUnauthorized, "Missing or invalid authorization user context", "UNAUTHORIZED")
+		return
+	}
+
+	doc, err := h.svc.GetDocumentByID(r.Context(), userCtx.OrgID, id)
+	if err != nil || doc == nil {
+		utils.Error(w, http.StatusNotFound, "Document not found", "NOT_FOUND")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Document retrieved successfully", doc)
+}
+
+// DownloadDocument handles GET /api/v1/documents/{id}/download
+func (h *Handler) DownloadDocument(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		utils.Error(w, http.StatusBadRequest, "Missing document id", "INVALID_PARAM")
+		return
+	}
+
+	userCtx, ok := r.Context().Value(middleware.UserContextKey).(middleware.UserContext)
+	if !ok || userCtx.OrgID <= 0 {
+		utils.Error(w, http.StatusUnauthorized, "Missing or invalid authorization user context", "UNAUTHORIZED")
+		return
+	}
+
+	data, contentType, fileName, err := h.svc.GetDocumentFile(r.Context(), userCtx.OrgID, id)
+	if err != nil {
+		utils.Error(w, http.StatusNotFound, "Document file not found: "+err.Error(), "NOT_FOUND")
+		return
+	}
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	safeName := filepath.Base(fileName)
+	if safeName == "" || safeName == "." {
+		safeName = fmt.Sprintf("document_%s.pdf", id)
+	}
+
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", safeName))
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	_, _ = w.Write(data)
+
+	actorID := userCtx.UserID
+	_, _ = audit.Record(r.Context(), auditDomain.CreateAuditLogParams{
+		OrgID:        userCtx.OrgID,
+		ActorID:      &actorID,
+		ActorRole:    userCtx.Role,
+		Action:       auditDomain.ActionExport,
+		Module:       auditDomain.ModuleDocuments,
+		ResourceType: "DOCUMENT",
+		ResourceID:   id,
+		ResourceName: safeName,
+		Description:  fmt.Sprintf("Downloaded document #%s (%s)", id, safeName),
+		Result:       auditDomain.ResultSuccess,
+	})
 }
 
 // UploadDocument handles POST /api/v1/shipments/{id}/documents/upload

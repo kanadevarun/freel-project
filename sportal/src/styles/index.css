@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sportal-navy: #0B192C;
+  --color-sportal-sidebar: #0B192C;
+  --color-sportal-sidebar-hover: #13243D;
+  --color-sportal-active: #1D4ED8;
+  --color-sportal-accent: #2563EB;
+  --color-sportal-bg: #F8FAFC;
+  --color-sportal-card: #FFFFFF;
+  --color-sportal-border: #E2E8F0;
+
+  --color-navy-800: #13243D;
+  --color-navy-900: #0B192C;
+  
+  --font-sans: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+/* Custom scrollbars for clean SaaS UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

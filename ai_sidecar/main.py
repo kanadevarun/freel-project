@@ -18,8 +18,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from typing import List, Optional, Dict, Any
 import json
-from fastapi import FastAPI, BackgroundTasks, HTTPException, status
+from fastapi import FastAPI, BackgroundTasks, HTTPException, status, Depends
 from pydantic import BaseModel
+
+from app.tools.auth_utils import get_internal_service_token, require_internal_service_key
 
 from app.state.contract_state import ContractExtractionState, ExtractedContractDraft
 from app.agents.parser_agent import parse_contract_agreement
@@ -127,7 +129,10 @@ async def run_langgraph_pipeline(req: ProcessingRequest):
         "status": "QUEUED"
     }
 
-    config = {"configurable": {"thread_id": req.document_id}}
+    config = {
+        "configurable": {"thread_id": req.document_id, "org_id": req.org_id},
+        "metadata": {"org_id": str(req.org_id), "correlation_id": req.correlation_id or ""},
+    }
     
     try:
         # Run graph. It will run through ocr -> classify -> parser -> validator.
@@ -210,13 +215,27 @@ async def run_langgraph_pipeline(req: ProcessingRequest):
     await send_callback(req.callback_url, callback_payload.model_dump())
 
 async def run_resume_pipeline(req: ResumeRequest):
-    print(f"[AI Sidecar][Correlation ID: {req.correlation_id or 'None'}] Resuming LangGraph pipeline for doc {req.document_id}...")
-    config = {"configurable": {"thread_id": req.document_id}}
+    config = {
+        "configurable": {"thread_id": req.document_id, "org_id": req.org_id},
+        "metadata": {"org_id": str(req.org_id), "correlation_id": req.correlation_id or ""},
+    }
 
     # Load current state
     snapshot = contracts_graph.get_state(config)
     if not snapshot or not snapshot.values:
         print(f"[AI Sidecar] Thread ID {req.document_id} not found. Cannot resume.")
+        return
+
+    # Tenant isolation validation
+    if snapshot.metadata and snapshot.metadata.get("org_id"):
+        saved_org = int(snapshot.metadata.get("org_id"))
+        if saved_org != req.org_id:
+            print(f"[AI Sidecar] Tenant isolation violation: thread {req.document_id} belongs to org {saved_org}, resume rejected for org {req.org_id}")
+            return
+
+    # Workflow replay prevention: reject resuming already completed/terminated workflows
+    if not snapshot.next:
+        print(f"[AI Sidecar] Thread ID {req.document_id} has no pending interrupt steps (already completed or terminated). Resume replay rejected.")
         return
 
     # Update state based on action
@@ -465,7 +484,7 @@ async def run_pricing_pipeline(org_id: int, entity_id: str, payload: dict):
     }
 
     config = {
-        "configurable": {"thread_id": f"rfq-{rfq_id}"},
+        "configurable": {"thread_id": f"rfq-{rfq_id}", "org_id": org_id},
         "metadata": {
             "correlation_id": correlation_id,
             "org_id": str(org_id),
@@ -483,58 +502,61 @@ async def run_pricing_pipeline(org_id: int, entity_id: str, payload: dict):
             "org_id": org_id,
             "status": "FAILED",
             "correlation_id": correlation_id,
-            "ai_reasoning": f"Pricing graph execution crashed: {str(e)}"
+            "ai_reasoning": f"Graph execution failed: {str(e)}"
         })
         return
 
-    # Check state after invoke
+    # Check if graph paused due to anomaly interrupt
     snapshot = pricing_graph.get_state(config)
-    state_values = snapshot.values if snapshot else result
-
-    is_anomaly = state_values.get("is_anomaly", False)
-    overall_reasoning = state_values.get("overall_reasoning", "")
-    
-    if is_anomaly:
-        print(f"[AI Sidecar Pricing] Anomaly detected for RFQ #{rfq_id}. Waiting for human review.")
+    if snapshot and snapshot.next:
+        print(f"[AI Sidecar Pricing] Workflow paused at interrupt {snapshot.next} awaiting human approval.")
         await send_callback(callback_url, {
             "rfq_id": rfq_id,
             "org_id": org_id,
-            "status": "NEEDS_REVIEW",
+            "status": "WAITING_FOR_HUMAN",
+            "correlation_id": correlation_id,
+            "ai_reasoning": "Pricing anomaly detected. Workflow halted for human operator sign-off."
+        })
+        return
+
+    # If it completed without interrupt, trigger callback with results
+    final_snapshot = pricing_graph.get_state(config)
+    overall_reasoning = final_snapshot.values.get("overall_reasoning", "") if final_snapshot else ""
+    
+    # Save quotes to backend
+    suggested_quotes = final_snapshot.values.get("suggested_quotes", []) if final_snapshot else []
+    try:
+        await save_pricing_quotes_to_backend(org_id, rfq_id, suggested_quotes)
+        await send_callback(callback_url, {
+            "rfq_id": rfq_id,
+            "org_id": org_id,
+            "status": "COMPLETED",
             "correlation_id": correlation_id,
             "ai_reasoning": overall_reasoning
         })
-    else:
-        print(f"[AI Sidecar Pricing] Pricing successful for RFQ #{rfq_id}. Auto-saving quotes.")
-        try:
-            # Resume/continue graph run past the interrupt to trigger the save node
-            pricing_graph.invoke(None, config=config)
-            
-            await send_callback(callback_url, {
-                "rfq_id": rfq_id,
-                "org_id": org_id,
-                "status": "COMPLETED",
-                "correlation_id": correlation_id,
-                "ai_reasoning": overall_reasoning
-            })
-        except Exception as save_err:
-            print(f"[AI Sidecar Pricing] Failed to save pricing quotes: {save_err}")
-            await send_callback(callback_url, {
-                "rfq_id": rfq_id,
-                "org_id": org_id,
-                "status": "FAILED",
-                "correlation_id": correlation_id,
-                "ai_reasoning": f"Failed to persist quotes: {str(save_err)}"
-            })
+    except Exception as save_err:
+        await send_callback(callback_url, {
+            "rfq_id": rfq_id,
+            "org_id": org_id,
+            "status": "FAILED",
+            "correlation_id": correlation_id,
+            "ai_reasoning": f"Failed to persist quotes: {str(save_err)}"
+        })
 
 async def run_pricing_resume_pipeline(org_id: int, entity_id: str, payload: dict):
-    rfq_id = int(entity_id)
+    clean_id = entity_id.replace("rfq-", "").strip() if entity_id else ""
+    try:
+        rfq_id = int(clean_id)
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid non-integer rfq_id '{entity_id}' for PRICING_RESUME")
+
     correlation_id = payload.get("correlation_id", "")
     callback_url = payload.get("callback_url", "")
     
     print(f"[AI Sidecar Pricing] Resuming pricing analysis for RFQ #{rfq_id} (Correlation ID: {correlation_id})")
     
     config = {
-        "configurable": {"thread_id": f"rfq-{rfq_id}"},
+        "configurable": {"thread_id": f"rfq-{rfq_id}", "org_id": org_id},
         "metadata": {
             "correlation_id": correlation_id,
             "org_id": str(org_id),
@@ -545,6 +567,32 @@ async def run_pricing_resume_pipeline(org_id: int, entity_id: str, payload: dict
     snapshot = pricing_graph.get_state(config)
     if not snapshot or not snapshot.values:
         print(f"[AI Sidecar Pricing] Thread rfq-{rfq_id} not found. Cannot resume.")
+        return
+
+    # Tenant isolation validation
+    if snapshot.metadata and snapshot.metadata.get("org_id"):
+        saved_org = int(snapshot.metadata.get("org_id"))
+        if saved_org != org_id:
+            print(f"[AI Sidecar Pricing] Tenant isolation violation: thread rfq-{rfq_id} belongs to org {saved_org}, resume rejected for org {org_id}")
+            await send_callback(callback_url, {
+                "rfq_id": rfq_id,
+                "org_id": org_id,
+                "status": "FAILED",
+                "correlation_id": correlation_id,
+                "ai_reasoning": "Tenant isolation violation: cross-tenant access denied"
+            })
+            return
+
+    # Workflow replay prevention: reject resuming already completed/terminated workflows
+    if not snapshot.next:
+        print(f"[AI Sidecar Pricing] Thread rfq-{rfq_id} has no pending interrupt steps (already completed or terminated). Resume replay rejected.")
+        await send_callback(callback_url, {
+            "rfq_id": rfq_id,
+            "org_id": org_id,
+            "status": "COMPLETED",
+            "correlation_id": correlation_id,
+            "ai_reasoning": "Workflow already completed; resume was a no-op."
+        })
         return
 
     # Update anomaly status before resuming
@@ -575,18 +623,41 @@ async def run_pricing_resume_pipeline(org_id: int, entity_id: str, payload: dict
         })
 
 async def send_callback(callback_url: str, payload: dict):
-    """Sends JSON results POST request to Go backend callback endpoint."""
-    token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+    """Sends JSON results to Go backend, routed through Centralized Action System."""
+    try:
+        from app.tools.action_bridge import execute_action
+        org_id = payload.get("org_id", 1)
+        doc_id = payload.get("document_id", "")
+        action_res = execute_action(
+            action_name="contracts.ingest_rates",
+            org_id=org_id,
+            input_data={
+                "document_id": doc_id,
+                "status": payload.get("status", "COMPLETED"),
+                "confirmed_rates": payload.get("confirmed_rates", []),
+                "flagged_items": payload.get("flagged_items", []),
+                "ai_summary": payload.get("ai_summary", ""),
+                "correlation_id": payload.get("correlation_id", "")
+            },
+            source="langgraph.contracts"
+        )
+        if action_res.get("success"):
+            print(f"[AI Sidecar] Rate extraction ingested via Action System for doc {doc_id}")
+            return
+    except Exception as ex:
+        print(f"[AI Sidecar] Action System contract ingestion error: {ex}")
+
+    token = get_internal_service_token()
     headers = {"X-LogisticsHQ-Service-Key": token}
     
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.post(callback_url, json=payload, headers=headers, timeout=15.0)
-            print(f"[AI Sidecar] Callback response: status={resp.status_code}, body={resp.text}")
+            print(f"[AI Sidecar] Fallback callback response: status={resp.status_code}, body={resp.text}")
         except Exception as e:
-            print(f"[AI Sidecar] Failed to send callback request: {e}")
+            print(f"[AI Sidecar] Failed to send fallback callback request: {e}")
 
-@app.post("/process", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/process", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_internal_service_key)])
 async def process_document(req: ProcessingRequest, background_tasks: BackgroundTasks):
     """
     HTTP POST /process
@@ -610,7 +681,7 @@ async def process_document(req: ProcessingRequest, background_tasks: BackgroundT
     background_tasks.add_task(run_langgraph_pipeline, req)
     return {"message": "Processing request queued successfully"}
 
-@app.post("/resume", status_code=status.HTTP_202_ACCEPTED)
+@app.post("/resume", status_code=status.HTTP_202_ACCEPTED, dependencies=[Depends(require_internal_service_key)])
 async def resume_document(req: ResumeRequest, background_tasks: BackgroundTasks):
     """
     HTTP POST /resume
@@ -634,6 +705,11 @@ async def resume_document(req: ResumeRequest, background_tasks: BackgroundTasks)
     background_tasks.add_task(run_resume_pipeline, req)
     return {"message": "Resume request queued successfully"}
 
+@app.get("/health")
+async def health_check():
+    from app.persistence.checkpointer import get_checkpointer_info
+    return {"status": "ok", **get_checkpointer_info()}
+
 class ExtractAgreementRequest(BaseModel):
     document_id: Optional[str] = None
     org_id: int
@@ -641,7 +717,7 @@ class ExtractAgreementRequest(BaseModel):
     file_name: Optional[str] = "contract_agreement.pdf"
     s3_key: Optional[str] = None
 
-@app.post("/contracts/extract-agreement")
+@app.post("/contracts/extract-agreement", dependencies=[Depends(require_internal_service_key)])
 async def extract_contract_agreement(req: ExtractAgreementRequest):
     """
     HTTP POST /contracts/extract-agreement
@@ -669,6 +745,864 @@ async def extract_contract_agreement(req: ExtractAgreementRequest):
 
     extracted = parse_contract_agreement(raw_text, req.file_name or "agreement.pdf")
     return {"status": "SUCCESS", "data": extracted}
+
+@app.post("/orchestrator/propose-action", dependencies=[Depends(require_internal_service_key)])
+async def orchestrator_propose_action(req: dict):
+    """
+    HTTP POST /orchestrator/propose-action
+    
+    Phase 3 Task 3.2: Controlled AI Workflow Execution and Action Orchestration.
+    Receives structured operational context from the Go backend, analyzes signals,
+    evaluates evidence, and returns a strictly validated ActionProposal.
+    """
+    from app.orchestrator.models import OrchestrationContextInput
+    from app.orchestrator.agent import AIActionOrchestrator
+    
+    try:
+        ctx = OrchestrationContextInput(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid orchestration context payload: {str(parse_err)}"
+        )
+        
+    orchestrator = AIActionOrchestrator()
+    resp = orchestrator.analyze_and_propose(ctx)
+    return resp.model_dump()
+
+
+@app.post("/customer-relationship/evaluate", dependencies=[Depends(require_internal_service_key)])
+async def customer_relationship_evaluate(req: dict):
+    """
+    HTTP POST /customer-relationship/evaluate
+    Phase 3 Task 3.3: Customer Relationship Automation & Intelligent Follow-Up.
+    Receives structured customer context from the Go backend, analyzes inactivity,
+    overdue balances, exceptions, and pending quotes, and returns transparent priority ratings.
+    """
+    from app.customer_relationship.models import CustomerFollowupContext
+    from app.customer_relationship.agent import CustomerRelationshipAgent
+
+    try:
+        ctx = CustomerFollowupContext(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid customer relationship context payload: {str(parse_err)}"
+        )
+
+    agent = CustomerRelationshipAgent()
+    resp = agent.evaluate_customer(ctx)
+    return resp.model_dump()
+
+
+@app.post("/customer-relationship/draft", dependencies=[Depends(require_internal_service_key)])
+async def customer_relationship_draft(req: dict):
+    """
+    HTTP POST /customer-relationship/draft
+    Phase 3 Task 3.3: Grounded Customer Communication Drafting.
+    Explicitly requested draft generation grounded exclusively on verified MariaDB facts.
+    """
+    from app.customer_relationship.models import DraftMessageRequest
+    from app.customer_relationship.agent import CustomerRelationshipAgent
+
+    try:
+        draft_req = DraftMessageRequest(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid draft message request payload: {str(parse_err)}"
+        )
+
+    agent = CustomerRelationshipAgent()
+    resp = agent.draft_communication(draft_req)
+    return resp.model_dump()
+
+
+# ==============================================================================
+# Phase 3 Task 3.4: RFQ-to-Quotation Automation & Intelligent Pricing Workflow
+# ==============================================================================
+
+@app.post("/rfq-pricing/extract-requirements", dependencies=[Depends(require_internal_service_key)])
+async def rfq_pricing_extract_requirements(req: dict):
+    """
+    HTTP POST /rfq-pricing/extract-requirements
+    Phase 3 Task 3.4: RFQ Intake and Requirement Extraction.
+    Evaluates sanitized RFQ parameters, identifies missing mandatory information,
+    and returns grounded extraction evidence without fabricating values.
+    """
+    from app.rfq_pricing.models import RFQContext
+    from app.rfq_pricing.agent import RFQPricingWorkflowAgent
+
+    try:
+        ctx = RFQContext(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid RFQ context payload: {str(parse_err)}"
+        )
+
+    agent = RFQPricingWorkflowAgent()
+    resp = agent.extract_requirements(ctx)
+    return resp.model_dump()
+
+
+@app.post("/rfq-pricing/explain-pricing", dependencies=[Depends(require_internal_service_key)])
+async def rfq_pricing_explain_pricing(req: dict):
+    """
+    HTTP POST /rfq-pricing/explain-pricing
+    Phase 3 Task 3.4: Grounded Pricing Explanation.
+    Explains deterministic pricing and cost/sell components calculated by Go.
+    """
+    from app.rfq_pricing.models import RFQContext, DeterministicPricingFacts
+    from app.rfq_pricing.agent import RFQPricingWorkflowAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        pricing_data = req.get("pricing", {})
+        ctx = RFQContext(**ctx_data)
+        pricing = DeterministicPricingFacts(**pricing_data)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid pricing explanation payload: {str(parse_err)}"
+        )
+
+    agent = RFQPricingWorkflowAgent()
+    resp = agent.explain_pricing(ctx, pricing)
+    return resp.model_dump()
+
+
+@app.post("/rfq-pricing/analyze-risks", dependencies=[Depends(require_internal_service_key)])
+async def rfq_pricing_analyze_risks(req: dict):
+    """
+    HTTP POST /rfq-pricing/analyze-risks
+    Phase 3 Task 3.4: Quotation Risk Analysis.
+    Detects commercial/operational risks and determines HITL approval requirements.
+    """
+    from app.rfq_pricing.models import RFQContext, DeterministicPricingFacts
+    from app.rfq_pricing.agent import RFQPricingWorkflowAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        pricing_data = req.get("pricing", {})
+        ctx = RFQContext(**ctx_data)
+        pricing = DeterministicPricingFacts(**pricing_data)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid risk analysis payload: {str(parse_err)}"
+        )
+
+    agent = RFQPricingWorkflowAgent()
+    resp = agent.analyze_quotation_risks(ctx, pricing)
+    return resp.model_dump()
+
+
+@app.post("/rfq-pricing/generate-draft", dependencies=[Depends(require_internal_service_key)])
+async def rfq_pricing_generate_draft(req: dict):
+    """
+    HTTP POST /rfq-pricing/generate-draft
+    Phase 3 Task 3.4: Grounded Quotation Drafting.
+    Prepares internal summary, customer-facing proposal wording, and terms.
+    """
+    from app.rfq_pricing.models import QuotationDraftRequest
+    from app.rfq_pricing.agent import RFQPricingWorkflowAgent
+
+    try:
+        draft_req = QuotationDraftRequest(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid quotation draft request payload: {str(parse_err)}"
+        )
+
+    agent = RFQPricingWorkflowAgent()
+    resp = agent.generate_quotation_draft(draft_req)
+    return resp.model_dump()
+
+
+# =========================================================================
+# Phase 3 Task 3.5: Shipment Operations Automation & Intelligent Exception Response
+# =========================================================================
+
+@app.post("/shipment-ops/analyze-risks", dependencies=[Depends(require_internal_service_key)])
+async def shipment_ops_analyze_risks(req: dict):
+    """
+    HTTP POST /shipment-ops/analyze-risks
+    Phase 3 Task 3.5: Shipment Risk Analysis.
+    Evaluates multi-signal operational risks grounded in Go backend facts.
+    """
+    from app.shipment_ops.models import ShipmentContext, DeterministicShipmentSignals
+    from app.shipment_ops.agent import ShipmentOpsAgent
+
+    try:
+        ctx = ShipmentContext(**req.get("context", {}))
+        signals = DeterministicShipmentSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        print(f"[SHIPMENT-OPS ERROR] analyze-risks parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid shipment context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ShipmentOpsAgent()
+    resp = agent.analyze_shipment_risks(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/shipment-ops/prioritize-exceptions", dependencies=[Depends(require_internal_service_key)])
+async def shipment_ops_prioritize_exceptions(req: dict):
+    """
+    HTTP POST /shipment-ops/prioritize-exceptions
+    Phase 3 Task 3.5: Active Exception Prioritization.
+    Ranks active exceptions by operational urgency, financial exposure, and downstream impact.
+    """
+    from app.shipment_ops.models import ShipmentContext, DeterministicShipmentSignals
+    from app.shipment_ops.agent import ShipmentOpsAgent
+
+    try:
+        ctx = ShipmentContext(**req.get("context", {}))
+        signals = DeterministicShipmentSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid shipment context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ShipmentOpsAgent()
+    resp = agent.prioritize_exceptions(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/shipment-ops/recommend-actions", dependencies=[Depends(require_internal_service_key)])
+async def shipment_ops_recommend_actions(req: dict):
+    """
+    HTTP POST /shipment-ops/recommend-actions
+    Phase 3 Task 3.5: Operational Recommendations.
+    Generates bounded operational action recommendations mapped to Action System.
+    """
+    from app.shipment_ops.models import ShipmentContext, DeterministicShipmentSignals
+    from app.shipment_ops.agent import ShipmentOpsAgent
+
+    try:
+        ctx = ShipmentContext(**req.get("context", {}))
+        signals = DeterministicShipmentSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid shipment context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ShipmentOpsAgent()
+    resp = agent.generate_operational_recommendations(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/shipment-ops/generate-draft", dependencies=[Depends(require_internal_service_key)])
+async def shipment_ops_generate_draft(req: dict):
+    """
+    HTTP POST /shipment-ops/generate-draft
+    Phase 3 Task 3.5: Communication Drafting.
+    Prepares editable carrier follow-up, customer update, or internal escalation drafts.
+    """
+    from app.shipment_ops.models import CommunicationDraftRequest
+    from app.shipment_ops.agent import ShipmentOpsAgent
+
+    try:
+        draft_req = CommunicationDraftRequest(**req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid communication draft request payload: {str(parse_err)}"
+        )
+
+    agent = ShipmentOpsAgent()
+    resp = agent.generate_communication_draft(draft_req)
+    return resp.model_dump()
+
+
+# =========================================================================
+# Phase 3 Task 3.6: Finance & Collections Automation
+# =========================================================================
+
+@app.post("/finance-ops/analyze-receivables", dependencies=[Depends(require_internal_service_key)])
+async def finance_ops_analyze_receivables(req: dict):
+    """
+    HTTP POST /finance-ops/analyze-receivables
+    Phase 3 Task 3.6: Receivables Risk Analysis.
+    Evaluates multi-signal financial exposure grounded in Go backend facts.
+    """
+    from app.finance_ops.models import InvoiceContext, DeterministicFinanceSignals
+    from app.finance_ops.agent import FinanceCollectionsAgent
+
+    try:
+        ctx = InvoiceContext(**req.get("context", {}))
+        signals = DeterministicFinanceSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        print(f"[FINANCE-OPS ERROR] analyze-receivables parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid invoice context or signals payload: {str(parse_err)}"
+        )
+
+    agent = FinanceCollectionsAgent()
+    resp = agent.analyze_receivables_risk(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/finance-ops/prioritize-collections", dependencies=[Depends(require_internal_service_key)])
+async def finance_ops_prioritize_collections(req: dict):
+    """
+    HTTP POST /finance-ops/prioritize-collections
+    Phase 3 Task 3.6: Collection Prioritization.
+    Ranks receivables urgency based on aging, exposure, and multi-invoice risk.
+    """
+    from app.finance_ops.models import InvoiceContext, DeterministicFinanceSignals
+    from app.finance_ops.agent import FinanceCollectionsAgent
+
+    try:
+        ctx = InvoiceContext(**req.get("context", {}))
+        signals = DeterministicFinanceSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        print(f"[FINANCE-OPS ERROR] prioritize-collections parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid invoice context or signals payload: {str(parse_err)}"
+        )
+
+    agent = FinanceCollectionsAgent()
+    resp = agent.prioritize_collections(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/finance-ops/analyze-customer-behavior", dependencies=[Depends(require_internal_service_key)])
+async def finance_ops_analyze_customer_behavior(req: dict):
+    """
+    HTTP POST /finance-ops/analyze-customer-behavior
+    Phase 3 Task 3.6: Customer Payment Behavior Analysis.
+    Evaluates customer payment habits and credit risk based on historical settlement patterns.
+    """
+    from app.finance_ops.models import InvoiceContext, DeterministicFinanceSignals
+    from app.finance_ops.agent import FinanceCollectionsAgent
+
+    try:
+        ctx = InvoiceContext(**req.get("context", {}))
+        signals = DeterministicFinanceSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        print(f"[FINANCE-OPS ERROR] analyze-customer-behavior parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid invoice context or signals payload: {str(parse_err)}"
+        )
+
+    agent = FinanceCollectionsAgent()
+    resp = agent.analyze_customer_payment_behavior(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/finance-ops/recommend-actions", dependencies=[Depends(require_internal_service_key)])
+async def finance_ops_recommend_actions(req: dict):
+    """
+    HTTP POST /finance-ops/recommend-actions
+    Phase 3 Task 3.6: Operational Recommendations.
+    Generates bounded action recommendations mapped to Centralized Action System.
+    """
+    from app.finance_ops.models import InvoiceContext, DeterministicFinanceSignals
+    from app.finance_ops.agent import FinanceCollectionsAgent
+
+    try:
+        ctx = InvoiceContext(**req.get("context", {}))
+        signals = DeterministicFinanceSignals(**req.get("signals", {}))
+    except Exception as parse_err:
+        print(f"[FINANCE-OPS ERROR] recommend-actions parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid invoice context or signals payload: {str(parse_err)}"
+        )
+
+    agent = FinanceCollectionsAgent()
+    resp = agent.generate_operational_recommendations(ctx, signals)
+    return resp.model_dump()
+
+
+@app.post("/finance-ops/generate-collection-draft", dependencies=[Depends(require_internal_service_key)])
+async def finance_ops_generate_collection_draft(req: dict):
+    """
+    HTTP POST /finance-ops/generate-collection-draft
+    Phase 3 Task 3.6: Collection Message Draft Synthesis.
+    Prepares editable collection reminder, overdue notice, or demand drafts with HITL gates.
+    """
+    from app.finance_ops.models import CollectionDraftRequest
+    from app.finance_ops.agent import FinanceCollectionsAgent
+
+    try:
+        draft_req = CollectionDraftRequest(**req)
+    except Exception as parse_err:
+        print(f"[FINANCE-OPS ERROR] generate-collection-draft parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid collection draft request payload: {str(parse_err)}"
+        )
+
+    agent = FinanceCollectionsAgent()
+    resp = agent.generate_collection_draft(draft_req)
+    return resp.model_dump()
+
+
+# =========================================================================
+# Phase 3 Task 3.7: Contract and Compliance Automation & Document Review
+# =========================================================================
+
+@app.post("/contract-compliance/review-contract", dependencies=[Depends(require_internal_service_key)])
+async def contract_compliance_review(req: dict):
+    """
+    HTTP POST /contract-compliance/review-contract
+    Phase 3 Task 3.7: Multi-dimensional contract and compliance review.
+    Evaluates clause terms, structured discrepancies, and compliance obligations.
+    """
+    from app.contract_compliance.models import ContractDocumentContext, DeterministicComplianceSignals
+    from app.contract_compliance.agent import ContractComplianceAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        signals_data = req.get("signals", {})
+        context = ContractDocumentContext.model_validate(ctx_data)
+        signals = DeterministicComplianceSignals.model_validate(signals_data)
+    except Exception as parse_err:
+        print(f"[CONTRACT-COMPLIANCE ERROR] review-contract parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ContractComplianceAgent()
+    resp = agent.review_contract(context, signals)
+    return resp.model_dump()
+
+
+@app.post("/contract-compliance/extract-clauses", dependencies=[Depends(require_internal_service_key)])
+async def contract_compliance_extract_clauses(req: dict):
+    """
+    HTTP POST /contract-compliance/extract-clauses
+    Phase 3 Task 3.7: Deep contractual clause extraction and risk classification.
+    """
+    from app.contract_compliance.models import ContractDocumentContext, DeterministicComplianceSignals
+    from app.contract_compliance.agent import ContractComplianceAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        signals_data = req.get("signals", {})
+        context = ContractDocumentContext.model_validate(ctx_data)
+        signals = DeterministicComplianceSignals.model_validate(signals_data)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ContractComplianceAgent()
+    resp = agent.extract_clauses(context, signals)
+    return resp.model_dump()
+
+
+@app.post("/contract-compliance/verify-structured-terms", dependencies=[Depends(require_internal_service_key)])
+async def contract_compliance_verify_structured_terms(req: dict):
+    """
+    HTTP POST /contract-compliance/verify-structured-terms
+    Phase 3 Task 3.7: Verifies document terms against structured database records.
+    """
+    from app.contract_compliance.models import ContractDocumentContext, DeterministicComplianceSignals
+    from app.contract_compliance.agent import ContractComplianceAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        signals_data = req.get("signals", {})
+        context = ContractDocumentContext.model_validate(ctx_data)
+        signals = DeterministicComplianceSignals.model_validate(signals_data)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ContractComplianceAgent()
+    resp = agent.verify_structured_terms(context, signals)
+    return resp.model_dump()
+
+
+@app.post("/contract-compliance/assess-compliance", dependencies=[Depends(require_internal_service_key)])
+async def contract_compliance_assess(req: dict):
+    """
+    HTTP POST /contract-compliance/assess-compliance
+    Phase 3 Task 3.7: Evaluates regulatory, cargo liability, and customs compliance checklists.
+    """
+    from app.contract_compliance.models import ContractDocumentContext, DeterministicComplianceSignals
+    from app.contract_compliance.agent import ContractComplianceAgent
+
+    try:
+        ctx_data = req.get("context", {})
+        signals_data = req.get("signals", {})
+        context = ContractDocumentContext.model_validate(ctx_data)
+        signals = DeterministicComplianceSignals.model_validate(signals_data)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract context or signals payload: {str(parse_err)}"
+        )
+
+    agent = ContractComplianceAgent()
+    resp = agent.assess_compliance(context, signals)
+    return resp.model_dump()
+
+
+@app.post("/contract-compliance/generate-clarification-draft", dependencies=[Depends(require_internal_service_key)])
+async def contract_compliance_generate_draft(req: dict):
+    """
+    HTTP POST /contract-compliance/generate-clarification-draft
+    Phase 3 Task 3.7: Generates editable review notes, missing-document requests, or renewal proposals.
+    Requires HITL approval before dispatch.
+    """
+    from app.contract_compliance.models import ClarificationDraftRequest
+    from app.contract_compliance.agent import ContractComplianceAgent
+
+    try:
+        draft_req = ClarificationDraftRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[CONTRACT-COMPLIANCE ERROR] generate-clarification-draft parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid clarification draft request payload: {str(parse_err)}"
+        )
+
+    agent = ContractComplianceAgent()
+    resp = agent.generate_clarification_draft(draft_req)
+    return resp.model_dump()
+
+
+# =====================================================================
+# Phase 3 Task 3.8: Event-Driven AI Workflows & Cross-Module Automation
+# =====================================================================
+
+@app.post("/event-workflows/analyze-event", dependencies=[Depends(require_internal_service_key)])
+async def event_workflows_analyze_event(req: dict):
+    """
+    HTTP POST /event-workflows/analyze-event
+    Phase 3 Task 3.8: Evaluates an incoming domain event, synthesizes cross-module
+    context, and generates actionable operational recommendations.
+    """
+    from app.event_workflows.models import EventWorkflowRequest
+    from app.event_workflows.agent import EventWorkflowsAgent
+
+    try:
+        wf_req = EventWorkflowRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[EVENT-WORKFLOWS ERROR] analyze-event parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid event workflow request payload: {str(parse_err)}"
+        )
+
+    agent = EventWorkflowsAgent()
+    resp = agent.analyze_event(wf_req)
+    return resp.model_dump()
+
+
+@app.post("/event-workflows/generate-draft", dependencies=[Depends(require_internal_service_key)])
+async def event_workflows_generate_draft(req: dict):
+    """
+    HTTP POST /event-workflows/generate-draft
+    Phase 3 Task 3.8: Generates an editable communication draft in response to a domain event.
+    Requires HITL approval before dispatch.
+    """
+    from app.event_workflows.models import WorkflowDraftRequest
+    from app.event_workflows.agent import EventWorkflowsAgent
+
+    try:
+        draft_req = WorkflowDraftRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[EVENT-WORKFLOWS ERROR] generate-draft parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid workflow draft request payload: {str(parse_err)}"
+        )
+
+    agent = EventWorkflowsAgent()
+    resp = agent.generate_draft(draft_req)
+    return resp.model_dump()
+
+
+# =====================================================================
+# Phase 3 Task 3.9: Advanced Notifications & Escalations
+# =====================================================================
+
+@app.post("/notifications-escalations/analyze-and-prioritize", dependencies=[Depends(require_internal_service_key)])
+async def notifications_analyze_and_prioritize(req: dict):
+    """
+    HTTP POST /notifications-escalations/analyze-and-prioritize
+    Phase 3 Task 3.9: Evaluates notification priority, escalation trajectory,
+    semantic cluster key, and alert overload reduction advice.
+    """
+    from app.notifications_escalations.models import NotificationAnalysisRequest
+    from app.notifications_escalations.agent import NotificationsEscalationsAgent
+
+    try:
+        notif_req = NotificationAnalysisRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[NOTIFICATIONS-ESCALATIONS ERROR] analyze-and-prioritize parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid notification analysis request payload: {str(parse_err)}"
+        )
+
+    agent = NotificationsEscalationsAgent()
+    resp = agent.analyze_and_prioritize(notif_req)
+    return resp.model_dump()
+
+
+@app.post("/notifications-escalations/generate-escalation-draft", dependencies=[Depends(require_internal_service_key)])
+async def notifications_generate_escalation_draft(req: dict):
+    """
+    HTTP POST /notifications-escalations/generate-escalation-draft
+    Phase 3 Task 3.9: Generates editable internal escalation memo or external client advisory.
+    Requires HITL approval before dispatch.
+    """
+    from app.notifications_escalations.models import EscalationDraftRequest
+    from app.notifications_escalations.agent import NotificationsEscalationsAgent
+
+    try:
+        draft_req = EscalationDraftRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[NOTIFICATIONS-ESCALATIONS ERROR] generate-escalation-draft parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid escalation draft request payload: {str(parse_err)}"
+        )
+
+    agent = NotificationsEscalationsAgent()
+    resp = agent.generate_escalation_draft(draft_req)
+    return resp.model_dump()
+
+
+@app.post("/copilot/chat", dependencies=[Depends(require_internal_service_key)])
+async def copilot_chat_endpoint(req: dict):
+    """
+    HTTP POST /copilot/chat
+    Phase 3 Task 3.10: Omni-present AI Copilot across every module in LogisticsHQ.
+    Provides context-aware conversational guidance, record explanations,
+    operational risk insights, draft synthesis, and controlled action proposals.
+    """
+    from app.copilot.models import CopilotChatRequest
+    from app.copilot.agent import CopilotAgent
+
+    try:
+        copilot_req = CopilotChatRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[COPILOT ERROR] chat payload parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid copilot chat request payload: {str(parse_err)}"
+        )
+
+    agent = CopilotAgent()
+    resp = agent.process_chat(copilot_req)
+    return resp.model_dump()
+
+
+@app.post("/reporting/forecast-and-narrative", dependencies=[Depends(require_internal_service_key)])
+async def reporting_forecast_endpoint(req: dict):
+    """
+    HTTP POST /reporting/forecast-and-narrative
+    Phase 3 Task 3.11: Advanced Reporting, Forecasting & Executive Narrative.
+    Generates time-series projections, anomaly driver explanations,
+    trend interpretations, and safe executive summaries.
+    """
+    from app.reporting_forecasting.models import ReportingForecastRequest
+    from app.reporting_forecasting.agent import ReportingForecastingAgent
+
+    try:
+        report_req = ReportingForecastRequest.model_validate(req)
+    except Exception as parse_err:
+        print(f"[REPORTING FORECAST ERROR] payload parse error: {parse_err}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid reporting forecast request payload: {str(parse_err)}"
+        )
+
+    agent = ReportingForecastingAgent()
+    resp = agent.process_report(report_req)
+    return resp.model_dump()
+
+
+@app.post("/governance/inspect-input", dependencies=[Depends(require_internal_service_key)])
+async def governance_inspect_input_endpoint(req: dict):
+    """
+    HTTP POST /governance/inspect-input
+    Phase 3 Task 3.12: AI Governance and Production Controls.
+    Inspects input prompts and payloads for prompt injections, PII, and sensitive credentials.
+    """
+    from app.governance.models import InputInspectionRequest
+    from app.governance.safety_evaluator import AIGovernanceSafetyEvaluator
+
+    try:
+        inspect_req = InputInspectionRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid input inspection payload: {str(parse_err)}"
+        )
+
+    evaluator = AIGovernanceSafetyEvaluator()
+    res = evaluator.inspect_input(inspect_req)
+    return res.model_dump()
+
+
+@app.post("/governance/inspect-output", dependencies=[Depends(require_internal_service_key)])
+async def governance_inspect_output_endpoint(req: dict):
+    """
+    HTTP POST /governance/inspect-output
+    Phase 3 Task 3.12: AI Governance and Production Controls.
+    Inspects generated outputs against source facts, flags ungrounded claims,
+    evaluates hallucination risk, and enforces human approval for consequential actions.
+    """
+    from app.governance.models import OutputInspectionRequest
+    from app.governance.safety_evaluator import AIGovernanceSafetyEvaluator
+
+    try:
+        inspect_req = OutputInspectionRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid output inspection payload: {str(parse_err)}"
+        )
+
+    evaluator = AIGovernanceSafetyEvaluator()
+    res = evaluator.inspect_output(inspect_req)
+    return res.model_dump()
+
+
+@app.post("/governance/evaluate-quality", dependencies=[Depends(require_internal_service_key)])
+async def governance_evaluate_quality_endpoint(req: dict):
+    """
+    HTTP POST /governance/evaluate-quality
+    Phase 3 Task 3.12: AI Governance and Production Controls.
+    Evaluates test cases and benchmarks schema compliance, grounding, and release readiness.
+    """
+    from app.governance.models import QualityEvaluationRequest
+    from app.governance.quality_evaluator import AIQualityEvaluator
+
+    try:
+        eval_req = QualityEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid quality evaluation payload: {str(parse_err)}"
+        )
+
+    evaluator = AIQualityEvaluator()
+    res = evaluator.evaluate_dataset(eval_req)
+    return res.model_dump()
+
+
+@app.post("/leads/score-lead", dependencies=[Depends(require_internal_service_key)])
+async def score_lead_endpoint(req: dict):
+    """
+    HTTP POST /leads/score-lead
+    Migrated from backend/internal/jobs/lead_worker.go.
+    Scores sales leads using ICP scoring rules, history, and LLM reasoning.
+    """
+    from app.agents.lead_scoring_agent import LeadScoringAgent, LeadScoringRequest
+    try:
+        scoring_req = LeadScoringRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid lead scoring payload: {str(parse_err)}"
+        )
+    agent = LeadScoringAgent()
+    res = agent.score_lead(scoring_req)
+    return res.model_dump()
+
+
+@app.post("/leads/classify-email", dependencies=[Depends(require_internal_service_key)])
+async def classify_email_endpoint(req: dict):
+    """
+    HTTP POST /leads/classify-email
+    Migrated from backend/internal/leads/bl.go (ClassifyInboundEmailAI).
+    Classifies incoming sales emails into intent, sentiment, and logistics relevance.
+    """
+    from app.agents.email_classifier_agent import EmailClassifierAgent, EmailClassificationRequest
+    try:
+        classify_req = EmailClassificationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid email classification payload: {str(parse_err)}"
+        )
+    agent = EmailClassifierAgent()
+    res = agent.classify(classify_req)
+    return res.model_dump()
+
+
+@app.post("/rfq/parse-shipment-request", dependencies=[Depends(require_internal_service_key)])
+async def parse_shipment_request_endpoint(req: dict):
+    """
+    HTTP POST /rfq/parse-shipment-request
+    Migrated from backend/internal/rfq/bl.go (ParseShipmentRequest).
+    Extracts structured shipment parameters (origin, destination, incoterms, cargo) from unstructured text.
+    """
+    from app.agents.rfq_parser_agent import RFQParserAgent, ShipmentParseRequest
+    try:
+        parse_req = ShipmentParseRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid RFQ parse payload: {str(parse_err)}"
+        )
+    agent = RFQParserAgent()
+    res = agent.parse_request(parse_req)
+    return res.model_dump()
+
+
+@app.post("/ai/completion", dependencies=[Depends(require_internal_service_key)])
+async def ai_completion_endpoint(req: dict):
+    """
+    HTTP POST /ai/completion
+    General AI completion adapter replacing direct Gemini/OpenAI REST calls in Go.
+    """
+    from app.agents.llm_utils import execute_llm_text, execute_llm_json
+    from app.config.runtime_config import get_runtime_config
+    prompt = req.get("prompt", "")
+    json_mode = req.get("json_mode", False)
+    correlation_id = req.get("correlation_id", "")
+    exec_ctx = {"request_id": correlation_id}
+    cfg = get_runtime_config()
+
+    if json_mode:
+        data = execute_llm_json(prompt, exec_ctx=exec_ctx)
+        content = json.dumps(data) if data else "{}"
+    else:
+        content = execute_llm_text(prompt, exec_ctx=exec_ctx)
+
+    return {
+        "content": content,
+        "model": cfg.primary_model if hasattr(cfg, "primary_model") else "gemini-1.5-flash",
+        "confidence": 0.95,
+        "correlation_id": correlation_id,
+        "status": "success",
+    }
+
+
+@app.post("/predictions/generate", dependencies=[Depends(require_internal_service_key)])
+async def generate_prediction_endpoint(req: dict):
+    """
+    Phase 4: Predictive Intelligence & Decision Support Foundation
+    Generates source-grounded predictions across shipments, invoices, customers, RFQs, and contracts.
+    """
+    from app.predictions import GeneratePredictionRequest, PredictionEngine
+    parsed_req = GeneratePredictionRequest(**req)
+    engine = PredictionEngine()
+    result = engine.generate_prediction(parsed_req)
+    return result.model_dump()
 
 
 async def run_email_parse_pipeline(org_id: int, entity_id: str, payload: dict):
@@ -725,7 +1659,7 @@ async def run_email_parse_pipeline(org_id: int, entity_id: str, payload: dict):
     }
     
     config = {
-        "configurable": {"thread_id": f"sales-{interaction_id}"},
+        "configurable": {"thread_id": f"sales-{interaction_id}", "org_id": org_id},
         "metadata": {
             "org_id": str(org_id),
             "task_type": "EMAIL_PARSE",
@@ -786,7 +1720,7 @@ async def run_operations_pipeline(org_id: int, entity_id: str, payload: dict):
     }
 
     config = {
-        "configurable": {"thread_id": f"ops-{entity_id}-{payload.get('event_id', 'unknown')}"},
+        "configurable": {"thread_id": f"ops-{entity_id}-{payload.get('event_id', 'unknown')}", "org_id": org_id},
         "metadata": {
             "org_id": str(org_id),
             "task_type": "CARRIER_UPDATE_PARSE",
@@ -901,7 +1835,681 @@ async def run_finance_pipeline(org_id: int, entity_id: str, payload: Dict[str, A
         raise e
 
 
+# ── Phase 5: Controlled Autonomous Operations Endpoints ──────────────────────
+@app.post("/autonomy/plan/generate", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_plan_generate_endpoint(req: dict):
+    from app.autonomy.models import PlanGenerationRequest
+    from app.autonomy.planner import AutonomousPlannerAgent
+
+    try:
+        plan_req = PlanGenerationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid plan generation request: {str(parse_err)}"
+        )
+
+    agent = AutonomousPlannerAgent()
+    try:
+        resp = agent.generate_plan(plan_req)
+        return resp.model_dump()
+    except ValueError as val_err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(val_err)
+        )
+
+
+@app.post("/autonomy/plan/evaluate", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_plan_evaluate_endpoint(req: dict):
+    from app.autonomy.models import PlanEvaluationRequest
+    from app.autonomy.planner import AutonomousPlannerAgent
+
+    try:
+        eval_req = PlanEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid plan evaluation request: {str(parse_err)}"
+        )
+
+    agent = AutonomousPlannerAgent()
+    resp = agent.evaluate_plan_policy(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/plan/replan", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_plan_replan_endpoint(req: dict):
+    from app.autonomy.models import PlanReplanRequest
+    from app.autonomy.planner import AutonomousPlannerAgent
+
+    try:
+        replan_req = PlanReplanRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid plan replan request: {str(parse_err)}"
+        )
+
+    agent = AutonomousPlannerAgent()
+    resp = agent.replan(replan_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/plan/validate-graph", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_plan_validate_graph_endpoint(req: dict):
+    from app.autonomy.models import MultiStepPlanValidationRequest
+    from app.autonomy.planner import AutonomousPlannerAgent
+
+    # Defensively normalize empty dictionaries for optional model fields
+    steps = req.get("steps")
+    if isinstance(steps, list):
+        for s in steps:
+            if isinstance(s, dict):
+                for k in ["condition_predicate", "verification_criteria", "fallback_action", "compensation_action", "retry_policy"]:
+                    if k in s and isinstance(s[k], dict) and not s[k]:
+                        s[k] = None
+
+    try:
+        val_req = MultiStepPlanValidationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid plan validation request: {str(parse_err)}"
+        )
+
+    agent = AutonomousPlannerAgent()
+    resp = agent.validate_plan_graph(val_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/plan/cross-module", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_plan_cross_module_endpoint(req: dict):
+    from app.autonomy.models import CrossModulePlanningRequest
+    from app.autonomy.planner import AutonomousPlannerAgent
+
+    try:
+        cm_req = CrossModulePlanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid cross-module plan request: {str(parse_err)}"
+        )
+
+    agent = AutonomousPlannerAgent()
+    resp = agent.generate_cross_module_plan(cm_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/shipments/evaluate-event", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_shipment_evaluate_event_endpoint(req: dict):
+    from app.autonomy.models import ShipmentEventEvaluationRequest
+    from app.autonomy.shipment_agent import AdaptiveShipmentAgent
+
+    try:
+        eval_req = ShipmentEventEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid shipment event evaluation request: {str(parse_err)}"
+        )
+
+    agent = AdaptiveShipmentAgent()
+    resp = agent.evaluate_event(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/shipments/adaptive-plan", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_shipment_adaptive_plan_endpoint(req: dict):
+    from app.autonomy.models import PlanGenerationRequest
+    from app.autonomy.shipment_agent import AdaptiveShipmentAgent
+
+    try:
+        plan_req = PlanGenerationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid adaptive shipment plan request: {str(parse_err)}"
+        )
+
+    agent = AdaptiveShipmentAgent()
+    resp = agent.generate_adaptive_plan(plan_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/customers/evaluate-followup", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_customer_evaluate_followup_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/customers/evaluate-followup
+    Phase 5 Task 5.4: Autonomous Customer Follow-Up Evaluation.
+    Grounded decision logic, preference enforcement, and fact/prediction separation.
+    """
+    from app.autonomy.models import CustomerFollowupEvaluationRequest
+    from app.autonomy.customer_agent import evaluate_customer_followup
+
+    try:
+        eval_req = CustomerFollowupEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid customer follow-up evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_customer_followup(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/customers/classify-response", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_customer_classify_response_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/customers/classify-response
+    Phase 5 Task 5.4: Customer Response Classification.
+    Classifies incoming customer text into structured operational categories.
+    """
+    from app.autonomy.models import ClassifyCustomerResponseRequest
+    from app.autonomy.customer_agent import classify_customer_response
+
+    try:
+        class_req = ClassifyCustomerResponseRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid customer response classification request: {str(parse_err)}"
+        )
+
+    resp = classify_customer_response(class_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/pricing/evaluate-rfq", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_pricing_evaluate_rfq_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/pricing/evaluate-rfq
+    Phase 5 Task 5.5: Intelligent RFQ and Pricing Optimization.
+    Analyzes RFQ parameters, rate basis, and constraints to generate pricing strategies.
+    """
+    from app.autonomy.models import RfqPricingEvaluationRequest
+    from app.autonomy.pricing_agent import evaluate_rfq_pricing
+
+    try:
+        eval_req = RfqPricingEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid RFQ pricing evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_rfq_pricing(eval_req.context)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/pricing/replan", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_pricing_replan_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/pricing/replan
+    Phase 5 Task 5.5: Pricing Replanning.
+    Re-evaluates quotation strategies when carrier rates or operational constraints change.
+    """
+    from app.autonomy.models import PricingReplanningRequest
+    from app.autonomy.pricing_agent import replan_rfq_pricing
+
+    try:
+        replan_req = PricingReplanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid pricing replanning request: {str(parse_err)}"
+        )
+
+    resp = replan_rfq_pricing(replan_req)
+    return resp.model_dump()
+
+
+# ==============================================================================
+# Phase 5 Task 5.6: Adaptive Finance and Collections Endpoints
+# ==============================================================================
+
+@app.post("/autonomy/finance/evaluate-collection", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_finance_evaluate_collection_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/finance/evaluate-collection
+    Phase 5 Task 5.6: Evaluates an invoice context and generates ranked collection strategies,
+    fact/prediction segregation, risk/priority scoring, and a 7-step autonomous execution plan.
+    """
+    from app.autonomy.models import FinanceCollectionEvaluationRequest
+    from app.autonomy.finance_agent import evaluate_finance_collection
+
+    try:
+        eval_req = FinanceCollectionEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid finance collection evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_finance_collection(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/finance/replan-collection", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_finance_replan_collection_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/finance/replan-collection
+    Phase 5 Task 5.6: Re-evaluates collection strategies upon payment events, customer responses,
+    disputes, or material financial changes.
+    """
+    from app.autonomy.models import FinanceCollectionReplanningRequest
+    from app.autonomy.finance_agent import replan_finance_collection
+
+    try:
+        replan_req = FinanceCollectionReplanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid finance collection replanning request: {str(parse_err)}"
+        )
+
+    resp = replan_finance_collection(replan_req)
+    return resp.model_dump()
+
+
+# ==============================================================================
+# PHASE 5 TASK 5.7: CONTRACT AND COMPLIANCE MONITORING ENDPOINTS
+# ==============================================================================
+
+@app.post("/autonomy/compliance/evaluate-contract", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_compliance_evaluate_contract_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/compliance/evaluate-contract
+    Phase 5 Task 5.7: Evaluates a contract & compliance context, detects hard/soft deviations,
+    monitors expirations, separates facts vs predictions, and synthesizes candidate remediation strategies.
+    """
+    from app.autonomy.models import ContractComplianceEvaluationRequest
+    from app.autonomy.compliance_agent import evaluate_contract_compliance
+
+    try:
+        eval_req = ContractComplianceEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract compliance evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_contract_compliance(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/compliance/replan-contract", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_compliance_replan_contract_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/compliance/replan-contract
+    Phase 5 Task 5.7: Re-evaluates compliance plans upon document uploads, verification,
+    route changes, rate amendments, or contract expiration events.
+    """
+    from app.autonomy.models import ContractComplianceReplanningRequest
+    from app.autonomy.compliance_agent import replan_contract_compliance
+
+    try:
+        replan_req = ContractComplianceReplanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid contract compliance replanning request: {str(parse_err)}"
+        )
+
+    resp = replan_contract_compliance(replan_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/exceptions/evaluate-exception", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_exceptions_evaluate_exception_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/exceptions/evaluate-exception
+    Phase 5 Task 5.8: Evaluates an operational exception context and synthesizes:
+    - Root-cause reasoning vs symptom segregation
+    - Multi-tier impact analysis (confirmed, predicted, possible)
+    - 5 candidate recovery strategies with feasibility & risk scoring
+    - Selected strategy and 7-step sequential recovery plan
+    - Controlled waiting states, verification criteria, and approval gating.
+    """
+    from app.autonomy.models import ExceptionEvaluationRequest
+    from app.autonomy.exception_agent import evaluate_exception_resolution
+
+    try:
+        eval_req = ExceptionEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid exception evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_exception_resolution(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/exceptions/replan-exception", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_exceptions_replan_exception_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/exceptions/replan-exception
+    Phase 5 Task 5.8: Re-evaluates exception recovery plans upon carrier updates,
+    document submissions, customer confirmations, or verification failures.
+    """
+    from app.autonomy.models import ExceptionReplanningRequest
+    from app.autonomy.exception_agent import replan_exception_resolution
+
+    try:
+        replan_req = ExceptionReplanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid exception replanning request: {str(parse_err)}"
+        )
+
+    resp = replan_exception_resolution(replan_req)
+    return resp.model_dump()
+
+
+# ==============================================================================
+# PHASE 5 TASK 5.10: CONTINUOUS MONITORING AND REPLANNING ENDPOINTS
+# ==============================================================================
+
+@app.post("/autonomy/monitoring/evaluate-state-change", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_monitoring_evaluate_state_change_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/monitoring/evaluate-state-change
+    Phase 5 Task 5.10: Continuously assesses incoming business events and state changes
+    against active plans, evaluating plan health, invalidated assumptions, affected steps,
+    and recommending safe control actions (CONTINUE, PAUSE, REPLAN, ESCALATE, STOP).
+    """
+    from app.autonomy.models import StateChangeEvaluationRequest
+    from app.autonomy.monitoring_agent import evaluate_state_change
+
+    try:
+        eval_req = StateChangeEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid state change evaluation request: {str(parse_err)}"
+        )
+
+    resp = evaluate_state_change(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/monitoring/replan", dependencies=[Depends(require_internal_service_key)])
+async def autonomy_monitoring_replan_endpoint(req: dict):
+    """
+    HTTP POST /autonomy/monitoring/replan
+    Phase 5 Task 5.10: Formulates adaptive plan revisions (e.g. V1 -> V2 -> V3)
+    triggered by material operational changes while strictly preserving and protecting
+    all successfully completed steps from redundant re-execution.
+    """
+    from app.autonomy.models import ContinuousReplanningRequest
+    from app.autonomy.monitoring_agent import replan_continuous_workflow
+
+    try:
+        replan_req = ContinuousReplanningRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid continuous replanning request: {str(parse_err)}"
+        )
+
+    resp = replan_continuous_workflow(replan_req)
+    return resp.model_dump()
+
+
+# =============================================================================
+# Phase 5 Task 5.11: Human + AI Operating Model Endpoints
+# =============================================================================
+
+@app.post("/autonomy/human-ai/analyze-decision", tags=["Human + AI Operating Model"])
+async def analyze_decision_point_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.11: Human + AI Operating Model Decision Point Analysis.
+    Evaluates business context facts, forecasts, confidence, data sufficiency,
+    recommends action, formats alternatives, and attributes decision provenance.
+    """
+    from app.autonomy.models import HumanAIDecisionAnalysisRequest
+    from app.autonomy.human_ai_agent import human_ai_agent
+
+    try:
+        decision_req = HumanAIDecisionAnalysisRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid human-ai decision request: {str(parse_err)}"
+        )
+
+    resp = human_ai_agent.analyze_decision_point(decision_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/human-ai/analyze-feedback", tags=["Human + AI Operating Model"])
+async def analyze_human_feedback_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.11: Human + AI Operating Model Feedback Analysis.
+    Interprets human decisions, overrides, modifications, stops, and escalations.
+    Synthesizes structured memory items without storing chain-of-thought.
+    """
+    from app.autonomy.models import HumanFeedbackAnalysisRequest
+    from app.autonomy.human_ai_agent import human_ai_agent
+
+    try:
+        feedback_req = HumanFeedbackAnalysisRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid human feedback request: {str(parse_err)}"
+        )
+
+    resp = human_ai_agent.analyze_human_feedback(feedback_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/command-center/prioritize", tags=["Autonomous Operations Command Center"])
+async def command_center_prioritize_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.12: Autonomous Operations Command Center Prioritization.
+    Evaluates cross-domain operational items, calculates multi-factor priority scores,
+    and formats structured items with facts vs predictions separation.
+    """
+    from app.autonomy.models import CommandCenterPrioritizeRequest
+    from app.autonomy.command_center_agent import command_center_agent
+
+    try:
+        prioritize_req = CommandCenterPrioritizeRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid command center prioritize request: {str(parse_err)}"
+        )
+
+    resp = command_center_agent.prioritize_operations(prioritize_req)
+    return resp.model_dump()
+
+
+# -----------------------------------------------------------------------------
+# Phase 5 Task 5.13: Agent Memory and Learning from Outcomes Endpoints
+# -----------------------------------------------------------------------------
+
+@app.post("/autonomy/memory/evaluate-outcome", tags=["Agent Memory & Learning"])
+async def memory_evaluate_outcome_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.13: Evaluates an operational execution outcome against expectation.
+    Assesses success/failure, determines failure categories, and formulates safe memory candidates.
+    """
+    from app.autonomy.models import OutcomeEvaluationRequest
+    from app.autonomy.memory_learning_agent import memory_learning_agent
+
+    try:
+        eval_req = OutcomeEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid outcome evaluation request: {str(parse_err)}"
+        )
+
+    resp = memory_learning_agent.evaluate_outcome(eval_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/memory/retrieve", tags=["Agent Memory & Learning"])
+async def memory_retrieve_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.13: Retrieves and ranks relevant contextual operational memories.
+    Applies relevance scoring, recency decay, prompt-injection defense, and conflict detection.
+    """
+    from app.autonomy.models import MemoryRetrievalRequest
+    from app.autonomy.memory_learning_agent import memory_learning_agent
+
+    try:
+        ret_req = MemoryRetrievalRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid memory retrieval request: {str(parse_err)}"
+        )
+
+    resp = memory_learning_agent.retrieve_relevant_memory(ret_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/memory/detect-patterns", tags=["Agent Memory & Learning"])
+async def memory_detect_patterns_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.13: Analyzes historical outcomes and memories to detect recurring patterns.
+    """
+    from app.autonomy.models import PatternDetectionRequest
+    from app.autonomy.memory_learning_agent import memory_learning_agent
+
+    try:
+        pat_req = PatternDetectionRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid pattern detection request: {str(parse_err)}"
+        )
+
+    resp = memory_learning_agent.detect_patterns(pat_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/memory/resolve-conflicts", tags=["Agent Memory & Learning"])
+async def memory_resolve_conflicts_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.13: Evaluates contradictions between new authoritative observations and prior memories.
+    """
+    from app.autonomy.models import MemoryConflictRequest
+    from app.autonomy.memory_learning_agent import memory_learning_agent
+
+    try:
+        conf_req = MemoryConflictRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid memory conflict request: {str(parse_err)}"
+        )
+
+    resp = memory_learning_agent.resolve_memory_conflicts(conf_req)
+    return resp.model_dump()
+
+
+# ==============================================================================
+# Phase 5 Task 5.14: Governance for Controlled Autonomy Routes
+# ==============================================================================
+
+@app.post("/autonomy/governance/evaluate-context", tags=["Controlled Autonomy Governance"])
+async def governance_evaluate_context_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.14: Evaluates operational context, determines risk score, data sufficiency,
+    confidence class, and recommended autonomy tier, and neutralizes prompt injections.
+    """
+    from app.autonomy.models import GovernanceContextEvaluationRequest
+    from app.autonomy.governance_agent import governance_agent
+
+    try:
+        gov_req = GovernanceContextEvaluationRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid governance evaluation request: {str(parse_err)}"
+        )
+
+    resp = governance_agent.evaluate_context(gov_req)
+    return resp.model_dump()
+
+
+@app.post("/autonomy/governance/preview-plan", tags=["Controlled Autonomy Governance"])
+async def governance_preview_plan_endpoint(req: Dict[str, Any]):
+    """
+    Phase 5 Task 5.14: Simulates dry-run of a multi-step plan, determining affected entities,
+    max risk class, estimated financial exposure, and approval gates without mutating state.
+    """
+    from app.autonomy.models import GovernancePlanPreviewRequest
+    from app.autonomy.governance_agent import governance_agent
+
+    try:
+        prev_req = GovernancePlanPreviewRequest.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid governance plan preview request: {str(parse_err)}"
+        )
+
+    resp = governance_agent.preview_plan(prev_req)
+    return resp.model_dump()
+
+
+# =====================================================================
+# Phase 6.1: Multi-Agent Workforce Foundation Endpoints
+# =====================================================================
+
+@app.get("/api/v1/workforce/agents", tags=["Workforce Foundation"])
+async def workforce_list_agents():
+    """Returns registered AI workforce agents and their structured capabilities."""
+    from app.workforce.registry import workforce_registry
+    return [a.model_dump() for a in workforce_registry.list_agents()]
+
+
+@app.get("/api/v1/workforce/agents/{agent_id}", tags=["Workforce Foundation"])
+async def workforce_get_agent(agent_id: str):
+    """Returns metadata and capabilities for a specific workforce agent."""
+    from app.workforce.registry import workforce_registry
+    agent = workforce_registry.get_agent(agent_id)
+    if not agent:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Agent '{agent_id}' not found in workforce registry."
+        )
+    return agent.get_metadata().model_dump()
+
+
+@app.post("/api/v1/workforce/execute-task", tags=["Workforce Foundation"])
+async def workforce_execute_task(req: Dict[str, Any]):
+    """
+    Executes a workforce task using the assigned agent and segregated context.
+    Returns structured results, proposed delegations, proposed actions, and messages.
+    CRITICAL: Does NOT mutate business records directly!
+    """
+    from app.workforce.models import WorkforceTaskContract
+    from app.workforce.coordinator import workforce_coordinator
+
+    try:
+        task_contract = WorkforceTaskContract.model_validate(req)
+    except Exception as parse_err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid workforce task contract: {str(parse_err)}"
+        )
+
+    result = workforce_coordinator.execute_task(task_contract)
+    return result.model_dump()
+
+
 # Instantiate the global QueueWorker using dependency injection.
+
+
 #
 # Simple meaning:
 #   This worker will check the 'ai_processing_tasks' table in PostgreSQL
@@ -926,6 +2534,13 @@ worker = QueueWorker(
 
 @app.on_event("startup")
 async def startup_event():
+    from app.persistence.checkpointer import validate_checkpointer_config, get_checkpointer
+    validate_checkpointer_config()
+    checkpointer = get_checkpointer()
+    if hasattr(checkpointer, "verify_storage"):
+        checkpointer.verify_storage()
+    print(f"[AI Sidecar] Active checkpointer: {checkpointer.__class__.__name__}")
+
     # Start the worker thread when the FastAPI server starts up
     await worker.start()
 

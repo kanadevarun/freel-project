@@ -32,6 +32,15 @@ type Service interface {
 	RecordPayment(ctx context.Context, orgID int64, invoiceID int64, input RecordPaymentInput, userName string) (*Invoice, error)
 	GetAllPayments(ctx context.Context, orgID int64) ([]InvoicePayment, error)
 	AddDocument(ctx context.Context, orgID int64, invoiceID int64, docName, fileSize, fileType, s3Key string) (*InvoiceDocument, error)
+	ResolveUserName(ctx context.Context, userID int64) string
+
+	// Debit Note operations
+	CreateDebitNote(ctx context.Context, orgID int64, userID int64, input CreateDebitNoteInput) (*DebitNote, error)
+	ListDebitNotes(ctx context.Context, orgID int64, params ListDebitNoteParams) ([]*DebitNote, int, error)
+	GetDebitNote(ctx context.Context, orgID int64, id int64) (*DebitNote, error)
+	IssueDebitNote(ctx context.Context, orgID int64, id int64) error
+	VoidDebitNote(ctx context.Context, orgID int64, id int64) error
+	GetDebitNoteKPIStats(ctx context.Context, orgID int64) (*DebitNoteKPIStats, error)
 }
 
 type service struct {
@@ -121,7 +130,7 @@ func (s *service) CreateInvoice(ctx context.Context, orgID int64, currentUserID 
 
 	creator := creatorName
 	if creator == "" {
-		creator = "Varun Sharma"
+		creator = "<IdentifiedUser>"
 	}
 
 	status := input.Status
@@ -562,3 +571,138 @@ func (s *service) AddDocument(ctx context.Context, orgID int64, invoiceID int64,
 
 	return doc, nil
 }
+
+func (s *service) ResolveUserName(ctx context.Context, userID int64) string {
+	if userID <= 0 {
+		return "<IdentifiedUser>"
+	}
+	if name, err := s.repo.ResolveUserName(ctx, userID); err == nil && name != "" {
+		return name
+	}
+	return fmt.Sprintf("User #%d", userID)
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Debit Note service implementations
+// ──────────────────────────────────────────────────────────────────
+
+func (s *service) CreateDebitNote(ctx context.Context, orgID int64, userID int64, input CreateDebitNoteInput) (*DebitNote, error) {
+	if input.CustomerID <= 0 && input.CustomerName == "" {
+		return nil, ErrInvalidCustomer
+	}
+
+	dnNum, err := s.repo.GenerateDebitNoteNumber(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate debit note number: %w", err)
+	}
+
+	currency := input.Currency
+	if currency == "" {
+		currency = "USD"
+	}
+
+	dn := &DebitNote{
+		OrgID:           orgID,
+		DebitNoteNumber: dnNum,
+		CustomerID:      input.CustomerID,
+		CustomerName:    input.CustomerName,
+		CustomerCountry: input.CustomerCountry,
+		ShipmentID:      input.ShipmentID,
+		ShipmentNumber:  input.ShipmentNumber,
+		InvoiceID:       input.InvoiceID,
+		InvoiceNumber:   input.InvoiceNumber,
+		Reason:          input.Reason,
+		Currency:        currency,
+		TaxAmount:       input.TaxAmount,
+		Status:          "DRAFT",
+	}
+	if userID > 0 {
+		dn.CreatedByID = &userID
+	}
+	if input.Notes != "" {
+		dn.Notes = &input.Notes
+	}
+	if input.IssueDate != "" {
+		if t, err := time.Parse("2006-01-02", input.IssueDate); err == nil {
+			dn.IssueDate = &t
+		}
+	}
+	if input.DueDate != "" {
+		if t, err := time.Parse("2006-01-02", input.DueDate); err == nil {
+			dn.DueDate = &t
+		}
+	}
+
+	// Build line items and calculate totals
+	var items []DebitNoteItem
+	var subtotal float64
+	for i, li := range input.LineItems {
+		qty := li.Quantity
+		if qty <= 0 {
+			qty = 1
+		}
+		lineTotal := math.Round(qty*li.UnitPrice*100) / 100
+		subtotal += lineTotal
+		items = append(items, DebitNoteItem{
+			OrgID:           orgID,
+			Description:     li.Description,
+			ServiceCategory: li.ServiceCategory,
+			Quantity:        qty,
+			UnitPrice:       li.UnitPrice,
+			TotalAmount:     lineTotal,
+			DisplayOrder:    i,
+		})
+	}
+	subtotal = math.Round(subtotal*100) / 100
+	dn.Subtotal = subtotal
+	dn.TotalAmount = math.Round((subtotal+input.TaxAmount)*100) / 100
+
+	if input.IssueImmediately {
+		dn.Status = "ISSUED"
+		if dn.IssueDate == nil {
+			now := time.Now()
+			dn.IssueDate = &now
+		}
+	}
+
+	return s.repo.InsertDebitNote(ctx, dn, items)
+}
+
+func (s *service) ListDebitNotes(ctx context.Context, orgID int64, params ListDebitNoteParams) ([]*DebitNote, int, error) {
+	return s.repo.ListDebitNotes(ctx, orgID, params)
+}
+
+func (s *service) GetDebitNote(ctx context.Context, orgID int64, id int64) (*DebitNote, error) {
+	dn, err := s.repo.GetDebitNoteByID(ctx, orgID, id)
+	if err != nil {
+		return nil, errors.New("debit note not found")
+	}
+	return dn, nil
+}
+
+func (s *service) IssueDebitNote(ctx context.Context, orgID int64, id int64) error {
+	dn, err := s.repo.GetDebitNoteByID(ctx, orgID, id)
+	if err != nil {
+		return errors.New("debit note not found")
+	}
+	if dn.Status != "DRAFT" {
+		return fmt.Errorf("debit note cannot be issued from status %q", dn.Status)
+	}
+	return s.repo.UpdateDebitNoteStatus(ctx, orgID, id, "ISSUED")
+}
+
+func (s *service) VoidDebitNote(ctx context.Context, orgID int64, id int64) error {
+	dn, err := s.repo.GetDebitNoteByID(ctx, orgID, id)
+	if err != nil {
+		return errors.New("debit note not found")
+	}
+	if dn.Status == "VOID" {
+		return errors.New("debit note is already void")
+	}
+	return s.repo.UpdateDebitNoteStatus(ctx, orgID, id, "VOID")
+}
+
+func (s *service) GetDebitNoteKPIStats(ctx context.Context, orgID int64) (*DebitNoteKPIStats, error) {
+	return s.repo.GetDebitNoteKPIStats(ctx, orgID)
+}
+

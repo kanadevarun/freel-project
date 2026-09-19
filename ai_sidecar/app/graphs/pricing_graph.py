@@ -1,7 +1,7 @@
 import os
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, tools_condition
-from langgraph.checkpoint.memory import MemorySaver
+from app.persistence.checkpointer import get_checkpointer
 
 from app.state.pricing_state import PricingAgentState
 from app.agents.pricing_agent_node import pricing_agent_node, tools
@@ -37,9 +37,9 @@ pricing_builder.add_edge("tools", "agent")
 pricing_builder.add_edge("validate", "save")
 pricing_builder.add_edge("save", END)
 
-# Initialize in-memory checkpointer
-saver = MemorySaver()
-print("[AI Sidecar Pricing] Successfully initialized MemorySaver checkpointer.")
+# Initialize checkpointer via persistence factory
+saver = get_checkpointer()
+print("[AI Sidecar Pricing] Successfully initialized checkpointer.")
 
 # Compile the Pricing Graph with an interrupt before the save node for manual reviews
 pricing_graph = pricing_builder.compile(

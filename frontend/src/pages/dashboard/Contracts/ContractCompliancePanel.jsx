@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   ShieldCheck, Plus, AlertTriangle, AlertCircle, CheckCircle2, 
   Clock, FileCheck, RefreshCw, XCircle, ShieldAlert, Award,
-  X, ChevronDown, Shield, Sparkles
+  X, ChevronDown, Shield, Sparkles, Bot, RotateCcw
 } from 'lucide-react';
 import contractsService from '../../../services/contractsService';
+import aiTaskService from '../../../services/aiTaskService';
+import AgentStatusBadge from '../../../components/agent/AgentStatusBadge';
 import './ContractCompliancePanel.css';
 
 export default function ContractCompliancePanel({ contract }) {
@@ -17,6 +19,57 @@ export default function ContractCompliancePanel({ contract }) {
   const [verifyModal, setVerifyModal] = useState(null); // requirement object
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // AI Compliance tasks state
+  const [aiTasks, setAiTasks] = useState([]);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const fetchAiTasks = async () => {
+    try {
+      setAiLoading(true);
+      const res = await aiTaskService.getWorkforceTasks({ module: 'CONTRACTS', limit: 5 });
+      const raw = res?.data?.tasks || res?.data?.items || res?.tasks || [];
+      const list = raw.map((t) => ({
+        ...t,
+        task_id: t.task_id || t.id,
+        id: t.task_id || t.id,
+        workforce_status: t.workforce_status || t.status || 'unknown',
+        status: t.workforce_status || t.status || 'unknown',
+        safe_error_msg: t.safe_error_msg || t.error_message || '',
+      }));
+      setAiTasks(list);
+    } catch (err) {
+      console.warn('Failed to load compliance AI tasks:', err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleRetryAi = async (taskId) => {
+    try {
+      await aiTaskService.retryTask(taskId);
+      await fetchAiTasks();
+    } catch (err) {
+      console.error('Failed to retry task:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAiTasks();
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchAiTasks();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const primaryAiTask =
+    aiTasks.find((t) => t.workforce_status === 'processing') ||
+    aiTasks.find((t) => t.workforce_status === 'waiting_for_approval') ||
+    aiTasks.find((t) => t.workforce_status === 'failed' || t.workforce_status === 'stale') ||
+    aiTasks[0] ||
+    null;
 
   // New Requirement Form State
   const [reqFormData, setReqFormData] = useState({
@@ -149,6 +202,58 @@ export default function ContractCompliancePanel({ contract }) {
           <Plus size={16} />
           <span>Add Requirement</span>
         </button>
+      </div>
+
+      {/* AI Compliance & Risk Intelligence Strip */}
+      <div className="ai-compliance-status-banner">
+        <div className="ai-compliance-status-left">
+          <div className="ai-compliance-icon">
+            <Bot size={18} />
+          </div>
+          <div className="ai-compliance-text">
+            <div className="ai-compliance-title-row">
+              <span>AI Compliance & SLA Monitor</span>
+              {primaryAiTask ? (
+                <AgentStatusBadge
+                  status={primaryAiTask.workforce_status}
+                  error={primaryAiTask.safe_error_msg}
+                  mockMode={primaryAiTask.mock_mode}
+                  providerFailover={primaryAiTask.provider_failover}
+                />
+              ) : (
+                <span style={{ fontSize: '11px', color: '#94a3b8', background: 'rgba(148, 163, 184, 0.15)', padding: '2px 6px', borderRadius: '4px' }}>
+                  ● Continuous Audit Active
+                </span>
+              )}
+            </div>
+            <span className="ai-compliance-subtext">
+              {primaryAiTask?.workforce_status === 'processing'
+                ? `Cross-referencing legal clauses and certificates for ${primaryAiTask.related_ref || 'contract'}...`
+                : primaryAiTask?.workforce_status === 'waiting_for_approval'
+                ? 'High-risk covenant exception detected — human sign-off required'
+                : primaryAiTask?.workforce_status === 'failed'
+                ? `Verification interrupted: ${primaryAiTask.safe_error_msg || 'Execution fault'}`
+                : 'Automated monitoring of carrier insurance expiry, regulatory mandates, and SLA breach covenants.'}
+            </span>
+          </div>
+        </div>
+        <div className="ai-compliance-status-actions">
+          {primaryAiTask?.can_retry && (
+            <button
+              className="btn-ai-comp-action retry"
+              onClick={() => handleRetryAi(primaryAiTask.task_id)}
+            >
+              <RotateCcw size={11} /> Retry Audit
+            </button>
+          )}
+          <button
+            className="btn-ai-comp-action refresh"
+            onClick={fetchAiTasks}
+            title="Refresh AI compliance telemetry"
+          >
+            <RefreshCw size={12} className={aiLoading ? 'spin-icon' : ''} />
+          </button>
+        </div>
       </div>
 
       {loading ? (

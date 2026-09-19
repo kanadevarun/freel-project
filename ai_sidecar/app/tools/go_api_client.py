@@ -7,9 +7,10 @@ from langchain_core.tools import tool
 #   databases directly. Instead, they are given "Tools" that they can invoke when they
 #   need to communicate with external APIs or look up transactional data.
 
-# Retrieve the backend location and security keys from environment parameters.
+from app.tools.auth_utils import get_internal_service_token
+
+# Retrieve the backend location from environment parameters.
 go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
-service_token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
 
 @tool
 def normalize_port_tool(query: str) -> str:
@@ -28,7 +29,7 @@ def normalize_port_tool(query: str) -> str:
     # Target endpoint on the Go backend
     url = f"{go_backend_url}/internal/ports/normalize"
     # Supply internal authentication headers to bypass public Cognito gates
-    headers = {"X-LogisticsHQ-Service-Key": service_token}
+    headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
     params = {"query": query}
     
     try:
@@ -65,7 +66,7 @@ def search_ports_tool(query: str) -> str:
       Input: "Nhava" -> Output: "{'NHAVA SHEVA': 'INNSA', 'NHAVASHEVA': 'INNSA', 'NAVI MUMBAI': 'INNSA'}"
     """
     url = f"{go_backend_url}/internal/ports/search"
-    headers = {"X-LogisticsHQ-Service-Key": service_token}
+    headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
     params = {"query": query}
     
     try:

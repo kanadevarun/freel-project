@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
+import BusinessIntelligenceCard from '../../../../components/common/BusinessIntelligenceCard';
 
 export default function RFQOverview({
   rfq,
@@ -51,7 +52,7 @@ export default function RFQOverview({
   const contactPerson = rfq?.customer_contact_name || 'Alex Mercer';
   const contactEmail = rfq?.customer_email || 'alex@convertcorp.com';
   const contactPhone = rfq?.customer_phone || '+1 555 9999';
-  const salesOwner = 'Varun Kanade';
+  const salesOwner = rfq?.assigned_to_name || rfq?.sales_owner || 'Account Executive';
   const rfqOwner = 'Operations Team';
 
   // Commodity & Specs
@@ -746,24 +747,45 @@ export default function RFQOverview({
             </div>
           </div>
 
-          <button
-            onClick={() => onSwitchTab('quotes')}
-            style={{
-              background: '#4F46E5',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>Open Quotes Workspace →</span>
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => onSwitchTab('intelligence')}
+              style={{
+                background: '#F1F5F9',
+                color: '#334155',
+                border: '1px solid #CBD5E1',
+                borderRadius: '8px',
+                padding: '7px 14px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              data-testid="overview-open-intel-btn"
+            >
+              <span>📊 360° Pricing Intel →</span>
+            </button>
+            <button
+              onClick={() => onSwitchTab('quotes')}
+              style={{
+                background: '#4F46E5',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '7px 14px',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>Open Quotes Workspace →</span>
+            </button>
+          </div>
         </div>
 
         {quotesList.length > 0 ? (
@@ -952,6 +974,15 @@ export default function RFQOverview({
           </div>
         </div>
       </div>
+
+      {/* ── UNIFIED BUSINESS CONTEXT & INTELLIGENCE LAYER ── */}
+      {rfq?.id && (
+        <BusinessIntelligenceCard
+          entityType="RFQ"
+          entityId={rfq.id}
+          title="RFQ Unified Context & Cross-Module Intelligence"
+        />
+      )}
 
       {/* ── ROW 4: BOTTOM RFQ ACTIVITY TIMELINE (Horizontal Milestone Stepper) ── */}
       <div

@@ -1,17 +1,17 @@
 package leads
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/freel/backend/internal/audit"
+	"github.com/freel/backend/internal/audit/domain"
 	"github.com/freel/backend/internal/leads/spec"
 	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/rfq"
@@ -123,8 +123,8 @@ func (h *EmailHandler) CreateRFQFromEmail(w http.ResponseWriter, r *http.Request
 	// 1. Resolve lead details (req.CustomerID is the lead_id).
 	leadID := req.CustomerID
 	lead, err := h.leadsBL.GetLead(r.Context(), req.OrgID, leadID)
-	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, "Failed to retrieve lead context: "+err.Error(), "DB_ERROR")
+	if err != nil || lead == nil {
+		utils.Error(w, http.StatusNotFound, "Lead not found or organization mismatch", "NOT_FOUND")
 		return
 	}
 
@@ -224,9 +224,29 @@ func (h *EmailHandler) SalesCallback(w http.ResponseWriter, r *http.Request) {
 
 	err := h.leadsBL.UpdateInteractionAI(r.Context(), req.OrgID, req.InteractionID, req.Intent, req.Sentiment, req.Confidence, req.LinkedRFQID, req.Summary, req.DraftedReply)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, "Failed to update interaction AI: "+err.Error(), "DB_ERROR")
+		utils.Error(w, http.StatusNotFound, "Interaction not found or organization mismatch", "NOT_FOUND")
 		return
 	}
+
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+		OrgID:        req.OrgID,
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: SalesAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionUpdate,
+		Module:       domain.ModuleLeads,
+		ResourceType: "LEAD_INTERACTION",
+		ResourceID:   strconv.FormatInt(req.InteractionID, 10),
+		Description:  fmt.Sprintf("AI Sales Agent parsed interaction with intent %s (confidence %d%%)", req.Intent, req.Confidence),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"interaction_id": req.InteractionID,
+			"source":         "AI_AGENT",
+			"intent":         req.Intent,
+			"confidence":     req.Confidence,
+		},
+	})
 
 	// Always persist cumulative partial RFQ context if provided by the callback
 	if len(req.PartialRFQContext) > 0 {
@@ -280,17 +300,52 @@ func (h *EmailHandler) SalesCallback(w http.ResponseWriter, r *http.Request) {
 		_, _ = h.leadsBL.UpdateLead(r.Context(), updateReq)
 	}
 
-	// Trigger outbound sending if clarification was generated for incomplete RFQ
+	// Handle clarification reply for incomplete RFQ
 	if req.Intent == "NOT_LOGISTICS" || req.Intent == "PERSONAL" || req.Intent == "SPAM" || req.Intent == "OTHER" || req.Intent == "IRRELEVANT" {
-		log.Printf("[SalesCallback] Intent is %s. Suppressing automated clarification reply.", req.Intent)
+		log.Printf("[SalesCallback] Intent is %s. Suppressing clarification draft.", req.Intent)
 	} else if req.Intent == "RFQ_REQUEST_INCOMPLETE" && req.DraftedReply != "" {
-		go func() {
-			// Use context.Background() since the callback request context will terminate
-			err := h.leadsBL.SendClarificationEmail(context.Background(), req.OrgID, req.InteractionID, req.DraftedReply, req.Summary)
-			if err != nil {
-				log.Printf("[SalesCallback] Failed to send outbound email: %v", err)
+		// 1. Stage the AI-drafted reply into lead_email_drafts table with status AWAITING_APPROVAL
+		parentInter, pErr := h.leadsBL.GetInteractionByID(r.Context(), int32(req.OrgID), req.InteractionID)
+		if pErr == nil && parentInter != nil {
+			replySubject := parentInter.Subject
+			if !strings.HasPrefix(strings.ToLower(replySubject), "re:") {
+				replySubject = "Re: " + replySubject
 			}
-		}()
+			draftObj := &LeadEmailDraft{
+				OrgID:               req.OrgID,
+				LeadID:              req.LeadID,
+				ParentInteractionID: req.InteractionID,
+				Recipients:          parentInter.Sender,
+				Subject:             replySubject,
+				Content:             req.DraftedReply,
+				Status:              "AWAITING_APPROVAL",
+			}
+			if saveDraftErr := h.leadsBL.SaveDraft(r.Context(), draftObj); saveDraftErr != nil {
+				log.Printf("[SalesCallback] Warning: failed to save staged email draft for interaction %d: %v", req.InteractionID, saveDraftErr)
+			} else {
+				log.Printf("[SalesCallback] Staged AI clarification draft in lead_email_drafts for Interaction #%d (Lead #%d)", req.InteractionID, req.LeadID)
+
+				// Create an explicit approval request for human operator sign-off
+				customerName := parentInter.Sender
+				if lead, lErr := h.leadsBL.GetLead(r.Context(), int32(req.OrgID), int32(req.LeadID)); lErr == nil && lead != nil && lead.CompanyName != "" {
+					customerName = fmt.Sprintf("%s (%s)", lead.CompanyName, parentInter.Sender)
+				}
+				appID, appErr := h.leadsBL.CreateApprovalForDraft(r.Context(), req.OrgID, draftObj, customerName, req.Summary)
+				if appErr != nil {
+					log.Printf("[SalesCallback] Warning: failed to create approval request for draft: %v", appErr)
+				} else {
+					draftObj.ApprovalID = &appID
+					_ = h.leadsBL.SaveDraft(r.Context(), draftObj)
+					log.Printf("[SalesCallback] Created human approval request #%d for AI clarification draft (Interaction #%d)", appID, req.InteractionID)
+				}
+			}
+		}
+
+		// 2. SAFETY ENFORCEMENT:
+		// Clarification emails must NEVER be autonomously transmitted.
+		// Doing so risks sending unverified commitments or rate estimates.
+		// Sending strictly requires human review and explicit operator approval.
+		log.Printf("[SalesCallback] Clarification reply safely staged as AWAITING_APPROVAL for Interaction #%d on Lead #%d. Autonomous dispatch suppressed.", req.InteractionID, req.LeadID)
 	}
 
 	utils.Success(w, http.StatusOK, "Sales callback processed successfully", nil)
@@ -370,23 +425,7 @@ func (h *EmailHandler) CreateInteraction(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *EmailHandler) authenticate(r *http.Request) error {
-	token := r.Header.Get("X-LogisticsHQ-Service-Key")
-	if token == "" {
-		token = r.URL.Query().Get("service_key")
-	}
-
-	expectedToken := os.Getenv("INTERNAL_SERVICE_TOKEN")
-	if expectedToken == "" {
-		if os.Getenv("APP_ENV") == "production" {
-			return fmt.Errorf("Configuration error: INTERNAL_SERVICE_TOKEN must be specified in production environments")
-		}
-		expectedToken = "internal-service-key-logisticshq"
-	}
-
-	if token != expectedToken {
-		return fmt.Errorf("Unauthorized access: Invalid service key token")
-	}
-	return nil
+	return middleware.ValidateInternalServiceToken(r)
 }
 
 // RetryClarificationEmail handles POST /api/v1/leads/{id}/interactions/{interaction_id}/retry
@@ -411,12 +450,17 @@ func (h *EmailHandler) RetryClarificationEmail(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	orgIDStr := r.URL.Query().Get("org_id")
-	if orgIDStr == "" {
-		orgIDStr = "1"
+	orgID := int32(1)
+	if userCtx, ok := middleware.GetUserContext(r.Context()); ok {
+		orgID = int32(userCtx.OrgID)
+	} else {
+		orgIDStr := r.URL.Query().Get("org_id")
+		if orgIDStr != "" {
+			if parsed, err := strconv.Atoi(orgIDStr); err == nil {
+				orgID = int32(parsed)
+			}
+		}
 	}
-	orgIDVal, _ := strconv.Atoi(orgIDStr)
-	orgID := int32(orgIDVal)
 
 	// Fetch parent interaction to retrieve drafted reply and summary
 	parentInter, err := h.leadsBL.GetInteractionByID(r.Context(), orgID, interactionID)
@@ -440,6 +484,85 @@ func (h *EmailHandler) RetryClarificationEmail(w http.ResponseWriter, r *http.Re
 	utils.Success(w, http.StatusOK, "Clarification email resent successfully", nil)
 }
 
+// ApproveDraft handles POST /api/v1/leads/{id}/interactions/{interaction_id}/approve-draft
+func (h *EmailHandler) ApproveDraft(w http.ResponseWriter, r *http.Request) {
+	leadIDStr := chi.URLParam(r, "id")
+	leadID, err := strconv.ParseInt(leadIDStr, 10, 64)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid lead ID", "INVALID_PARAMS")
+		return
+	}
+
+	interactionIDStr := chi.URLParam(r, "interaction_id")
+	interactionID, err := strconv.ParseInt(interactionIDStr, 10, 64)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid interaction ID", "INVALID_PARAMS")
+		return
+	}
+
+	userCtx, ok := middleware.GetUserContext(r.Context())
+	if !ok || userCtx.OrgID <= 0 {
+		utils.Error(w, http.StatusUnauthorized, "Missing or invalid authorization context", "UNAUTHORIZED")
+		return
+	}
+	orgID := userCtx.OrgID
+	actorName := h.leadsBL.ResolveUserName(r.Context(), userCtx.UserID)
+
+	var reqBody struct {
+		Notes string `json:"notes"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&reqBody)
+
+	outboundInter, err := h.leadsBL.ApproveClarificationDraft(r.Context(), orgID, leadID, interactionID, actorName, reqBody.Notes)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Failed to approve and send clarification email: "+err.Error(), "ACTION_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Clarification draft approved and dispatched successfully", outboundInter)
+}
+
+// RejectDraft handles POST /api/v1/leads/{id}/interactions/{interaction_id}/reject-draft
+func (h *EmailHandler) RejectDraft(w http.ResponseWriter, r *http.Request) {
+	leadIDStr := chi.URLParam(r, "id")
+	leadID, err := strconv.ParseInt(leadIDStr, 10, 64)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid lead ID", "INVALID_PARAMS")
+		return
+	}
+
+	interactionIDStr := chi.URLParam(r, "interaction_id")
+	interactionID, err := strconv.ParseInt(interactionIDStr, 10, 64)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid interaction ID", "INVALID_PARAMS")
+		return
+	}
+
+	userCtx, ok := middleware.GetUserContext(r.Context())
+	if !ok || userCtx.OrgID <= 0 {
+		utils.Error(w, http.StatusUnauthorized, "Missing or invalid authorization context", "UNAUTHORIZED")
+		return
+	}
+	orgID := userCtx.OrgID
+	actorName := h.leadsBL.ResolveUserName(r.Context(), userCtx.UserID)
+
+	var reqBody struct {
+		Reason string `json:"reason"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&reqBody)
+	if reqBody.Reason == "" {
+		reqBody.Reason = "Rejected by operator"
+	}
+
+	err = h.leadsBL.RejectClarificationDraft(r.Context(), orgID, leadID, interactionID, actorName, reqBody.Reason)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Failed to reject clarification draft: "+err.Error(), "ACTION_FAILED")
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Clarification draft rejected successfully", nil)
+}
+
 // ReplyToInteractionRequest represents the payload for sending a manual reply.
 type ReplyToInteractionRequest struct {
 	From    string `json:"from"`
@@ -450,16 +573,20 @@ type ReplyToInteractionRequest struct {
 }
 
 type EmailDraftResponse struct {
-	ID                  int64  `json:"id"`
-	OrgID               int64  `json:"org_id"`
-	LeadID              int64  `json:"lead_id"`
-	ParentInteractionID int64  `json:"parent_interaction_id"`
-	MailboxID           *int64 `json:"mailbox_id"`
-	From                string `json:"from"`
-	To                  string `json:"to"`
-	CC                  string `json:"cc"`
-	Subject             string `json:"subject"`
-	Body                string `json:"body"`
+	ID                  int64      `json:"id"`
+	OrgID               int64      `json:"org_id"`
+	LeadID              int64      `json:"lead_id"`
+	ParentInteractionID int64      `json:"parent_interaction_id"`
+	MailboxID           *int64     `json:"mailbox_id"`
+	From                string     `json:"from"`
+	To                  string     `json:"to"`
+	CC                  string     `json:"cc"`
+	Subject             string     `json:"subject"`
+	Body                string     `json:"body"`
+	Status              string     `json:"status"`
+	ApprovalID          *int64     `json:"approval_id,omitempty"`
+	SentAt              *time.Time `json:"sent_at,omitempty"`
+	ErrorMessage        *string    `json:"error_message,omitempty"`
 }
 
 type SaveEmailDraftRequest struct {
@@ -469,6 +596,7 @@ type SaveEmailDraftRequest struct {
 	CC        string `json:"cc"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	Status    string `json:"status,omitempty"`
 }
 
 // ReplyToInteraction handles POST /api/v1/leads/{id}/interactions/{interaction_id}/reply
@@ -661,6 +789,10 @@ func (h *EmailHandler) GetDraft(w http.ResponseWriter, r *http.Request) {
 		CC:                  draft.CCRecipients,
 		Subject:             draft.Subject,
 		Body:                draft.Content,
+		Status:              draft.Status,
+		ApprovalID:          draft.ApprovalID,
+		SentAt:              draft.SentAt,
+		ErrorMessage:        draft.ErrorMessage,
 	}
 	utils.Success(w, http.StatusOK, "Draft retrieved successfully", resp)
 }

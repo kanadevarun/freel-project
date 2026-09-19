@@ -55,6 +55,7 @@ type Endpoints struct {
 	GenerateQuotationDocumentEP endpoint.Endpoint
 	ListQuotationDocumentsEP    endpoint.Endpoint
 	GetQuotationDocumentEP      endpoint.Endpoint
+	DownloadQuotationPDFEP      endpoint.Endpoint
 	CreateQuotationPublicLinkEP endpoint.Endpoint
 	ListQuotationPublicLinksEP  endpoint.Endpoint
 	RevokeQuotationPublicLinkEP endpoint.Endpoint
@@ -138,6 +139,7 @@ func NewAllQuotationEndpoints(svc Service) Endpoints {
 		GenerateQuotationDocumentEP: makeGenerateQuotationDocumentEP(svc),
 		ListQuotationDocumentsEP:    makeListQuotationDocumentsEP(svc),
 		GetQuotationDocumentEP:      makeGetQuotationDocumentEP(svc),
+		DownloadQuotationPDFEP:      makeDownloadQuotationPDFEP(svc),
 		CreateQuotationPublicLinkEP: makeCreateQuotationPublicLinkEP(svc),
 		ListQuotationPublicLinksEP:  makeListQuotationPublicLinksEP(svc),
 		RevokeQuotationPublicLinkEP: makeRevokeQuotationPublicLinkEP(svc),
@@ -815,6 +817,28 @@ func makeGetQuotationDocumentEP(svc Service) endpoint.Endpoint {
 		}
 		req := request.(*getDocEndpointRequest)
 		doc, content, err := svc.GetQuotationDocument(ctx, orgID, req.QuotationID, req.DocumentID)
+		if err != nil {
+			return nil, err
+		}
+		return &QuotationDocumentDownloadResponse{
+			Document: doc,
+			Content:  content,
+		}, nil
+	}
+}
+
+type downloadPDFEndpointRequest struct {
+	QuotationID int64
+}
+
+func makeDownloadQuotationPDFEP(svc Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		orgID, userID, err := getOrgAndUserID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		req := request.(*downloadPDFEndpointRequest)
+		doc, content, err := svc.GetOrGenerateQuotationPDF(ctx, orgID, req.QuotationID, userID)
 		if err != nil {
 			return nil, err
 		}

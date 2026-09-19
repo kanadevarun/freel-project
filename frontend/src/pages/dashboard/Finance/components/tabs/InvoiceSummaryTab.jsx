@@ -1,5 +1,8 @@
 import React from 'react';
 import { FileText, Eye, Download } from 'lucide-react';
+import BusinessIntelligenceCard from '../../../../../components/common/BusinessIntelligenceCard';
+import InvoiceFinanceIntelligenceSection from '../InvoiceFinanceIntelligenceSection';
+import FinanceCollectionsPredictiveIntelligenceCard from '../../../../../components/predictions/FinanceCollectionsPredictiveIntelligenceCard';
 import './InvoiceSubTabs.css';
 
 export default function InvoiceSummaryTab({ invoice, onActionClick }) {
@@ -11,6 +14,26 @@ export default function InvoiceSummaryTab({ invoice, onActionClick }) {
 
   return (
     <div className="invoice-subtab-container summary-tab">
+      {/* ── PHASE 4 TASK 4.6: PREDICTIVE FINANCE, CASH FLOW & COLLECTIONS INTELLIGENCE ── */}
+      {invoice?.id && (
+        <FinanceCollectionsPredictiveIntelligenceCard invoiceId={invoice.id} />
+      )}
+
+      {/* ── DETERMINISTIC INVOICE & FINANCE INTELLIGENCE (Task 1.5) ── */}
+      {invoice?.id && (
+        <InvoiceFinanceIntelligenceSection invoiceId={invoice.id} />
+      )}
+
+      {/* ── UNIFIED BUSINESS CONTEXT & INTELLIGENCE LAYER ── */}
+      {invoice?.id && (
+        <BusinessIntelligenceCard
+          entityType="Invoice"
+          entityId={invoice.id}
+          title="Invoice Context & Operational Intelligence"
+          compact={true}
+        />
+      )}
+
       {/* Operational Context & Cross-Module References Card */}
       <div className="summary-operational-context-card">
         <h4 className="context-card-title">Operational Context & References</h4>

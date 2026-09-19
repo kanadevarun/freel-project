@@ -75,6 +75,7 @@ type Repository interface {
 	GetQuotationPublicLinkByToken(ctx context.Context, token string) (*QuotationPublicLink, error)
 	RevokeQuotationPublicLink(ctx context.Context, orgID, quotationID, linkID, actorUserID int64, reason string) error
 	IncrementPublicLinkAccess(ctx context.Context, linkID int64) error
+	GetOrganizationBranding(ctx context.Context, orgID int64) (*OrganizationBranding, error)
 
 	// Quotation-to-Booking Operational Conversion (Task 18.6)
 	GetQuotationConversionHistory(ctx context.Context, orgID, quotationID int64) ([]*QuotationConversionHistory, error)
@@ -2473,6 +2474,38 @@ func (r *repository) GetQuotationsAffectedByRate(ctx context.Context, orgID, rat
 		return nil, err
 	}
 	return ids, nil
+}
+
+// OrganizationBranding represents the tenant organization branding details for quotations.
+type OrganizationBranding struct {
+	ID           int64   `db:"id"`
+	Name         string  `db:"name"`
+	LegalName    *string `db:"legal_name"`
+	PrimaryEmail *string `db:"primary_email"`
+	PhoneNumber  *string `db:"phone_number"`
+	SupportEmail *string `db:"support_email"`
+	Address      *string `db:"address"`
+	City         *string `db:"city"`
+	State        *string `db:"state"`
+	Country      *string `db:"country"`
+	PostalCode   *string `db:"postal_code"`
+	LogoURL      *string `db:"logo_url"`
+}
+
+func (r *repository) GetOrganizationBranding(ctx context.Context, orgID int64) (*OrganizationBranding, error) {
+	query := `
+		SELECT id, name, legal_name, primary_email, phone_number, support_email,
+		       address, city, state, country, postal_code, logo_url
+		FROM organizations
+		WHERE id = ?
+		LIMIT 1
+	`
+	var org OrganizationBranding
+	err := r.db.GetContext(ctx, &org, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	return &org, nil
 }
 
 

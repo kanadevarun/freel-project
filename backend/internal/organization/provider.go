@@ -324,7 +324,7 @@ func (p *GmailProvider) normalizeMessage(g *GmailMessage) (SyncEmail, error) {
 		case "subject":
 			email.Subject = h.Value
 		case "from":
-			// Extract plain email from From header (e.g. "Varun Kanade <varun@example.com>")
+			// Extract plain email from From header (e.g. "Operations Desk <ops@example.com>")
 			email.From = extractEmailAddress(h.Value)
 			email.Sender = h.Value
 		case "to":

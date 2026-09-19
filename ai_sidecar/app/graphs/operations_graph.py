@@ -43,10 +43,10 @@ ops_builder.add_edge("update_milestones", "detect_exceptions")
 ops_builder.add_edge("detect_exceptions", "ops_action")
 ops_builder.add_edge("ops_action", END)
 
-from langgraph.checkpoint.memory import MemorySaver
+from app.persistence.checkpointer import get_checkpointer
 
-saver = MemorySaver()
-print("[AI Sidecar Ops] Successfully initialized MemorySaver checkpointer for OperationsAgent.")
+saver = get_checkpointer()
+print("[AI Sidecar Ops] Successfully initialized checkpointer for OperationsAgent.")
 
 # Compile the Operations Graph
 operations_graph = ops_builder.compile(

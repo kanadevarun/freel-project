@@ -28,7 +28,7 @@ func (s *Server) setupRoutes() {
 
 	// Auth Handlers & Middleware
 	authHandler := auth.NewHandler(s.authService)
-	authGuard := middleware.NewAuthMiddleware(s.cfg.AWSRegion, s.cfg.CognitoUserPoolID, s.db)
+	authGuard := s.newAuthGuard()
 	rbacGuard := middleware.NewRBACMiddleware(s.rbacSvc)
 
 	s.router.Route("/auth", func(r chi.Router) {
@@ -290,6 +290,8 @@ func (s *Server) setupRoutes() {
 		r.Get("/leads/{id:[0-9]+}/interactions/{interaction_id:[0-9]+}/draft", s.leadsEmailHandler.GetDraft)
 		r.Put("/leads/{id:[0-9]+}/interactions/{interaction_id:[0-9]+}/draft", s.leadsEmailHandler.SaveDraft)
 		r.Delete("/leads/{id:[0-9]+}/interactions/{interaction_id:[0-9]+}/draft", s.leadsEmailHandler.DeleteDraft)
+		r.Post("/leads/{id:[0-9]+}/interactions/{interaction_id:[0-9]+}/approve-draft", s.leadsEmailHandler.ApproveDraft)
+		r.Post("/leads/{id:[0-9]+}/interactions/{interaction_id:[0-9]+}/reject-draft", s.leadsEmailHandler.RejectDraft)
 
 		// Outreach Endpoints — Campaign management + AI email generation
 		r.Route("/outreach", func(r chi.Router) {
@@ -314,10 +316,27 @@ func (s *Server) setupRoutes() {
 			dashboard.AddDashboardHandlers(r, s.dashboardEndpoints, authGuard.RequireAuth)
 		})
 
-		// Notifications Endpoints
+		// Notifications & Escalation Center Endpoints
 		r.Route("/notifications", func(r chi.Router) {
+			r.Get("/", s.notificationsHandler.GetNotifications)
 			r.Get("/unread", s.notificationsHandler.GetUnread)
+			r.Get("/unread-count", s.notificationsHandler.GetUnreadCount)
+			r.Get("/stats", s.notificationsHandler.GetStats)
+			r.Get("/escalations", s.notificationsHandler.GetEscalations)
+			r.Get("/preferences", s.notificationsHandler.GetPreferences)
+			r.Put("/preferences", s.notificationsHandler.UpdatePreferences)
+			r.Post("/evaluate", s.notificationsHandler.Evaluate)
+			r.Post("/read-all", s.notificationsHandler.MarkAllAsRead)
+			r.Get("/{id}", s.notificationsHandler.GetNotificationByID)
+			r.Post("/{id}/read", s.notificationsHandler.MarkAsRead)
 			r.Put("/{id}/read", s.notificationsHandler.MarkAsRead)
+			r.Post("/{id}/unread", s.notificationsHandler.MarkAsUnread)
+			r.Post("/{id}/dismiss", s.notificationsHandler.Dismiss)
+			r.Post("/{id:[0-9]+}/acknowledge", s.notificationsHandler.Acknowledge)
+			r.Post("/{id:[0-9]+}/snooze", s.notificationsHandler.Snooze)
+			r.Post("/{id:[0-9]+}/escalate", s.notificationsHandler.Escalate)
+			r.Post("/{id:[0-9]+}/analyze-ai", s.notificationsHandler.AnalyzeAI)
+			r.Post("/{id:[0-9]+}/generate-draft", s.notificationsHandler.GenerateDraft)
 		})
 
 		// Reports Endpoints
@@ -388,7 +407,10 @@ func (s *Server) setupRoutes() {
 
 		// Aggregate Document & Invoice routes
 		r.Get("/documents", s.documentsHandler.ListAllDocuments)
+		r.Post("/documents", s.documentsHandler.UploadGeneralDocument)
 		r.Post("/documents/upload", s.documentsHandler.UploadGeneralDocument)
+		r.Get("/documents/{id}", s.documentsHandler.GetDocument)
+		r.Get("/documents/{id}/download", s.documentsHandler.DownloadDocument)
 		r.Delete("/documents/{id}", s.documentsHandler.DeleteDocument)
 		// Invoices Module Endpoints
 		r.Route("/invoices", func(r chi.Router) {
@@ -408,15 +430,202 @@ func (s *Server) setupRoutes() {
 			r.Post("/{id:[0-9]+}/documents", s.invoicesHandler.UploadDocument)
 		})
 
+		// Debit Notes Module Endpoints
+		r.Route("/debit-notes", func(r chi.Router) {
+			r.Get("/", s.invoicesHandler.ListDebitNotes)
+			r.Get("/kpi-stats", s.invoicesHandler.GetDebitNoteKPIStats)
+			r.Post("/", s.invoicesHandler.CreateDebitNote)
+			r.Get("/{id:[0-9]+}", s.invoicesHandler.GetDebitNote)
+			r.Post("/{id:[0-9]+}/issue", s.invoicesHandler.IssueDebitNote)
+			r.Post("/{id:[0-9]+}/void", s.invoicesHandler.VoidDebitNote)
+		})
+
+
+
 		// Approvals Endpoints
 		r.Route("/approvals", func(r chi.Router) {
 			r.Get("/", s.approvalsHandler.ListApprovals)
 			r.Get("/stats", s.approvalsHandler.GetApprovalStats)
+			r.Get("/requirements", s.approvalsHandler.GetApprovalRequirements)
 			r.Post("/", s.approvalsHandler.CreateApproval)
 			r.Get("/{id}", s.approvalsHandler.GetApprovalByID)
+			r.Get("/{id}/preview", s.approvalsHandler.GetActionPreview)
+			r.Get("/{id}/history", s.approvalsHandler.GetDecisionHistory)
+			r.Get("/{id}/execution-status", s.approvalsHandler.GetExecutionStatus)
+			r.Post("/{id}/retry-execution", s.approvalsHandler.RetryExecution)
+			r.Get("/{id}/recommendation", s.approvalsHandler.GetRelatedRecommendation)
+			r.Get("/{id}/source-record", s.approvalsHandler.GetRelatedSourceRecord)
+			r.Get("/{id}/audit", s.approvalsHandler.GetAuditHistory)
 			r.Post("/{id}/approve", s.approvalsHandler.ApproveRequest)
 			r.Post("/{id}/reject", s.approvalsHandler.RejectRequest)
+			r.Post("/{id}/return", s.approvalsHandler.ReturnRequest)
+			r.Post("/{id}/cancel", s.approvalsHandler.CancelRequest)
 		})
+
+		// AI Tasks & Workforce Monitoring Endpoints
+		if s.aiTasksHandler != nil {
+			r.Route("/ai/tasks", func(r chi.Router) {
+				r.Get("/", s.aiTasksHandler.ListTasks)
+				r.Get("/stats", s.aiTasksHandler.GetTaskStats)
+				r.Get("/{id:[0-9]+}", s.aiTasksHandler.GetTaskByID)
+				r.Post("/{id:[0-9]+}/cancel", s.aiTasksHandler.CancelTask)
+				r.Post("/{id:[0-9]+}/retry", s.aiTasksHandler.RetryTask)
+			})
+			r.Route("/ai/workforce", func(r chi.Router) {
+				r.Get("/summary", s.aiTasksHandler.GetWorkforceSummary)
+				r.Get("/tasks", s.aiTasksHandler.ListWorkforceTasks)
+				r.Get("/health", s.aiTasksHandler.GetWorkforceHealth)
+			})
+		}
+
+		// AI Action & Recommendation Center & Customer Follow-Up Assistant (Phase 2 Tasks 2.1 & 2.2)
+		if s.recommendationsHandler != nil {
+			r.Route("/recommendations", func(r chi.Router) {
+				r.Get("/", s.recommendationsHandler.List)
+				r.Get("/stats", s.recommendationsHandler.GetStats)
+				r.Post("/generate", s.recommendationsHandler.Generate)
+				r.Get("/{id:[0-9]+}", s.recommendationsHandler.GetByID)
+				r.Patch("/{id:[0-9]+}/status", s.recommendationsHandler.UpdateStatus)
+				r.Post("/{id:[0-9]+}/assign", s.recommendationsHandler.Assign)
+				r.Post("/{id:[0-9]+}/dismiss", s.recommendationsHandler.Dismiss)
+				r.Post("/{id:[0-9]+}/review", s.recommendationsHandler.MarkReviewed)
+				r.Get("/{id:[0-9]+}/evidence", s.recommendationsHandler.GetEvidence)
+				r.Get("/source/{sourceType}/{sourceId:[0-9]+}", s.recommendationsHandler.ListBySource)
+				// Task 2.2 Customer Follow-Up actions on recommendations
+				r.Post("/{id:[0-9]+}/draft", s.recommendationsHandler.GenerateDraft)
+				r.Patch("/{id:[0-9]+}/draft", s.recommendationsHandler.SaveDraft)
+				r.Post("/{id:[0-9]+}/task", s.recommendationsHandler.CreateFollowupTask)
+				r.Get("/tasks", s.recommendationsHandler.ListFollowupTasks)
+				r.Get("/followups/stats", s.recommendationsHandler.GetFollowupStats)
+				// Task 2.3 RFQ & Quotation Assistant actions on recommendations
+				r.Get("/{id:[0-9]+}/action-preview", s.recommendationsHandler.GetActionPreview)
+				r.Post("/{id:[0-9]+}/request-approval", s.recommendationsHandler.RequestApproval)
+				// Task 2.4 Shipment Exception & Operations Copilot evidence routes
+				r.Get("/shipments/{shipmentId:[0-9]+}/evidence", s.recommendationsHandler.GetShipmentEvidence)
+				r.Get("/milestones/{milestoneId:[0-9]+}/evidence", s.recommendationsHandler.GetMilestoneEvidence)
+				r.Get("/exceptions/{exceptionId:[0-9]+}/evidence", s.recommendationsHandler.GetExceptionEvidence)
+				// Task 2.5 Invoice & Collections Assistant routes
+				r.Get("/invoices/{invoiceId:[0-9]+}/evidence", s.recommendationsHandler.GetInvoiceEvidence)
+				r.Get("/customers/{customerId:[0-9]+}/collection-summary", s.recommendationsHandler.GetCustomerCollectionSummary)
+				// Task 2.6 Contract, Document & Compliance Assistant routes
+				r.Get("/contracts/{contractId:[0-9]+}/evidence", s.recommendationsHandler.GetContractEvidence)
+				r.Get("/documents/{documentId}/evidence", s.recommendationsHandler.GetDocumentEvidence)
+				r.Get("/compliance/{complianceId:[0-9]+}/evidence", s.recommendationsHandler.GetComplianceEvidence)
+				r.Get("/contracts/compliance-summary", s.recommendationsHandler.GetContractComplianceSummary)
+			})
+
+			r.Route("/followups", func(r chi.Router) {
+				r.Get("/", s.recommendationsHandler.List)
+				r.Get("/stats", s.recommendationsHandler.GetFollowupStats)
+				r.Get("/tasks", s.recommendationsHandler.ListFollowupTasks)
+				r.Get("/{id:[0-9]+}", s.recommendationsHandler.GetByID)
+				r.Post("/{id:[0-9]+}/draft", s.recommendationsHandler.GenerateDraft)
+				r.Patch("/{id:[0-9]+}/draft", s.recommendationsHandler.SaveDraft)
+				r.Post("/{id:[0-9]+}/task", s.recommendationsHandler.CreateFollowupTask)
+				r.Post("/{id:[0-9]+}/assign", s.recommendationsHandler.Assign)
+				r.Post("/{id:[0-9]+}/dismiss", s.recommendationsHandler.Dismiss)
+				r.Post("/{id:[0-9]+}/review", s.recommendationsHandler.MarkReviewed)
+			})
+		}
+
+		// Workflow Automation & Scheduled AI Jobs (Phase 2 Task 2.7)
+		if s.automationsHandler != nil {
+			r.Route("/automations", func(r chi.Router) {
+				r.Get("/", s.automationsHandler.ListAutomations)
+				r.Post("/", s.automationsHandler.CreateAutomation)
+				r.Get("/supported-types", s.automationsHandler.GetSupportedTypes)
+				r.Get("/stats", s.automationsHandler.GetStats)
+				r.Get("/executions", s.automationsHandler.ListExecutions)
+				r.Get("/executions/{executionId:[0-9]+}", s.automationsHandler.GetExecution)
+				r.Post("/executions/{executionId:[0-9]+}/cancel", s.automationsHandler.CancelExecution)
+				r.Post("/executions/{executionId:[0-9]+}/retry", s.automationsHandler.RetryExecution)
+				r.Get("/executions/{executionId:[0-9]+}/recommendations", s.automationsHandler.GetExecutionRecommendations)
+				r.Get("/executions/{executionId:[0-9]+}/insights", s.automationsHandler.GetExecutionInsights)
+
+				// Operational Intelligence & Insights Feed (Phase 3 Task 3.1)
+				r.Get("/insights", s.automationsHandler.ListInsights)
+				r.Get("/insights/{id:[0-9]+}", s.automationsHandler.GetInsight)
+				r.Post("/insights/{id:[0-9]+}/acknowledge", s.automationsHandler.AcknowledgeInsight)
+				r.Post("/insights/{id:[0-9]+}/dismiss", s.automationsHandler.DismissInsight)
+				r.Post("/evaluate", s.automationsHandler.EvaluateEvent)
+
+				r.Get("/{id:[0-9]+}", s.automationsHandler.GetAutomation)
+				r.Put("/{id:[0-9]+}", s.automationsHandler.UpdateAutomation)
+				r.Delete("/{id:[0-9]+}", s.automationsHandler.DeleteAutomation)
+				r.Post("/{id:[0-9]+}/enable", s.automationsHandler.EnableAutomation)
+				r.Post("/{id:[0-9]+}/disable", s.automationsHandler.DisableAutomation)
+				r.Get("/{id:[0-9]+}/preview-next", s.automationsHandler.PreviewNextRun)
+				r.Post("/{id:[0-9]+}/preview-next", s.automationsHandler.PreviewNextRun)
+				r.Post("/{id:[0-9]+}/run", s.automationsHandler.TriggerManualRun)
+				r.Get("/{id:[0-9]+}/executions", s.automationsHandler.ListExecutions)
+			})
+		}
+
+		// AI Memory & Personalization (Phase 2 Task 2.10)
+		if s.memoryHandler != nil {
+			r.Route("/memory", func(r chi.Router) {
+				r.Get("/", s.memoryHandler.ListMemories)
+				r.Post("/", s.memoryHandler.CreateMemory)
+				r.Post("/propose", s.memoryHandler.ProposeMemory)
+				r.Get("/stats", s.memoryHandler.GetStats)
+				r.Get("/settings", s.memoryHandler.GetUserSettings)
+				r.Put("/settings", s.memoryHandler.UpdateUserSettings)
+				r.Post("/toggle", s.memoryHandler.TogglePersonalization)
+				r.Post("/clear-personal", s.memoryHandler.ClearPersonalMemories)
+				r.Get("/preferences", s.memoryHandler.ListPreferences)
+				r.Put("/preferences", s.memoryHandler.SetPreference)
+				r.Delete("/preferences/{key}", s.memoryHandler.DeletePreference)
+				r.Post("/runtime-context", s.memoryHandler.GetRuntimeContext)
+				r.Get("/audit", s.memoryHandler.ListAuditEvents)
+
+				r.Get("/{id:[0-9]+}", s.memoryHandler.GetMemory)
+				r.Put("/{id:[0-9]+}", s.memoryHandler.UpdateMemory)
+				r.Delete("/{id:[0-9]+}", s.memoryHandler.DeleteMemory)
+				r.Post("/{id:[0-9]+}/disable", s.memoryHandler.DisableMemory)
+				r.Post("/{id:[0-9]+}/enable", s.memoryHandler.EnableMemory)
+			})
+		}
+
+		// AI Performance, Cost, and Quality Monitoring (Phase 2 Task 2.11)
+		if s.monitoringHandler != nil {
+			r.Route("/monitoring", func(r chi.Router) {
+				s.monitoringHandler.RegisterRoutes(r)
+			})
+		}
+
+		// Unified Business Context & Read-Only Intelligence Endpoints (Task 1.1, 1.2, 1.3, 1.4, 1.5)
+		if s.contextHandler != nil {
+			r.Get("/customers/{id:[0-9]+}/intelligence", s.contextHandler.GetCustomerIntelligence)
+			r.Get("/rfqs/{id:[0-9]+}/intelligence", s.contextHandler.GetRFQIntelligence)
+			r.Get("/shipments/{id:[0-9]+}/intelligence", s.contextHandler.GetShipmentIntelligence)
+			r.Get("/shipments/operations-summary", s.contextHandler.GetOrgOperationsSummary)
+			r.Get("/invoices/{id:[0-9]+}/intelligence", s.contextHandler.GetInvoiceIntelligence)
+			r.Get("/invoices/finance-summary", s.contextHandler.GetOrgFinanceSummary)
+			r.Get("/contracts/{id:[0-9]+}/intelligence", s.contextHandler.GetContractIntelligence)
+			r.Get("/contracts/compliance-summary", s.contextHandler.GetOrgContractComplianceSummary)
+			r.Get("/contracts/coverage-check", s.contextHandler.GetContractCoverage)
+			r.Get("/insights/cross-module", s.contextHandler.GetCrossModuleInsights)
+			r.Get("/insights/summary", s.contextHandler.GetOrgCrossModuleSummary)
+			r.Get("/context/{type}/{id:[0-9]+}", s.contextHandler.GetContext)
+			r.Post("/intelligence/insight", s.contextHandler.GetInsight)
+		}
+
+		// Controlled AI Workflow Execution and Action Orchestration (Phase 3 Task 3.2)
+		if s.orchestrationHandler != nil {
+			r.Route("/orchestration", func(r chi.Router) {
+				r.Post("/proposals", s.orchestrationHandler.GenerateProposal)
+				r.Get("/proposals", s.orchestrationHandler.ListProposals)
+				r.Get("/proposals/{id}", s.orchestrationHandler.GetProposal)
+				r.Post("/proposals/{id}/execute", s.orchestrationHandler.ExecuteProposal)
+
+				r.Get("/executions", s.orchestrationHandler.ListExecutions)
+				r.Get("/executions/{id}", s.orchestrationHandler.GetExecution)
+				r.Post("/executions/{id}/cancel", s.orchestrationHandler.CancelExecution)
+				r.Post("/executions/{id}/retry", s.orchestrationHandler.RetryExecution)
+
+				r.Get("/actions", s.orchestrationHandler.ListRegisteredActions)
+			})
+		}
 
 		// SaaS Subscription & Billing Endpoints
 		r.Route("/subscription", func(r chi.Router) {
@@ -485,6 +694,46 @@ func (s *Server) setupRoutes() {
 		// Phase 5: Finance internal routes
 		r.Post("/finance/callback", s.financeHandler.CallbackInternal)
 		r.Get("/shipments/{id:[0-9]+}/finance", s.financeHandler.GetFinanceWorkspaceInternal)
+
+		// Approvals internal bridge
+		r.Post("/approvals/propose", s.approvalsHandler.ProposeAIApproval)
+
+		// Centralized Action System (Task 0.5 Bridge)
+		if s.actionsHandler != nil {
+			r.Post("/actions/execute", s.actionsHandler.ExecuteAction)
+			r.Get("/actions", s.actionsHandler.ListActions)
+		}
+
+		// AI Task Queue & Worker Lifecycle Bridge (Task 0.7)
+		if s.aiTasksHandler != nil {
+			r.Post("/ai/tasks/claim", s.aiTasksHandler.InternalClaimTask)
+			r.Post("/ai/tasks/{id:[0-9]+}/heartbeat", s.aiTasksHandler.InternalHeartbeatTask)
+			r.Post("/ai/tasks/{id:[0-9]+}/status", s.aiTasksHandler.InternalUpdateStatus)
+			r.Post("/ai/tasks/recover-stale", s.aiTasksHandler.InternalRecoverStale)
+			r.Get("/ai/tasks/{id:[0-9]+}", s.aiTasksHandler.InternalGetTask)
+		}
+
+		// Unified Business Context & Intelligence internal bridge (Task 1.1, 1.2, 1.3, 1.4, 1.5)
+		if s.contextHandler != nil {
+			r.Post("/context/retrieve", s.contextHandler.InternalGetContext)
+			r.Post("/intelligence/insight", s.contextHandler.InternalGetInsight)
+			r.Post("/customers/intelligence", s.contextHandler.InternalGetCustomerIntelligence)
+			r.Post("/rfqs/intelligence", s.contextHandler.InternalGetRFQIntelligence)
+			r.Post("/shipments/intelligence", s.contextHandler.InternalGetShipmentIntelligence)
+			r.Post("/shipments/operations-summary", s.contextHandler.InternalGetOrgOperationsSummary)
+			r.Post("/invoices/intelligence", s.contextHandler.InternalGetInvoiceIntelligence)
+			r.Post("/invoices/finance-summary", s.contextHandler.InternalGetOrgFinanceSummary)
+			r.Post("/contracts/intelligence", s.contextHandler.InternalGetContractIntelligence)
+			r.Post("/contracts/compliance-summary", s.contextHandler.InternalGetOrgContractComplianceSummary)
+			r.Post("/contracts/coverage", s.contextHandler.InternalGetContractCoverage)
+			r.Post("/insights/cross-module", s.contextHandler.InternalGetCrossModuleInsights)
+			r.Post("/insights/summary", s.contextHandler.InternalGetOrgCrossModuleSummary)
+		}
+
+		// AI Memory Internal Bridge (Phase 2 Task 2.10)
+		if s.memoryHandler != nil {
+			r.Post("/memory/runtime-context", s.memoryHandler.GetRuntimeContext)
+		}
 	})
 
 	// ── Serve uploads statically (for local dev visual review) ─────────────────

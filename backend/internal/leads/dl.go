@@ -32,7 +32,10 @@ type Datalayer interface {
 	LockInteractionForRetry(ctx context.Context, orgID int64, id int64) (bool, error)
 	UpdateInteractionRetry(ctx context.Context, orgID int64, id int64, status string, lastError *string, incrementRetry bool, rawEmailID string, rfcMessageID string, threadID string) error
 	GetDraft(ctx context.Context, orgID int64, leadID int64, parentInteractionID int64) (*LeadEmailDraft, error)
+	GetDraftByID(ctx context.Context, orgID int64, draftID int64) (*LeadEmailDraft, error)
 	SaveDraft(ctx context.Context, draft *LeadEmailDraft) error
+	UpdateDraftStatus(ctx context.Context, orgID int64, draftID int64, status string, approvalID *int64, errMsg *string) error
+	CreateApprovalForDraft(ctx context.Context, orgID int64, draft *LeadEmailDraft, customerName string, summary string) (int64, error)
 	DeleteDraft(ctx context.Context, orgID int64, leadID int64, parentInteractionID int64) error
 	CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error
 	UpdateInteractionAI(ctx context.Context, orgID int64, id int64, intent string, sentiment string, confidence int, linkedRFQID *int64, aiSummary string, draftedReply string) error
@@ -46,6 +49,7 @@ type Datalayer interface {
 	GetActivities(ctx context.Context, orgID int32, leadID int32) ([]spec.TimelineEvent, error)
 	UserExistsInOrg(ctx context.Context, orgID int32, userID int64) (bool, error)
 	PurgeNonLogisticsLeads(ctx context.Context, orgID int32) error
+	ResolveUserName(ctx context.Context, userID int64) (string, error)
 }
 
 type dataLayer struct {
@@ -554,5 +558,28 @@ func (d *dataLayer) GetCustomerIDByCompanyName(ctx context.Context, orgID int32,
 		return 0, err
 	}
 	return customerID, nil
+}
+
+func (d *dataLayer) ResolveUserName(ctx context.Context, userID int64) (string, error) {
+	if userID <= 0 {
+		return "", nil
+	}
+	var name sql.NullString
+	query := `
+		SELECT NULLIF(TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))), '')
+		FROM users
+		WHERE id = ?
+	`
+	err := d.db.GetContext(ctx, &name, query, userID)
+	if err == nil && name.Valid && name.String != "" {
+		return name.String, nil
+	}
+
+	var email string
+	if err := d.db.GetContext(ctx, &email, "SELECT email FROM users WHERE id = ?", userID); err == nil && email != "" {
+		return email, nil
+	}
+
+	return "", nil
 }
 

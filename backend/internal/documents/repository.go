@@ -58,8 +58,8 @@ func (r *repository) GetDocumentsByShipment(ctx context.Context, orgID int64, sh
 	query := `
 		SELECT 
 			d.id, d.org_id, d.shipment_id, d.customer_id, d.lead_id, d.booking_id,
-			d.doc_type, d.s3_key, d.file_path, d.file_name, d.original_file_name,
-			d.file_type, d.mime_type, d.file_size,
+			d.doc_type, COALESCE(d.s3_key, '') AS s3_key, d.file_path, COALESCE(d.file_name, '') AS file_name, d.original_file_name,
+			COALESCE(d.file_type, 'application/pdf') AS file_type, d.mime_type, COALESCE(d.file_size, 0) AS file_size,
 			COALESCE(d.status, 'VERIFIED') AS status,
 			COALESCE(d.extracted_data, '{}') AS extracted_data,
 			d.created_at, d.updated_at,
@@ -84,8 +84,8 @@ func (r *repository) GetDocumentsByOrg(ctx context.Context, orgID int64) ([]*Shi
 	query := `
 		SELECT 
 			d.id, d.org_id, d.shipment_id, d.customer_id, d.lead_id, d.booking_id,
-			d.doc_type, d.s3_key, d.file_path, d.file_name, d.original_file_name,
-			d.file_type, d.mime_type, d.file_size,
+			d.doc_type, COALESCE(d.s3_key, '') AS s3_key, d.file_path, COALESCE(d.file_name, '') AS file_name, d.original_file_name,
+			COALESCE(d.file_type, 'application/pdf') AS file_type, d.mime_type, COALESCE(d.file_size, 0) AS file_size,
 			COALESCE(d.status, 'VERIFIED') AS status,
 			COALESCE(d.extracted_data, '{}') AS extracted_data,
 			d.created_at, d.updated_at,
@@ -110,8 +110,8 @@ func (r *repository) GetDocumentByID(ctx context.Context, orgID int64, id string
 	query := `
 		SELECT 
 			d.id, d.org_id, d.shipment_id, d.customer_id, d.lead_id, d.booking_id,
-			d.doc_type, d.s3_key, d.file_path, d.file_name, d.original_file_name,
-			d.file_type, d.mime_type, d.file_size,
+			d.doc_type, COALESCE(d.s3_key, '') AS s3_key, d.file_path, COALESCE(d.file_name, '') AS file_name, d.original_file_name,
+			COALESCE(d.file_type, 'application/pdf') AS file_type, d.mime_type, COALESCE(d.file_size, 0) AS file_size,
 			COALESCE(d.status, 'VERIFIED') AS status,
 			COALESCE(d.extracted_data, '{}') AS extracted_data,
 			d.created_at, d.updated_at,

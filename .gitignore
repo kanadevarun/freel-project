@@ -117,3 +117,7 @@ leads_import_test.csv
 # --- Task result files ---
 task41_browser_results.json
 eval_summary.json
+
+storage/
+inspect_*.py
+

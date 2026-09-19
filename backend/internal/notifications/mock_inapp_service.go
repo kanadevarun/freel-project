@@ -8,6 +8,7 @@ import (
 )
 
 type mockInAppServiceImpl struct {
+	UnimplementedInAppService
 	eventBus events.Bus
 }
 
@@ -18,18 +19,18 @@ var mockNotifications = []Notification{
 		OrgID:     1, // Assuming org 1
 		Title:     "New Lead Created",
 		Message:   "Acme Corp was added to the CRM.",
-		Type:      "INFO",
+		Severity:  SeverityInformational,
 		IsRead:    false,
-		CreatedAt: time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		CreatedAt: time.Now().Add(-2 * time.Hour),
 	},
 	{
 		ID:        2,
 		OrgID:     1,
 		Title:     "Pricing Agent Drafted Quote",
 		Message:   "A new quote for RFQ #12 requires your approval.",
-		Type:      "SUCCESS",
+		Severity:  SeverityMedium,
 		IsRead:    false,
-		CreatedAt: time.Now().Add(-30 * time.Minute).Format(time.RFC3339),
+		CreatedAt: time.Now().Add(-30 * time.Minute),
 	},
 }
 
@@ -59,7 +60,7 @@ func (s *mockInAppServiceImpl) SendInviteEmail(ctx context.Context, toEmail, tok
 func (s *mockInAppServiceImpl) GetUnreadNotifications(ctx context.Context, orgID int32) ([]Notification, error) {
 	var result []Notification
 	for _, n := range mockNotifications {
-		if n.OrgID == orgID && !n.IsRead {
+		if n.OrgID == int64(orgID) && !n.IsRead {
 			result = append(result, n)
 		}
 	}
@@ -68,7 +69,7 @@ func (s *mockInAppServiceImpl) GetUnreadNotifications(ctx context.Context, orgID
 
 func (s *mockInAppServiceImpl) MarkAsRead(ctx context.Context, orgID int32, notifID int32) error {
 	for i, n := range mockNotifications {
-		if n.OrgID == orgID && n.ID == notifID {
+		if n.OrgID == int64(orgID) && n.ID == int64(notifID) {
 			mockNotifications[i].IsRead = true
 			break
 		}

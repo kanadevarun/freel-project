@@ -42,13 +42,26 @@ def doc_report_node(state: ComplianceState) -> ComplianceState:
         "org_id": org_id,
         "shipment_id": shipment_id,
         "doc_status_list": doc_status_list,
-        "discrepancies": state.get("discrepancies", [])
-    }
+    # Execute through Centralized Action System
+    from app.tools.action_bridge import execute_action
+    action_res = execute_action(
+        action_name="compliance.record_discrepancies",
+        org_id=org_id,
+        input_data={
+            "shipment_id": shipment_id,
+            "doc_status_list": doc_status_list,
+            "discrepancies": state.get("discrepancies", [])
+        },
+        source="langgraph.compliance"
+    )
+    if action_res.get("success"):
+        print(f"[Compliance Agent] Action System execution success for doc {doc_id}")
+        return state
 
-    import os
-    token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+    # Fallback to direct callback if action did not execute
+    from app.tools.auth_utils import get_internal_service_token
     internal_headers = {
-        "X-LogisticsHQ-Service-Key": token,
+        "X-LogisticsHQ-Service-Key": get_internal_service_token(),
         "Content-Type": "application/json"
     }
 

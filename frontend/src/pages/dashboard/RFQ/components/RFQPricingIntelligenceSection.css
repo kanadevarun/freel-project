@@ -1,0 +1,727 @@
+/* RFQ Pricing Intelligence Section - LogisticsHQ Light Design System */
+
+.rfq-intel-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 32px;
+}
+
+/* Header Bar */
+.rfq-intel-header {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rfq-intel-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rfq-intel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  width: fit-content;
+}
+
+.rfq-intel-badge--readonly {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.rfq-intel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rfq-intel-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rfq-intel-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.rfq-intel-health-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.rfq-intel-health-pill--healthy {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.rfq-intel-health-pill--thin {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fde68a;
+}
+
+.rfq-intel-health-pill--negative {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.rfq-intel-health-pill--unknown {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.rfq-intel-anomaly-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.rfq-intel-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.rfq-intel-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.rfq-intel-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.rfq-intel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.rfq-intel-btn--secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.rfq-intel-btn--secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+/* AI Grounded Summary Card */
+.rfq-intel-ai-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #4f46e5;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.rfq-intel-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.rfq-intel-ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rfq-intel-ai-sparkle {
+  color: #4f46e5;
+}
+
+.rfq-intel-ai-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rfq-intel-ai-confidence {
+  font-size: 11px;
+  background: #e0e7ff;
+  color: #3730a3;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.rfq-intel-ai-disclaimer {
+  font-size: 11px;
+  color: #64748b;
+  font-style: italic;
+}
+
+.rfq-intel-ai-text {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #334155;
+  margin: 0 0 14px 0;
+}
+
+.rfq-intel-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.rfq-intel-ai-subitem {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.rfq-intel-ai-subitem-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.rfq-intel-ai-subitem p {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #475569;
+  margin: 0;
+}
+
+.rfq-intel-ai-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.rfq-intel-ai-action-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.rfq-intel-ai-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.rfq-intel-ai-list-item {
+  display: flex;
+  align-items: flex-start;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.rfq-intel-ai-citations {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.rfq-intel-ai-citations-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.rfq-intel-citation-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+/* 4-Quadrant KPI Grid */
+.rfq-intel-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.rfq-intel-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rfq-intel-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rfq-intel-card-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rfq-intel-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rfq-intel-card-desc {
+  font-size: 11px;
+  color: #64748b;
+  margin: 0;
+}
+
+.rfq-intel-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 12px;
+}
+
+.rfq-intel-kpi-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.rfq-intel-kpi-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.rfq-intel-kpi-val {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rfq-intel-kpi-subval {
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.rfq-intel-stat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rfq-intel-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rfq-intel-stat-name {
+  color: #64748b;
+}
+
+.rfq-intel-stat-val {
+  color: #1e293b;
+}
+
+.rfq-intel-timing-row {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rfq-intel-notice-box {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.rfq-intel-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.rfq-intel-status-badge--success {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.rfq-intel-status-badge--neutral {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Quotation Comparison Matrix Table */
+.rfq-intel-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.rfq-intel-table-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rfq-intel-table-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rfq-intel-table-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.rfq-intel-count-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 9999px;
+}
+
+.rfq-intel-table-wrapper {
+  overflow-x: auto;
+}
+
+.rfq-intel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+
+.rfq-intel-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 11px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.rfq-intel-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rfq-intel-tr--selected {
+  background: #f0fdf4;
+}
+
+.rfq-intel-tr--lowest:not(.rfq-intel-tr--selected) {
+  background: #f8fafc;
+}
+
+.rfq-intel-carrier-code {
+  font-size: 10px;
+  background: #e2e8f0;
+  color: #334155;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.rfq-intel-lowest-tag {
+  font-size: 10px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.rfq-intel-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 3px 8px;
+  border-radius: 9999px;
+}
+
+.rfq-intel-quote-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.rfq-intel-quote-status--received,
+.rfq-intel-quote-status--valid,
+.rfq-intel-quote-status--selected {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.rfq-intel-quote-status--pending {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.rfq-intel-quote-status--expired,
+.rfq-intel-quote-status--rejected {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+/* Empty quotes placeholder */
+.rfq-intel-empty-quotes {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.rfq-intel-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px auto;
+}
+
+/* Grounded Observation Ledger */
+.rfq-intel-observations-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.rfq-intel-obs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rfq-intel-obs-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rfq-intel-obs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rfq-intel-obs-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.rfq-intel-obs-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.rfq-intel-obs-severity {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+.rfq-intel-obs-severity--info {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.rfq-intel-obs-severity--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.rfq-intel-obs-severity--critical {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.rfq-intel-obs-category {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.rfq-intel-obs-evidence {
+  font-size: 10px;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+.rfq-intel-obs-msg {
+  font-size: 12px;
+  color: #334155;
+  margin: 0;
+}
+
+/* Loading & Error States */
+.rfq-intel-loading {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.rfq-intel-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: rfq-intel-spin 0.8s linear infinite;
+}
+
+@keyframes rfq-intel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rfq-intel-loading-text {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.rfq-intel-error {
+  background: #ffffff;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .rfq-intel-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .rfq-intel-header-right {
+    align-items: flex-start;
+  }
+  .rfq-intel-ai-actions-row {
+    grid-template-columns: 1fr;
+  }
+}

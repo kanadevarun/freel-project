@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"strconv"
 	"strings"
 	"time"
 
@@ -427,6 +428,101 @@ func (e *CarrierSyncEngine) GetIntegrationHealth(ctx context.Context, orgID int6
 	}, nil
 }
 
+// resolveTenantIntegration deterministically maps an incoming webhook to the correct tenant integration.
+// Prevents cross-tenant leaks when multiple organizations connect to the same carrier.
+func (e *CarrierSyncEngine) resolveTenantIntegration(ctx context.Context, scac string, rawBody []byte, headers map[string]string) (*domain.CarrierIntegration, error) {
+	// 1. Explicit Integration ID Header
+	if idStr, ok := headers["X-Integration-ID"]; ok && idStr != "" {
+		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil && id > 0 {
+			var ci domain.CarrierIntegration
+			query := `SELECT * FROM carrier_integrations WHERE id = ? AND carrier_scac = ? AND is_active = 1`
+			if err := e.db.GetContext(ctx, &ci, query, id, scac); err == nil {
+				ci.UnmarshalRuntimeFields()
+				return &ci, nil
+			}
+		}
+	}
+
+	// 2. Explicit Org ID Header
+	if orgStr, ok := headers["X-Org-ID"]; ok && orgStr != "" {
+		if orgID, err := strconv.ParseInt(orgStr, 10, 64); err == nil && orgID > 0 {
+			var ci domain.CarrierIntegration
+			query := `SELECT * FROM carrier_integrations WHERE org_id = ? AND carrier_scac = ? AND is_active = 1 LIMIT 1`
+			if err := e.db.GetContext(ctx, &ci, query, orgID, scac); err == nil {
+				ci.UnmarshalRuntimeFields()
+				return &ci, nil
+			}
+		}
+	}
+
+	// 3. Query all active integrations for this carrier SCAC
+	var candidates []domain.CarrierIntegration
+	query := `SELECT * FROM carrier_integrations WHERE carrier_scac = ? AND is_active = 1 AND connection_status = 'CONNECTED'`
+	if err := e.db.SelectContext(ctx, &candidates, query, scac); err != nil || len(candidates) == 0 {
+		fallbackQuery := `SELECT * FROM carrier_integrations WHERE carrier_scac = ? AND is_active = 1`
+		if err := e.db.SelectContext(ctx, &candidates, fallbackQuery, scac); err != nil || len(candidates) == 0 {
+			return nil, fmt.Errorf("no active carrier integration found for provider (%s)", scac)
+		}
+	}
+
+	for i := range candidates {
+		candidates[i].UnmarshalRuntimeFields()
+	}
+
+	// If only 1 integration exists system-wide for this carrier, resolve directly
+	if len(candidates) == 1 {
+		return &candidates[0], nil
+	}
+
+	// 4. Multiple active integrations: Check payload references (equipment/container/booking/mbl)
+	if len(rawBody) > 0 {
+		var m map[string]interface{}
+		if err := json.Unmarshal(rawBody, &m); err == nil {
+			var ref string
+			for _, k := range []string{"container", "container_number", "containerNumber", "equipmentNo", "equipmentReference", "booking", "booking_number", "bookingNumber", "carrierBookingReference", "mbl", "mbl_number"} {
+				if v, ok := m[k].(string); ok && v != "" {
+					ref = v
+					break
+				}
+			}
+			if ref != "" {
+				var matchingOrgID int64
+				qShipment := `
+					SELECT s.org_id FROM shipments s
+					INNER JOIN carrier_integrations ci ON ci.org_id = s.org_id
+					WHERE ci.carrier_scac = ? AND ci.is_active = 1 AND ci.connection_status = 'CONNECTED'
+					  AND (s.container_number = ? OR s.booking_number = ? OR s.mbl_number = ?)
+					LIMIT 1
+				`
+				if err := e.db.GetContext(ctx, &matchingOrgID, qShipment, scac, ref, ref, ref); err == nil && matchingOrgID > 0 {
+					for _, c := range candidates {
+						if c.OrgID == matchingOrgID {
+							return &c, nil
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// 5. Check signature match against candidate webhook secrets
+	if sig, ok := headers["X-Carrier-Signature"]; ok && sig != "" {
+		for _, c := range candidates {
+			if secret, ok := c.Config["webhook_secret"].(string); ok && secret != "" {
+				mac := hmac.New(sha256.New, []byte(secret))
+				mac.Write(rawBody)
+				expected := hex.EncodeToString(mac.Sum(nil))
+				if hmac.Equal([]byte(sig), []byte(expected)) {
+					return &c, nil
+				}
+			}
+		}
+	}
+
+	// 6. Ambiguous tenant conflict guard: multiple candidates exist and none definitively matched
+	return nil, fmt.Errorf("ambiguous tenant resolution: multiple active integrations for carrier %s without qualifying tenant ID, shipment reference, or signature match", scac)
+}
+
 // ProcessWebhook receives and processes an inbound carrier webhook with HMAC validation and idempotency.
 func (e *CarrierSyncEngine) ProcessWebhook(ctx context.Context, providerCode string, rawBody []byte, headers map[string]string) (*domain.CarrierWebhookEvent, error) {
 	normalizedCode := strings.ToUpper(strings.TrimSpace(providerCode))
@@ -441,17 +537,11 @@ func (e *CarrierSyncEngine) ProcessWebhook(ctx context.Context, providerCode str
 	hasher.Write(rawBody)
 	fingerprint := hex.EncodeToString(hasher.Sum(nil))
 
-	// Find the matching carrier integration
-	var ci domain.CarrierIntegration
-	query := `
-		SELECT * FROM carrier_integrations
-		WHERE carrier_scac = ? AND is_active = 1 AND connection_status = 'CONNECTED'
-		LIMIT 1
-	`
-	if dbErr := e.db.GetContext(ctx, &ci, query, provider.SCAC); dbErr != nil {
-		return nil, fmt.Errorf("no active carrier integration found for provider %s (%s)", providerCode, provider.SCAC)
+	// Find the matching carrier integration using secure tenant resolution
+	ci, err := e.resolveTenantIntegration(ctx, provider.SCAC, rawBody, headers)
+	if err != nil {
+		return nil, err
 	}
-	ci.UnmarshalRuntimeFields()
 
 	// 1. Idempotency check: look up existing event
 	existingEvt, err := e.repo.GetWebhookEventByFingerprint(ctx, ci.OrgID, fingerprint)
@@ -462,14 +552,16 @@ func (e *CarrierSyncEngine) ProcessWebhook(ctx context.Context, providerCode str
 	}
 
 	// 2. Validate webhook signature if secret configured
-	if sig, ok := headers["X-Carrier-Signature"]; ok {
-		if secret, ok := ci.Config["webhook_secret"].(string); ok && secret != "" {
-			mac := hmac.New(sha256.New, []byte(secret))
-			mac.Write(rawBody)
-			expectedSig := hex.EncodeToString(mac.Sum(nil))
-			if !hmac.Equal([]byte(sig), []byte(expectedSig)) {
-				return nil, errors.New("invalid carrier webhook signature")
-			}
+	if secret, ok := ci.Config["webhook_secret"].(string); ok && secret != "" {
+		sig, ok := headers["X-Carrier-Signature"]
+		if !ok || sig == "" {
+			return nil, errors.New("missing required carrier webhook signature")
+		}
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write(rawBody)
+		expectedSig := hex.EncodeToString(mac.Sum(nil))
+		if !hmac.Equal([]byte(sig), []byte(expectedSig)) {
+			return nil, errors.New("invalid carrier webhook signature")
 		}
 	}
 
@@ -516,7 +608,28 @@ func (e *CarrierSyncEngine) ProcessWebhook(ctx context.Context, providerCode str
 		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		_, _, _, _, syncErr := e.executeSync(bgCtx, &ci, domain.SyncOpFullSync)
+		// If a specific container or booking reference is present, sync that shipment immediately
+		if len(rawBody) > 0 && e.trackingSyncer != nil {
+			var m map[string]interface{}
+			if json.Unmarshal(rawBody, &m) == nil {
+				var ref string
+				for _, k := range []string{"container", "container_number", "containerNumber", "equipmentNo", "equipmentReference", "booking", "booking_number", "bookingNumber", "carrierBookingReference"} {
+					if v, ok := m[k].(string); ok && v != "" {
+						ref = v
+						break
+					}
+				}
+				if ref != "" {
+					var sid int64
+					qSid := `SELECT id FROM shipments WHERE org_id = ? AND (container_number = ? OR booking_number = ? OR mbl_number = ?) LIMIT 1`
+					if e.db.GetContext(bgCtx, &sid, qSid, ci.OrgID, ref, ref, ref) == nil && sid > 0 {
+						_, _ = e.trackingSyncer(bgCtx, ci.OrgID, sid)
+					}
+				}
+			}
+		}
+
+		_, _, _, _, syncErr := e.executeSync(bgCtx, ci, domain.SyncOpFullSync)
 		if syncErr != nil {
 			errStr := syncErr.Error()
 			_ = e.repo.UpdateWebhookEventStatus(bgCtx, ci.OrgID, evt.ID, domain.WebhookStatusFailed, &errStr)

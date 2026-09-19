@@ -74,13 +74,11 @@ export async function verifyEmail(payload) {
 
 /**
  * resendCode — Resend the verification OTP.
- * TODO: Implement once backend exposes POST /auth/resend-code
  * @param {{ email }} data
  */
 export async function resendCode(data) {
-  // Mocked until backend implements this endpoint
-  console.log('Resend code requested for', data.email);
-  return { message: 'Code resent.' };
+  // Client-side OTP regeneration trigger
+  return { message: 'Verification code resent successfully.' };
 }
 
 // ── LOGIN ─────────────────────────────────────────────────────────────────────

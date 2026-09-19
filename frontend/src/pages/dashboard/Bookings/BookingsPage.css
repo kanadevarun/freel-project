@@ -1,11 +1,11 @@
 /* Bookings Workspace - Enterprise Operational Styling System */
 
 .bookings-page-container {
-  padding: 24px 32px 48px;
+  padding: 0;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  min-height: 100vh;
+  min-height: auto;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: #0f172a;
 }

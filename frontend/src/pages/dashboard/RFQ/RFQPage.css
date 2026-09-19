@@ -1,9 +1,11 @@
 /* RFQPage.css — Modern enterprise styling for RFQ List & Operations */
 
 .rfq-page-container {
-  padding: 24px 32px 48px 32px;
-  background-color: #F8FAFC;
-  min-height: 100vh;
+  padding: 0;
+  background-color: transparent;
+  width: 100%;
+  max-width: 100%;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;

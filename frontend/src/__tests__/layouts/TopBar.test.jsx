@@ -88,9 +88,10 @@ describe('TopBar Global Header Component', () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText(/Welcome to LogisticsHQ, Varun!/i)).toBeInTheDocument();
+    expect(screen.getByText(/Operations Command|Welcome/i)).toBeInTheDocument();
     expect(screen.getByText(/Search shipments, RFQs, bookings, invoices.../i)).toBeInTheDocument();
     expect(screen.getByText(/Aug 9 – Aug 15, 2026/i)).toBeInTheDocument();
+
   });
 
   it('opens and closes global search command palette with keyboard shortcut and mouse clicks', async () => {

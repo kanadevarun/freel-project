@@ -3,6 +3,7 @@ package quotations
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -309,6 +310,14 @@ func AddQuotationHandlers(
 	router.With(authMiddleware).Get("/{id:[0-9]+}/documents/{docId:[0-9]+}/download", kitHttp.NewServer(
 		endpoints.GetQuotationDocumentEP,
 		decodeGetDocumentRequest,
+		encodeQuotationDocumentDownload,
+		opts...,
+	).ServeHTTP)
+
+	// GET  /api/v1/quotations/{id}/pdf (Direct Quotation PDF Generation & Download)
+	router.With(authMiddleware).Get("/{id:[0-9]+}/pdf", kitHttp.NewServer(
+		endpoints.DownloadQuotationPDFEP,
+		decodeDownloadPDFRequest,
 		encodeQuotationDocumentDownload,
 		opts...,
 	).ServeHTTP)
@@ -954,6 +963,15 @@ func decodeGetDocumentRequest(_ context.Context, r *http.Request) (interface{}, 
 	return &getDocEndpointRequest{QuotationID: id, DocumentID: docId}, nil
 }
 
+func decodeDownloadPDFRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+	return &downloadPDFEndpointRequest{QuotationID: id}, nil
+}
+
 // ── Public Link Decoders (Task 18.5) ───────────────────────────────────────
 
 func decodeCreatePublicLinkRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -1095,12 +1113,13 @@ func encodeQuotationDocumentDownload(_ context.Context, w http.ResponseWriter, r
 func encodeQuotationError(_ context.Context, err error, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	if svcErr, ok := err.(*svcerror.ServiceError); ok {
+	var svcErr *svcerror.ServiceError
+	if errors.As(err, &svcErr) {
 		switch svcErr.Code {
 		case svcerror.ErrInvalidArgument:
 			w.WriteHeader(http.StatusBadRequest)
 		case svcerror.ErrInsufficientResourceAccess:
-			w.WriteHeader(http.StatusUnauthorized)
+			w.WriteHeader(http.StatusForbidden)
 		case svcerror.ErrResourceNotFound:
 			w.WriteHeader(http.StatusNotFound)
 		default:

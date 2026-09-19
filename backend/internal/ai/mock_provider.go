@@ -46,9 +46,9 @@ func (m *mockProvider) GenerateCompletion(ctx context.Context, prompt string) (s
 			"intent": "RFQ_REQUEST_INCOMPLETE",
 			"sentiment": "NEUTRAL",
 			"summary": "Incomplete Quote Request from NHAVA SHEVA (INNSA) to HAMBURG (DEHAM). Missing mandatory fields: Cargo Weight, Cargo Volume.",
-			"drafted_reply": "Dear Varun,\n\nThank you for reaching out for a shipping quote from Mumbai to Hamburg. We would be happy to assist you with transporting your steel parts next month.\n\nTo provide you with an accurate rate, could you please provide missing details?\n\nBest regards,\nLogisticsHQ Sales Team",
+			"drafted_reply": "Dear Customer,\n\nThank you for reaching out for a shipping quote from Mumbai to Hamburg. We would be happy to assist you with transporting your steel parts next month.\n\nTo provide you with an accurate rate, could you please provide missing details?\n\nBest regards,\nLogisticsHQ Sales Team",
 			"partial_rfq_context": {
-				"lead_name": "Varun Kanade",
+				"lead_name": "Prospective Shipper",
 				"cargo_description": "machinery parts",
 				"origin_port": "NHAVA SHEVA (INNSA)",
 				"destination_port": "HAMBURG (DEHAM)",
@@ -64,7 +64,7 @@ func (m *mockProvider) GenerateCompletion(ctx context.Context, prompt string) (s
 			"sentiment": "NEUTRAL",
 			"summary": "The sender is requesting an ocean freight quote for shipping 20 tons of industrial valves from Nhava Sheva to Hamburg, with a cargo ready date of October 15, 2026.",
 			"partial_rfq_context": {
-				"lead_name": "Varun Kanade",
+				"lead_name": "Prospective Shipper",
 				"cargo_description": "industrial valves",
 				"cargo_weight": "20000",
 				"origin_port": "NHAVA SHEVA (INNSA)",

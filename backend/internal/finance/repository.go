@@ -101,8 +101,8 @@ func (r *repository) GetInvoiceByID(ctx context.Context, orgID int64, id string)
 
 func (r *repository) UpdateInvoiceStatusTx(ctx context.Context, tx *sqlx.Tx, orgID int64, id string, status string, summary string) error {
 	_, err := tx.ExecContext(ctx,
-		`UPDATE shipment_invoices SET status = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`,
-		status, id, orgID,
+		`UPDATE shipment_invoices SET status = ?, ai_summary = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`,
+		status, summary, id, orgID,
 	)
 	return err
 }
@@ -119,19 +119,21 @@ func (r *repository) GetItemsByInvoice(ctx context.Context, orgID int64, invoice
 func (r *repository) InsertDiscrepanciesTx(ctx context.Context, tx *sqlx.Tx, items []*FinanceDiscrepancy) error {
 	query := `
 		INSERT INTO shipment_finance_discrepancies (
-			invoice_id, charge_code, field_name,
+			org_id, shipment_id, invoice_id, charge_code, field_name,
 			expected_value, actual_value, source, status, created_at, updated_at
 		) VALUES (
-			?, ?, ?,
+			?, ?, ?, ?, ?,
 			?, ?, ?, ?, NOW(), NOW()
 		) ON DUPLICATE KEY UPDATE
+		org_id = VALUES(org_id),
+		shipment_id = VALUES(shipment_id),
 		expected_value = VALUES(expected_value),
 		actual_value = VALUES(actual_value),
 		status = CASE WHEN status = 'RESOLVED' THEN 'RESOLVED' ELSE 'OPEN' END,
 		updated_at = NOW()
 	`
 	for _, d := range items {
-		if _, err := tx.ExecContext(ctx, query, d.InvoiceID, d.ChargeCode, d.FieldName, d.ExpectedValue, d.ActualValue, d.Source, d.Status); err != nil {
+		if _, err := tx.ExecContext(ctx, query, d.OrgID, d.ShipmentID, d.InvoiceID, d.ChargeCode, d.FieldName, d.ExpectedValue, d.ActualValue, d.Source, d.Status); err != nil {
 			return err
 		}
 	}

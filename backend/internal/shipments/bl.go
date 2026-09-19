@@ -27,6 +27,7 @@ type Service interface {
 	ListShipments(ctx context.Context, orgID int64) ([]*spec.Shipment, error)
 	UpdateShipment(ctx context.Context, s *spec.Shipment) error
 	GetMilestones(ctx context.Context, shipmentID int64) ([]*spec.ShipmentMilestone, error)
+	CreateMilestone(ctx context.Context, m *spec.ShipmentMilestone) error
 	UpdateMilestone(ctx context.Context, orgID int64, shipmentID int64, milestoneCode string, actualDate *time.Time, location *string, notes *string) error
 	GetShipmentExceptions(ctx context.Context, orgID int64, shipmentID int64) ([]*spec.ShipmentException, error)
 	CreateShipmentException(ctx context.Context, orgID int64, shipmentID int64, exType string, severity string, title string, description string, sourceEventID *string) error
@@ -108,7 +109,7 @@ func NewService(repo Repository, db *sqlx.DB, eventBus events.Bus, backendBaseUR
 }
 
 func (s *serviceImpl) SetCarrierService(carrierSvc carrierService.CarrierService) {
-	s.carrierTrackingEngine = NewCarrierTrackingEngine(s.db, s.repo, carrierSvc)
+	s.carrierTrackingEngine = NewCarrierTrackingEngine(s.db, s.repo, carrierSvc, s.eventBus)
 }
 
 func (s *serviceImpl) CreateFromRFQ(ctx context.Context, rfqID int64) (*spec.Shipment, error) {
@@ -293,6 +294,10 @@ func (s *serviceImpl) GetMilestones(ctx context.Context, shipmentID int64) ([]*s
 	return s.repo.GetMilestones(ctx, shipmentID)
 }
 
+func (s *serviceImpl) CreateMilestone(ctx context.Context, m *spec.ShipmentMilestone) error {
+	return s.repo.CreateMilestone(ctx, m)
+}
+
 func (s *serviceImpl) UpdateMilestone(ctx context.Context, orgID int64, shipmentID int64, milestoneCode string, actualDate *time.Time, location *string, notes *string) error {
 	// 1. Validate shipment exists and belongs to the caller's organization
 	sh, err := s.repo.GetShipmentByID(ctx, orgID, shipmentID)
@@ -317,7 +322,18 @@ func (s *serviceImpl) UpdateMilestone(ctx context.Context, orgID int64, shipment
 	}
 
 	if targetMilestone == nil {
-		return fmt.Errorf("milestone %s not found for shipment %d", milestoneCode, shipmentID)
+		desc := fmt.Sprintf("Milestone %s", milestoneCode)
+		targetMilestone = &spec.ShipmentMilestone{
+			ShipmentID:    shipmentID,
+			MilestoneCode: milestoneCode,
+			Description:   &desc,
+			PlannedDate:   actualDate,
+			ActualDate:    actualDate,
+			Status:        "COMPLETED",
+			Location:      location,
+			Notes:         notes,
+		}
+		return s.repo.CreateMilestone(ctx, targetMilestone)
 	}
 
 	// Decision 2: Prevent milestone actual-date regression. Preserve raw event but do not overwrite newer date.
@@ -348,6 +364,25 @@ func (s *serviceImpl) UpdateMilestone(ctx context.Context, orgID int64, shipment
 		return err
 	}
 
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: OperationsAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionUpdate,
+		Module:       domain.ModuleShipments,
+		ResourceType: "MILESTONE",
+		ResourceID:   fmt.Sprintf("%d:%s", shipmentID, milestoneCode),
+		Description:  fmt.Sprintf("AI Operations Agent updated milestone %s for shipment #%d", milestoneCode, shipmentID),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"shipment_id":    shipmentID,
+			"milestone_code": milestoneCode,
+			"source":         "AI_AGENT",
+		},
+	})
+
 	// Update shipment status based on latest milestone code progression rules
 	milestoneOrder := map[string]int{
 		spec.BOOKING_PENDING: 0,
@@ -376,6 +411,19 @@ func (s *serviceImpl) UpdateMilestone(ctx context.Context, orgID int64, shipment
 				"Logistics Operations",
 			)
 		}
+	}
+
+	if s.eventBus != nil {
+		s.eventBus.Publish(events.Event{
+			Type: "shipment.milestone_updated",
+			Payload: map[string]interface{}{
+				"shipment_id":    shipmentID,
+				"org_id":         orgID,
+				"milestone_code": milestoneCode,
+				"status":         sh.Status,
+			},
+			Timestamp: time.Now(),
+		})
 	}
 
 	return nil
@@ -449,6 +497,42 @@ func (s *serviceImpl) CreateShipmentException(ctx context.Context, orgID int64, 
 		fmt.Sprintf("New %s Exception raised: %s", severity, title),
 		"Logistics Operations",
 	)
+
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: OperationsAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionCreate,
+		Module:       domain.ModuleShipments,
+		ResourceType: "SHIPMENT_EXCEPTION",
+		ResourceID:   fmt.Sprintf("%d:%s", shipmentID, exType),
+		Description:  fmt.Sprintf("AI Operations Agent created %s exception '%s' for shipment #%d", severity, title, shipmentID),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"shipment_id":     shipmentID,
+			"exception_type":  exType,
+			"severity":        severity,
+			"source_event_id": sourceEventID,
+			"source":          "AI_AGENT",
+		},
+	})
+
+	if s.eventBus != nil {
+		s.eventBus.Publish(events.Event{
+			Type: "shipment.exception_raised",
+			Payload: map[string]interface{}{
+				"shipment_id":     shipmentID,
+				"org_id":          orgID,
+				"exception_type":  exType,
+				"severity":        severity,
+				"title":           title,
+				"source_event_id": sourceEventID,
+			},
+			Timestamp: time.Now(),
+		})
+	}
 
 	return nil
 }

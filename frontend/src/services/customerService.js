@@ -38,6 +38,11 @@ export const customerService = {
     return await api.get(`${BASE_URL}/${id}`);
   },
 
+  // ── Customer 360° Intelligence (Task 1.2) ──────────────────────────────
+  getCustomer360Intelligence: async (id) => {
+    return await api.get(`${BASE_URL}/${id}/intelligence`);
+  },
+
   // ── Customer 360° Dashboard & Sub-Module Endpoints (Task 22) ───────────
   getCustomerDashboard: async (id) => {
     return await api.get(`${BASE_URL}/${id}/dashboard`);
@@ -193,4 +198,5 @@ export const customerService = {
   },
 };
 
+export const getCustomer360Intelligence = customerService.getCustomer360Intelligence;
 export default customerService;

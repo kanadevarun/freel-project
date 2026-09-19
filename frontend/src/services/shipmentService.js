@@ -350,6 +350,27 @@ export const shipmentService = {
   reviewShipmentFinancials: async (shipmentId, data) => {
     return api.post(`/api/v1/shipments/${shipmentId}/financials/review`, data);
   },
+
+  /**
+   * ──────────────────────────────────────────────────────────────────────────
+   * Shipment & Operations Intelligence API (Phase 1 Task 1.4)
+   * ──────────────────────────────────────────────────────────────────────────
+   */
+
+  /**
+   * Fetch complete 360-degree shipment and operations intelligence.
+   * Deterministic milestone tracking, delay analysis, exception prioritization, and grounded AI insights.
+   */
+  getShipment360OperationsIntelligence: async (shipmentId) => {
+    return api.get(`/api/v1/shipments/${shipmentId}/intelligence`);
+  },
+
+  /**
+   * Fetch organization-wide operational health summary.
+   */
+  getOrgOperationsSummary: async () => {
+    return api.get('/api/v1/shipments/operations-summary');
+  },
 };
 
 export default shipmentService;

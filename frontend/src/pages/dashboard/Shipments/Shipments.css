@@ -2,10 +2,12 @@
 
 .shipments-container,
 .shipment-detail-container {
-  padding: 32px;
-  max-width: 1400px;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: auto;
+  box-sizing: border-box;
 }
 
 .shipments-header {
@@ -5217,6 +5219,251 @@
   margin: 0;
   line-height: 1.4;
 }
+
+/* =========================================================
+   SHIPMENT DETAIL TAB NAVIGATION & WORKSPACE SHELL
+========================================================= */
+.sd-tabs-shell {
+  margin: 0 0 20px 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.sd-tabs-scroll {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  padding: 4px 8px;
+  gap: 4px;
+  scrollbar-width: thin;
+}
+
+.sd-nav-tab {
+  position: relative;
+  min-height: 44px;
+  padding: 6px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px 6px 0 0;
+}
+
+.sd-nav-tab:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.sd-nav-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 700;
+  background: #ffffff;
+}
+
+.sd-nav-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.sd-nav-tab-badge.badge-danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.sd-nav-tab-badge.badge-amber {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+/* =========================================================
+   OVERVIEW TAB LAYOUT & CARDS
+========================================================= */
+.sd-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .sd-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sd-overview-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sd-overview-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sd-overview-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.sd-overview-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.sd-overview-action-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.sd-overview-action-link:hover {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.sd-overview-milestone-highlight {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.sd-overview-ms-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sd-overview-ms-body h4 {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.sd-overview-ms-body p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0 0 6px 0;
+}
+
+.sd-overview-ms-meta {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.sd-overview-ai-card {
+  background: #ffffff;
+  border: 1px solid #e0e7ff;
+  border-left: 4px solid #4f46e5;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sd-overview-ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.sd-overview-ai-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #312e81;
+  margin: 0;
+}
+
+.sd-overview-ai-desc {
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+}
+
+.sd-overview-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sd-overview-ai-btn:hover {
+  background: #4338ca;
+}
+
 
 
 

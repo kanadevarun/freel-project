@@ -1295,12 +1295,12 @@ func main() {
 			total, subtotal, tax, disc, paid, bal float64
 			bm, my bool
 		}{
-			{"INV-2026-0456", "Global Traders Inc.", "USA", "SH-2026-00124", "Shanghai ➔ Los Angeles", "2026-08-15", "2026-08-30", "15 days left", "Issued", "By Varun Sharma", 24650.00, 22410.00, 0.00, 0.00, 0.00, 24650.00, true, true},
+			{"INV-2026-0456", "Global Traders Inc.", "USA", "SH-2026-00124", "Shanghai ➔ Los Angeles", "2026-08-15", "2026-08-30", "15 days left", "Issued", "By Billing Operations", 24650.00, 22410.00, 0.00, 0.00, 0.00, 24650.00, true, true},
 			{"INV-2026-0455", "Oceanic Imports Pvt. Ltd.", "India", "SH-2026-00123", "Nhava Sheva ➔ New York", "2026-08-14", "2026-08-29", "14 days left", "Partially Paid", "By Priya Nair", 18940.00, 17200.00, 1740.00, 0.00, 10000.00, 8940.00, false, false},
-			{"INV-2026-0454", "Bright Star Ltd.", "UK", "SH-2026-00122", "Dubai ➔ Felixstowe", "2026-08-12", "2026-08-27", "12 days left", "Overdue", "By Varun Sharma", 32120.00, 30000.00, 2120.00, 0.00, 0.00, 32120.00, true, true},
+			{"INV-2026-0454", "Bright Star Ltd.", "UK", "SH-2026-00122", "Dubai ➔ Felixstowe", "2026-08-12", "2026-08-27", "12 days left", "Overdue", "By Billing Operations", 32120.00, 30000.00, 2120.00, 0.00, 0.00, 32120.00, true, true},
 			{"INV-2026-0453", "Techtronics GmbH", "Germany", "SH-2026-00121", "Hamburg ➔ Mumbai", "2026-08-11", "2026-08-26", "11 days left", "Paid", "By Priya Nair", 15780.00, 15780.00, 0.00, 0.00, 15780.00, 0.00, false, false},
 			{"INV-2026-0452", "Southern Retail LLC", "USA", "SH-2026-00120", "Los Angeles ➔ Chicago", "2026-08-10", "2026-08-25", "10 days left", "Paid", "By Rohan Mehta", 9650.00, 9650.00, 0.00, 0.00, 9650.00, 0.00, false, true},
-			{"INV-2026-0451", "Alpha Logistics", "Singapore", "SH-2026-00119", "Singapore ➔ Sydney", "2026-08-09", "2026-08-24", "9 days left", "Pending Approval", "By Varun Sharma", 7850.00, 7850.00, 0.00, 0.00, 0.00, 7850.00, false, true},
+			{"INV-2026-0451", "Alpha Logistics", "Singapore", "SH-2026-00119", "Singapore ➔ Sydney", "2026-08-09", "2026-08-24", "9 days left", "Pending Approval", "By Billing Operations", 7850.00, 7850.00, 0.00, 0.00, 0.00, 7850.00, false, true},
 			{"INV-2026-0450", "East Coast Traders", "Canada", "SH-2026-00118", "Vancouver ➔ Seattle", "2026-08-08", "2026-08-23", "8 days left", "Draft", "By Priya Nair", 11320.00, 11320.00, 0.00, 0.00, 0.00, 11320.00, false, false},
 			{"INV-2026-0449", "Sunrise Exports", "India", "SH-2026-00117", "Chennai ➔ Los Angeles", "2026-08-06", "2026-08-21", "6 days left", "Issued", "By Rohan Mehta", 26450.00, 26450.00, 0.00, 0.00, 0.00, 26450.00, false, false},
 		}

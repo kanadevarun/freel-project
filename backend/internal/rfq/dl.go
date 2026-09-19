@@ -234,28 +234,14 @@ func (d *dataLayer) ListRFQs(ctx context.Context, orgID int32, limit, offset int
 
 func (d *dataLayer) UpdateStage(ctx context.Context, orgID, rfqID int32, stage string) error {
 	query := `UPDATE rfqs SET stage = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`
-	res, err := d.db.ExecContext(ctx, query, stage, rfqID, orgID)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	_, err := d.db.ExecContext(ctx, query, stage, rfqID, orgID)
+	return err
 }
 
 func (d *dataLayer) UpdateAgentStatus(ctx context.Context, orgID, rfqID int32, status string) error {
 	query := `UPDATE rfqs SET agent_status = ?, updated_at = NOW() WHERE id = ? AND org_id = ?`
-	res, err := d.db.ExecContext(ctx, query, status, rfqID, orgID)
-	if err != nil {
-		return err
-	}
-	rows, _ := res.RowsAffected()
-	if rows == 0 {
-		return sql.ErrNoRows
-	}
-	return nil
+	_, err := d.db.ExecContext(ctx, query, status, rfqID, orgID)
+	return err
 }
 
 func (d *dataLayer) CreateRFQItem(ctx context.Context, item *spec.RFQItem) error {
@@ -1233,7 +1219,7 @@ func (d *dataLayer) GetBookingsWorkspace(ctx context.Context, orgID int32, filte
 	selectQuery := `
 		SELECT 
 			b.id, b.org_id, b.rfq_id, COALESCE(r.rfq_number, CONCAT('RFQ-', b.rfq_id)) AS rfq_number,
-			r.customer_id, COALESCE(c.name, 'Unknown Customer') AS customer_name,
+			r.customer_id, COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
 			b.quote_id, q.quote_reference, q.sell_price AS quote_sell_price,
 			COALESCE(q.currency, 'USD') AS currency,
 			b.booking_number, b.carrier_id, b.carrier_name, b.carrier_scac,
@@ -1359,7 +1345,7 @@ func (d *dataLayer) GetBookingWorkspaceDetail(ctx context.Context, orgID int32, 
 	// 2. Fetch Source RFQ
 	var sourceRFQ spec.BookingDetailSourceRFQ
 	rfqQuery := `
-		SELECT r.id, r.rfq_number, r.lead_id, r.customer_id, COALESCE(c.name, 'Unknown Customer') AS customer_name,
+		SELECT r.id, r.rfq_number, r.lead_id, r.customer_id, COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
 		       COALESCE(r.origin, '') AS origin_port, COALESCE(r.destination, '') AS destination_port, r.status, r.stage, r.created_at
 		FROM rfqs r
 		LEFT JOIN customers c ON r.customer_id = c.id
@@ -1467,7 +1453,7 @@ func (d *dataLayer) GetBookingWorkspaceDetail(ctx context.Context, orgID int32, 
 		CreatedAt   time.Time `db:"created_at"`
 	}
 	actQuery := `
-		SELECT id, entity_type, entity_id, action, description, actor, created_at
+		SELECT id, entity_type, entity_id, action, description, 'Operations Coordinator' AS actor, created_at
 		FROM activities
 		WHERE org_id = ? AND (
 			(entity_type = 'BOOKING' AND entity_id = ?) OR
@@ -1526,7 +1512,7 @@ func (d *dataLayer) GetEligibleRFQsForBooking(ctx context.Context, orgID int32) 
 	query := `
 		SELECT 
 			r.id AS rfq_id, COALESCE(r.rfq_number, CONCAT('RFQ-', r.id)) AS rfq_number,
-			r.customer_id, COALESCE(c.name, 'Unknown Customer') AS customer_name,
+			r.customer_id, COALESCE(NULLIF(c.name, ''), 'Direct Commercial Shipper') AS customer_name,
 			COALESCE(r.origin, '') AS origin_port, COALESCE(r.destination, '') AS destination_port, r.target_date,
 			q.id AS approved_quote_id, q.quote_reference, q.carrier_name, q.carrier_id AS carrier_scac,
 			COALESCE(q.currency, 'USD') AS currency, q.sell_price, q.buy_price, q.transit_time_days,
@@ -1640,6 +1626,33 @@ func (d *dataLayer) CreateShipmentFromBookingTx(ctx context.Context, orgID int32
 	shipmentID, err := res.LastInsertId()
 	if err != nil {
 		return nil, err
+	}
+
+	// Seed standard milestones for the newly created shipment
+	standardMilestones := []struct {
+		code  string
+		desc  string
+		st    string
+		delay int
+	}{
+		{"BOOKED", "Booking confirmed by shipping line", "COMPLETED", 0},
+		{"DEPARTED", "Vessel departed origin port", "PLANNED", 7},
+		{"IN_TRANSIT", "Vessel in ocean transit", "PLANNED", 14},
+		{"ARRIVED", "Vessel arrived at destination port", "PLANNED", 21},
+		{"DELIVERED", "Cargo delivered to final consignee", "PLANNED", 24},
+	}
+	for _, sm := range standardMilestones {
+		planned := time.Now().AddDate(0, 0, sm.delay)
+		var actual *time.Time
+		if sm.st == "COMPLETED" {
+			now := time.Now()
+			actual = &now
+		}
+		_, _ = d.db.ExecContext(ctx, `
+			INSERT INTO shipment_milestones (
+				shipment_id, milestone_code, description, planned_date, actual_date, status, location, notes
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`, shipmentID, sm.code, sm.desc, planned, actual, sm.st, booking.OriginPort, "Auto-initialized from confirmed booking")
 	}
 
 	// Record activity

@@ -221,7 +221,7 @@ export default function BookingDetailPage() {
             )}
           </div>
           <div style={{ fontSize: '0.88rem', color: '#64748b' }}>
-            Carrier: <strong>{booking.carrier_name}</strong> {booking.carrier_scac && `(${booking.carrier_scac})`} | Customer: <strong>{source_rfq.customer_name}</strong>
+            Carrier: <strong>{booking.carrier_name}</strong> {booking.carrier_scac && `(${booking.carrier_scac})`} | Customer: <strong>{source_rfq.customer_name || 'Direct Commercial Shipper'}</strong>
           </div>
         </div>
 
@@ -516,7 +516,7 @@ export default function BookingDetailPage() {
 
               <div className="booking-meta-item">
                 <span className="booking-meta-label">Customer</span>
-                <span className="booking-meta-val">{source_rfq.customer_name}</span>
+                <span className="booking-meta-val">{source_rfq.customer_name || 'Direct Commercial Shipper'}</span>
               </div>
             </div>
 
@@ -565,6 +565,55 @@ export default function BookingDetailPage() {
               <p style={{ fontSize: '0.85rem', color: '#94a3b8', fontStyle: 'italic', marginTop: '12px' }}>
                 No commercial quotation reference attached to this booking.
               </p>
+            )}
+          </div>
+
+          {/* Card 4: Operational Audit & Activity Timeline */}
+          <div className="detail-card">
+            <div className="detail-card-header">
+              <h3 className="detail-card-title">
+                <span>🕒 Operational Audit & Activity Timeline</span>
+              </h3>
+              <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                {activity_events?.length || 0} Events
+              </span>
+            </div>
+
+            {activity_events && activity_events.length > 0 ? (
+              <div className="booking-timeline-list" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {activity_events.map((evt, idx) => (
+                  <div key={evt.id || idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{
+                      width: '28px', height: '28px', borderRadius: '50%',
+                      background: evt.type?.includes('CONFIRMED') ? '#dcfce7' : evt.type?.includes('SHIPMENT') ? '#e0f2fe' : evt.type?.includes('REJECTED') ? '#fee2e2' : '#f1f5f9',
+                      color: evt.type?.includes('CONFIRMED') ? '#16a34a' : evt.type?.includes('SHIPMENT') ? '#0284c7' : evt.type?.includes('REJECTED') ? '#dc2626' : '#475569',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0, marginTop: '2px'
+                    }}>
+                      {evt.type?.includes('CONFIRMED') ? '✓' : evt.type?.includes('SHIPMENT') ? '🚢' : evt.type?.includes('REJECTED') ? '✕' : '•'}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
+                          {evt.title ? evt.title.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : evt.type}
+                        </span>
+                        <span style={{ fontSize: '0.74rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                          {evt.timestamp ? new Date(evt.timestamp).toLocaleString() : ''}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.82rem', color: '#475569', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+                        {evt.description}
+                      </p>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                        Actor: <strong>{evt.actor_name || 'Operations Coordinator'}</strong>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>
+                No operational activity events logged yet.
+              </div>
             )}
           </div>
         </div>

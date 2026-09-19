@@ -46,6 +46,12 @@ import api from '../../../services/api';
 import CustomerModal from './CustomerModal';
 import DocumentUploadModal from '../Documents/DocumentUploadModal';
 import DocumentDetailsModal from '../Documents/DocumentDetailsModal';
+import BusinessIntelligenceCard from '../../../components/common/BusinessIntelligenceCard';
+import CustomerIntelligence360Section from './CustomerIntelligence360Section';
+import AutonomousCustomerRelationshipCard from './components/AutonomousCustomerRelationshipCard';
+import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
+import CustomerLeadPredictiveIntelligenceCard from '../../../components/predictions/CustomerLeadPredictiveIntelligenceCard';
+import NetworkPerformancePredictiveCard from '../../../components/predictions/NetworkPerformancePredictiveCard';
 import './CustomerDetailsPage.css';
 
 const safeArray = (value) => (Array.isArray(value) ? value : []);
@@ -116,8 +122,24 @@ export default function CustomerDetailsPage() {
   const [intelProfile, setIntelProfile] = useState({});
   const [openRisks, setOpenRisks] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam) return tabParam.toLowerCase();
+    } catch {}
+    return 'overview';
+  });
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', newTab);
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  };
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const [customerDocs, setCustomerDocs] = useState([]);
@@ -422,7 +444,7 @@ export default function CustomerDetailsPage() {
           <button
             type="button"
             className="btn-secondary-action"
-            onClick={() => setActiveTab('financial')}
+            onClick={() => handleTabChange('financial')}
           >
             <DollarSign size={15} />
             Financial
@@ -526,7 +548,7 @@ export default function CustomerDetailsPage() {
               key={tab.id}
               type="button"
               className={`customer-tab ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
             >
               {tab.label}
             </button>
@@ -542,6 +564,30 @@ export default function CustomerDetailsPage() {
           
           {/* Main 3-Column Grid */}
           <div className="customer-overview-main">
+
+            {/* UNIFIED BUSINESS CONTEXT & INTELLIGENCE */}
+            {id && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <CustomerLeadPredictiveIntelligenceCard
+                  recordType="customer"
+                  recordId={id}
+                />
+                <NetworkPerformancePredictiveCard
+                  entityType="customer"
+                  entityId={id}
+                />
+                <BusinessIntelligenceCard
+                  entityType="Customer"
+                  entityId={id}
+                  title="Customer 360° Unified Intelligence"
+                />
+                <ModuleRecommendationsWidget
+                  sourceType="CUSTOMER"
+                  sourceId={id}
+                  sourceRef={customer?.customer_code || customer?.name}
+                />
+              </div>
+            )}
 
             {/* COMPANY INFORMATION CARD */}
             <div className="customer-panel">
@@ -1571,127 +1617,8 @@ export default function CustomerDetailsPage() {
       {/* ========================================================= */}
       {activeTab === 'intelligence' && (
         <section className="customer-tab-panel">
-          <div className="customer-tab-header">
-            <div>
-              <h2>Customer Intelligence & Risk</h2>
-              <p>Automated account health assessment, detected risks, and commercial expansion opportunities.</p>
-            </div>
-
-            <button
-              type="button"
-              className="btn-secondary-action"
-              disabled={refreshingIntel}
-              onClick={handleRefreshIntel}
-            >
-              <RefreshCw size={14} className={refreshingIntel ? 'animate-spin' : ''} />
-              {refreshingIntel ? 'Evaluating...' : 'Refresh Intelligence'}
-            </button>
-          </div>
-
-          {/* 3 Intelligence Summary Cards */}
-          <div className="customer-intelligence-grid">
-            <div className="customer-intelligence-card">
-              <div className="intelligence-card-header">
-                <TrendingUp size={18} className="text-blue-600" />
-                <span>Account Health</span>
-              </div>
-              <div className="health-score-display">
-                <strong>{healthScore ?? 50}</strong>
-                <span>/ 100</span>
-              </div>
-              <div className="mt-2">{renderHealthStatus()}</div>
-            </div>
-
-            <div className="customer-intelligence-card">
-              <div className="intelligence-card-header">
-                <ShieldAlert size={18} className="text-amber-600" />
-                <span>Open Risks</span>
-              </div>
-              <strong className="intelligence-count text-amber-600">{openRisks.length}</strong>
-              <span className="intelligence-card-sub">Active account risks requiring attention</span>
-            </div>
-
-            <div className="customer-intelligence-card">
-              <div className="intelligence-card-header">
-                <Zap size={18} className="text-indigo-600" />
-                <span>Opportunities</span>
-              </div>
-              <strong className="intelligence-count text-indigo-600">{opportunities.length}</strong>
-              <span className="intelligence-card-sub">Detected commercial expansion opportunities</span>
-            </div>
-          </div>
-
-          {/* Risks Section */}
-          <div className="mt-4">
-            <div className="intelligence-section-title">
-              <ShieldAlert size={16} className="text-amber-600" />
-              <h3>Detected Account Risks</h3>
-            </div>
-
-            {openRisks.length > 0 ? (
-              <div className="customer-risk-list">
-                {openRisks.map((risk, index) => (
-                  <div className="customer-risk-card" key={risk.id || index}>
-                    <div className="risk-icon-box">
-                      <AlertTriangle size={18} className="text-amber-600" />
-                    </div>
-                    <div className="risk-body">
-                      <strong className="risk-title">{risk.title || 'Customer Risk'}</strong>
-                      <p className="risk-desc">{risk.description || risk.reason || 'Risk requires commercial review.'}</p>
-                    </div>
-                    <span className={`risk-severity-badge severity-${(risk.severity || 'ATTENTION').toLowerCase()}`}>
-                      {risk.severity || 'ATTENTION'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="customer-empty-state-green">
-                <CheckCircle2 size={24} className="text-emerald-600" />
-                <div>
-                  <strong>No open risks detected</strong>
-                  <span>This customer account is in good standing with zero active operational or financial alerts.</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Opportunities Section */}
-          <div className="mt-4">
-            <div className="intelligence-section-title">
-              <Zap size={16} className="text-indigo-600" />
-              <h3>Commercial Opportunities</h3>
-            </div>
-
-            {opportunities.length > 0 ? (
-              <div className="customer-opp-list">
-                {opportunities.map((opp, index) => (
-                  <div className="customer-opp-card" key={opp.id || index}>
-                    <div className="opp-icon-box">
-                      <Zap size={18} className="text-indigo-600" />
-                    </div>
-                    <div className="opp-body">
-                      <strong className="opp-title">{opp.title || 'Commercial Opportunity'}</strong>
-                      <p className="opp-desc">{opp.description || opp.reason || 'Expansion opportunity detected.'}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn-secondary-action"
-                      onClick={() => navigate('/dashboard/rfqs')}
-                    >
-                      Explore RFQ
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="customer-empty-state-neutral">
-                <HelpCircle size={20} className="text-slate-400" />
-                <span>No new commercial opportunities identified at this time. Increase RFQ and quotation engagement to trigger smart suggestions.</span>
-              </div>
-            )}
-          </div>
-
+          <AutonomousCustomerRelationshipCard customerId={id} />
+          <CustomerIntelligence360Section customerId={id} />
         </section>
       )}
 

@@ -12,7 +12,10 @@ import {
   Mail, 
   Blocks, 
   CreditCard, 
-  Receipt 
+  Receipt,
+  Cpu,
+  Brain,
+  Activity
 } from 'lucide-react';
 import './SettingsLayout.css';
 
@@ -74,10 +77,48 @@ export default function SettingsLayout() {
           </ul>
         </div>
 
+        {/* AUTOMATION */}
+        <div className="settings-nav-section">
+          <div className="settings-nav-title">AUTOMATION</div>
+          <ul className="settings-nav-list">
+            <li className="settings-nav-item">
+              <NavLink to="/dashboard/settings/automations" className="settings-nav-link">
+                <Cpu className="settings-nav-icon" />
+                Workflow Automations
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+
+        {/* AI & PERSONALIZATION */}
+        <div className="settings-nav-section">
+          <div className="settings-nav-title">AI & PERSONALIZATION</div>
+          <ul className="settings-nav-list">
+            <li className="settings-nav-item">
+              <NavLink to="/dashboard/settings/memory" className="settings-nav-link">
+                <Brain className="settings-nav-icon" />
+                AI Memory & Preferences
+              </NavLink>
+            </li>
+            <li className="settings-nav-item">
+              <NavLink to="/dashboard/settings/monitoring" className="settings-nav-link">
+                <Activity className="settings-nav-icon" />
+                AI Monitoring & Quality
+              </NavLink>
+            </li>
+          </ul>
+        </div>
+
         {/* INTEGRATIONS */}
         <div className="settings-nav-section">
           <div className="settings-nav-title">INTEGRATIONS</div>
           <ul className="settings-nav-list">
+            <li className="settings-nav-item">
+              <NavLink to="/dashboard/settings/external-integrations" className="settings-nav-link">
+                <Blocks className="settings-nav-icon" />
+                External Integrations
+              </NavLink>
+            </li>
             <li className="settings-nav-item">
               <NavLink to="/dashboard/settings/carrier-integrations" className="settings-nav-link">
                 <Truck className="settings-nav-icon" />

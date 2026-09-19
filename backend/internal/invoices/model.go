@@ -168,3 +168,98 @@ type ListInvoiceParams struct {
 	Page        int
 	PageSize    int
 }
+
+// ──────────────────────────────────────────────────────────────────
+// Debit Note domain types
+// Debit Notes are issued to customers to charge additional amounts
+// after the original invoice (e.g. demurrage, corrections, surcharges).
+// Status lifecycle: DRAFT → ISSUED → ACKNOWLEDGED | VOID
+// ──────────────────────────────────────────────────────────────────
+
+// DebitNote represents a customer-facing debit note document.
+type DebitNote struct {
+	ID               int64      `db:"id" json:"id"`
+	OrgID            int64      `db:"org_id" json:"org_id"`
+	DebitNoteNumber  string     `db:"debit_note_number" json:"debit_note_number"`
+	CustomerID       int64      `db:"customer_id" json:"customer_id"`
+	CustomerName     string     `db:"customer_name" json:"customer_name"`
+	CustomerCountry  string     `db:"customer_country" json:"customer_country"`
+	ShipmentID       *int64     `db:"shipment_id" json:"shipment_id,omitempty"`
+	ShipmentNumber   string     `db:"shipment_number" json:"shipment_number"`
+	InvoiceID        *int64     `db:"invoice_id" json:"invoice_id,omitempty"`
+	InvoiceNumber    string     `db:"invoice_number" json:"invoice_number"`
+	Reason           string     `db:"reason" json:"reason"`
+	Currency         string     `db:"currency" json:"currency"`
+	Subtotal         float64    `db:"subtotal" json:"subtotal"`
+	TaxAmount        float64    `db:"tax_amount" json:"tax_amount"`
+	TotalAmount      float64    `db:"total_amount" json:"total_amount"`
+	Status           string     `db:"status" json:"status"` // DRAFT | ISSUED | ACKNOWLEDGED | VOID
+	IssueDate        *time.Time `db:"issue_date" json:"issue_date,omitempty"`
+	DueDate          *time.Time `db:"due_date" json:"due_date,omitempty"`
+	Notes            *string    `db:"notes" json:"notes,omitempty"`
+	CreatedByID      *int64     `db:"created_by_id" json:"created_by_id,omitempty"`
+	CreatedAt        time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt        time.Time  `db:"updated_at" json:"updated_at"`
+
+	// Populated on GetByID
+	LineItems []DebitNoteItem `json:"line_items,omitempty"`
+}
+
+// DebitNoteItem represents a single line item within a debit note.
+type DebitNoteItem struct {
+	ID              int64     `db:"id" json:"id"`
+	OrgID           int64     `db:"org_id" json:"org_id"`
+	DebitNoteID     int64     `db:"debit_note_id" json:"debit_note_id"`
+	Description     string    `db:"description" json:"description"`
+	ServiceCategory string    `db:"service_category" json:"service_category"`
+	Quantity        float64   `db:"quantity" json:"quantity"`
+	UnitPrice       float64   `db:"unit_price" json:"unit_price"`
+	TotalAmount     float64   `db:"total_amount" json:"total_amount"`
+	DisplayOrder    int       `db:"display_order" json:"display_order"`
+	CreatedAt       time.Time `db:"created_at" json:"created_at"`
+}
+
+// CreateDebitNoteInput represents the request payload for creating a debit note.
+type CreateDebitNoteInput struct {
+	CustomerID      int64                    `json:"customer_id"`
+	CustomerName    string                   `json:"customer_name"`
+	CustomerCountry string                   `json:"customer_country"`
+	ShipmentID      *int64                   `json:"shipment_id"`
+	ShipmentNumber  string                   `json:"shipment_number"`
+	InvoiceID       *int64                   `json:"invoice_id"`
+	InvoiceNumber   string                   `json:"invoice_number"`
+	Reason          string                   `json:"reason"`
+	Currency        string                   `json:"currency"`
+	TaxAmount       float64                  `json:"tax_amount"`
+	IssueDate       string                   `json:"issue_date"`
+	DueDate         string                   `json:"due_date"`
+	Notes           string                   `json:"notes"`
+	IssueImmediately bool                   `json:"issue_immediately"`
+	LineItems       []CreateDebitNoteItemInput `json:"line_items"`
+}
+
+// CreateDebitNoteItemInput represents a line item in the create request.
+type CreateDebitNoteItemInput struct {
+	Description     string  `json:"description"`
+	ServiceCategory string  `json:"service_category"`
+	Quantity        float64 `json:"quantity"`
+	UnitPrice       float64 `json:"unit_price"`
+}
+
+// ListDebitNoteParams represents filter parameters for listing debit notes.
+type ListDebitNoteParams struct {
+	Status     string // 'All', 'DRAFT', 'ISSUED', 'ACKNOWLEDGED', 'VOID'
+	Search     string
+	CustomerID int64
+	ShipmentID int64
+	Page       int
+	PageSize   int
+}
+
+// DebitNoteKPIStats represents tenant-scoped debit note dashboard metrics.
+type DebitNoteKPIStats struct {
+	TotalIssued    KPICardMetric `json:"total_issued"`
+	Draft          KPICardMetric `json:"draft"`
+	Outstanding    KPICardMetric `json:"outstanding"`
+	Void           KPICardMetric `json:"void"`
+}

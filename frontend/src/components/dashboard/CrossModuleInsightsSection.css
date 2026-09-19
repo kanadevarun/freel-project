@@ -1,0 +1,585 @@
+/* ==========================================================================
+   CrossModuleInsightsSection.css — Light Enterprise Styling for LogisticsHQ
+   ========================================================================== */
+
+.cmi-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cmi-container--compact {
+  padding: 14px;
+  gap: 12px;
+}
+
+/* ── Header ── */
+.cmi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cmi-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cmi-meta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 4px;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+.cmi-shield-icon {
+  color: #2563eb;
+}
+
+.cmi-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.cmi-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.cmi-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.cmi-count-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.cmi-count-pill--alert {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+}
+
+.cmi-count-pill--active {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.cmi-count-pill--clean {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.cmi-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cmi-timing,
+.cmi-corr {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.cmi-btn--icon {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.cmi-btn--icon:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cmi-btn--icon:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cmi-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Grounded AI Card ── */
+.cmi-ai-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cmi-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cmi-ai-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cmi-ai-icon {
+  color: #2563eb;
+}
+
+.cmi-ai-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cmi-confidence-badge {
+  font-size: 11px;
+  font-weight: 600;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.cmi-ai-summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cmi-ai-analysis {
+  font-size: 13px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.cmi-ai-questions {
+  margin-top: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.cmi-ai-q-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.cmi-ai-q-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.cmi-ai-q-list li {
+  margin-bottom: 3px;
+}
+
+/* ── Insights List ── */
+.cmi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cmi-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.cmi-item-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.cmi-item-card--critical {
+  border-left: 4px solid #ef4444;
+}
+
+.cmi-item-card--high {
+  border-left: 4px solid #f59e0b;
+}
+
+.cmi-item-card--moderate {
+  border-left: 4px solid #3b82f6;
+}
+
+.cmi-item-card--low {
+  border-left: 4px solid #94a3b8;
+}
+
+.cmi-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #ffffff;
+  cursor: pointer;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cmi-item-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cmi-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.cmi-badge--critical {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
+.cmi-badge--high {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+.cmi-badge--moderate {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.cmi-badge--low {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.cmi-category-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.cmi-item-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.cmi-item-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cmi-score-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.cmi-expand-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.cmi-item-body {
+  padding: 12px 14px 14px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cmi-item-desc {
+  font-size: 13px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ── Relationships ── */
+.cmi-relationships {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cmi-subheading {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cmi-rel-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cmi-rel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #1e293b;
+}
+
+/* ── Evidence Grid ── */
+.cmi-evidence-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cmi-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px;
+}
+
+.cmi-evidence-item {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cmi-ev-label {
+  font-weight: 600;
+  color: #64748b;
+  text-transform: capitalize;
+}
+
+.cmi-ev-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cmi-ev-desc {
+  font-size: 10px;
+}
+
+/* ── Action Callout ── */
+.cmi-action-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #1e3a8a;
+  line-height: 1.4;
+}
+
+.cmi-action-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ── Empty & Loading & Error States ── */
+.cmi-card {
+  padding: 24px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.cmi-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.cmi-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.cmi-loading-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.cmi-error-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  text-align: left;
+}
+
+.cmi-error-icon {
+  color: #e11d48;
+}
+
+.cmi-error-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #9f1239;
+  margin: 0 0 2px 0;
+}
+
+.cmi-error-msg {
+  font-size: 12px;
+  color: #be123c;
+  margin: 0 0 8px 0;
+}
+
+.cmi-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+}
+
+.cmi-empty-icon {
+  color: #10b981;
+}
+
+.cmi-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.cmi-empty-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  max-width: 480px;
+}
+
+.cmi-btn--secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cmi-btn--secondary:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cmi-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94a3b8;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}

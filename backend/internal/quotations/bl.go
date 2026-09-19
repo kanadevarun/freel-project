@@ -59,6 +59,7 @@ type Service interface {
 	GenerateQuotationDocument(ctx context.Context, orgID, quotationID, userID int64, docType string) (*QuotationDocument, error)
 	ListQuotationDocuments(ctx context.Context, orgID, quotationID int64) ([]*QuotationDocument, error)
 	GetQuotationDocument(ctx context.Context, orgID, quotationID, docID int64) (*QuotationDocument, []byte, error)
+	GetOrGenerateQuotationPDF(ctx context.Context, orgID, quotationID, userID int64) (*QuotationDocument, []byte, error)
 	CreateQuotationPublicLink(ctx context.Context, orgID, quotationID, userID int64, req *CreateQuotationPublicLinkRequest) (*QuotationPublicLink, error)
 	ListQuotationPublicLinks(ctx context.Context, orgID, quotationID int64) ([]*QuotationPublicLink, error)
 	RevokeQuotationPublicLink(ctx context.Context, orgID, quotationID, linkID, userID int64, req *RevokeQuotationPublicLinkRequest) error
@@ -1658,6 +1659,56 @@ func (s *service) GetCustomerQuotationPreview(ctx context.Context, orgID, quotat
 
 	validityStatus := CalculateQuotationValidityStatus(q.ValidUntil)
 
+	companyName := "LogisticsHQ Global Freight"
+	companyAddress := "742 Evergreen Terrace, Logistics Park, Suite 400"
+	companyContact := "support@logisticshq.io • +1 (800) 555-LOGI"
+	var companyLogoURL string
+
+	if orgBranding, err := s.repo.GetOrganizationBranding(ctx, orgID); err == nil && orgBranding != nil {
+		if orgBranding.LegalName != nil && strings.TrimSpace(*orgBranding.LegalName) != "" {
+			companyName = strings.TrimSpace(*orgBranding.LegalName)
+		} else if strings.TrimSpace(orgBranding.Name) != "" {
+			companyName = strings.TrimSpace(orgBranding.Name)
+		}
+
+		var addrParts []string
+		if orgBranding.Address != nil && strings.TrimSpace(*orgBranding.Address) != "" {
+			addrParts = append(addrParts, strings.TrimSpace(*orgBranding.Address))
+		}
+		if orgBranding.City != nil && strings.TrimSpace(*orgBranding.City) != "" {
+			addrParts = append(addrParts, strings.TrimSpace(*orgBranding.City))
+		}
+		if orgBranding.State != nil && strings.TrimSpace(*orgBranding.State) != "" {
+			addrParts = append(addrParts, strings.TrimSpace(*orgBranding.State))
+		}
+		if orgBranding.Country != nil && strings.TrimSpace(*orgBranding.Country) != "" {
+			addrParts = append(addrParts, strings.TrimSpace(*orgBranding.Country))
+		}
+		if orgBranding.PostalCode != nil && strings.TrimSpace(*orgBranding.PostalCode) != "" {
+			addrParts = append(addrParts, strings.TrimSpace(*orgBranding.PostalCode))
+		}
+		if len(addrParts) > 0 {
+			companyAddress = strings.Join(addrParts, ", ")
+		}
+
+		var contactParts []string
+		if orgBranding.PrimaryEmail != nil && strings.TrimSpace(*orgBranding.PrimaryEmail) != "" {
+			contactParts = append(contactParts, strings.TrimSpace(*orgBranding.PrimaryEmail))
+		} else if orgBranding.SupportEmail != nil && strings.TrimSpace(*orgBranding.SupportEmail) != "" {
+			contactParts = append(contactParts, strings.TrimSpace(*orgBranding.SupportEmail))
+		}
+		if orgBranding.PhoneNumber != nil && strings.TrimSpace(*orgBranding.PhoneNumber) != "" {
+			contactParts = append(contactParts, strings.TrimSpace(*orgBranding.PhoneNumber))
+		}
+		if len(contactParts) > 0 {
+			companyContact = strings.Join(contactParts, " • ")
+		}
+
+		if orgBranding.LogoURL != nil && strings.TrimSpace(*orgBranding.LogoURL) != "" {
+			companyLogoURL = strings.TrimSpace(*orgBranding.LogoURL)
+		}
+	}
+
 	preview := &CustomerQuotationPreview{
 		QuotationID:     q.ID,
 		QuotationNumber: q.QuotationNumber,
@@ -1686,9 +1737,10 @@ func (s *service) GetCustomerQuotationPreview(ctx context.Context, orgID, quotat
 		AcceptedAt:      q.AcceptedAt,
 		DeclinedAt:      q.DeclinedAt,
 		Charges:         customerCharges,
-		CompanyName:     "LogisticsHQ Global Freight",
-		CompanyAddress:  "742 Evergreen Terrace, Logistics Park, Suite 400",
-		CompanyContact:  "support@logisticshq.io • +1 (800) 555-LOGI",
+		CompanyName:     companyName,
+		CompanyAddress:  companyAddress,
+		CompanyContact:  companyContact,
+		CompanyLogoURL:  companyLogoURL,
 	}
 
 	return preview, nil
@@ -1993,6 +2045,33 @@ func (s *service) GetQuotationDocument(ctx context.Context, orgID, quotationID, 
 	content, err := os.ReadFile(doc.FilePath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("read document file: %w", err)
+	}
+
+	return doc, content, nil
+}
+
+func (s *service) GetOrGenerateQuotationPDF(ctx context.Context, orgID, quotationID, userID int64) (*QuotationDocument, []byte, error) {
+	// 1. Check if an existing PDF document is already stored and available on disk
+	docs, err := s.repo.GetQuotationDocuments(ctx, orgID, quotationID)
+	if err == nil && len(docs) > 0 {
+		for _, doc := range docs {
+			if doc.DocumentType == QuotationDocumentTypePDF && doc.FilePath != "" {
+				if content, readErr := os.ReadFile(doc.FilePath); readErr == nil && len(content) > 0 {
+					return doc, content, nil
+				}
+			}
+		}
+	}
+
+	// 2. Otherwise generate a fresh, authoritative PDF document
+	doc, err := s.GenerateQuotationDocument(ctx, orgID, quotationID, userID, QuotationDocumentTypePDF)
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate quotation pdf: %w", err)
+	}
+
+	content, err := os.ReadFile(doc.FilePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read generated pdf file: %w", err)
 	}
 
 	return doc, content, nil

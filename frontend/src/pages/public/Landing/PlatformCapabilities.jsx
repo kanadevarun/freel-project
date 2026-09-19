@@ -66,7 +66,6 @@ export default function PlatformCapabilities() {
           {/* Feature 1 */}
           <div className="pc-block" ref={el => blockRefs.current[0] = el}>
             <div className="pc-block-image">
-              {/* TODO: Download this image from Nano Banana */}
               <img src="/images/platform/tracking-dashboard.webp" alt="Real-Time Shipment Tracking" />
             </div>
             <div className="pc-block-content">
@@ -84,7 +83,6 @@ export default function PlatformCapabilities() {
           {/* Feature 2 */}
           <div className="pc-block" ref={el => blockRefs.current[1] = el}>
             <div className="pc-block-image">
-              {/* TODO: Download this image from Nano Banana */}
               <img src="/images/platform/document-management.webp" alt="Smart Documentation" />
             </div>
             <div className="pc-block-content">
@@ -102,7 +100,6 @@ export default function PlatformCapabilities() {
           {/* Feature 3 */}
           <div className="pc-block" ref={el => blockRefs.current[2] = el}>
             <div className="pc-block-image">
-              {/* TODO: Download this image from Nano Banana */}
               <img src="/images/platform/carrier-network.webp" alt="Carrier Management" />
             </div>
             <div className="pc-block-content">
@@ -120,7 +117,6 @@ export default function PlatformCapabilities() {
           {/* Feature 4 */}
           <div className="pc-block" ref={el => blockRefs.current[3] = el}>
             <div className="pc-block-image">
-              {/* TODO: Download this image from Nano Banana */}
               <img src="/images/platform/analytics.webp" alt="Analytics & Insights" />
             </div>
             <div className="pc-block-content">

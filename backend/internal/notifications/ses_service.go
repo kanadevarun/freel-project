@@ -15,6 +15,7 @@ import (
 
 // sesServiceImpl is the concrete implementation of the notifications Service using AWS SES.
 type sesServiceImpl struct {
+	UnimplementedInAppService
 	sesClient   *ses.Client
 	fromAddress string
 	templateDir string

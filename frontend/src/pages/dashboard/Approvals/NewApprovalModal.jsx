@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, AlertCircle, ShieldAlert, User, Calendar, Tag } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 
 export default function NewApprovalModal({
   isOpen,
@@ -14,12 +15,19 @@ export default function NewApprovalModal({
   initialDocumentId = 0,
   initialCustomerId = 0,
 }) {
+  const { user } = useAuth();
+  const defaultRequester = user?.full_name || 
+    (user?.name && !user.name.includes('@') ? user.name : null) || 
+    (user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : null) || 
+    user?.email || 
+    '<IdentifiedUser>';
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(initialCategory);
   const [type, setType] = useState(initialType);
   const [relatedRef, setRelatedRef] = useState(initialRelatedRef);
   const [customerName, setCustomerName] = useState(initialCustomerName);
-  const [requesterName, setRequesterName] = useState('Varun Kanade');
+  const [requesterName, setRequesterName] = useState(defaultRequester);
   const [department, setDepartment] = useState('Operations');
   const [assignedTo, setAssignedTo] = useState('Arjun Singh (Operations Manager)');
   const [dueDate, setDueDate] = useState(() => {

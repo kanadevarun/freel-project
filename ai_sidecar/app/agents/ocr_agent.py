@@ -15,11 +15,20 @@ def ocr_node(state: ContractExtractionState) -> Dict[str, Any]:
         message=f"Reading contract document text (key: {state.s3_key})..."
     ))
 
-    local_path = f"/Users/varun.kanade/go/src/freel/freel-project/backend/uploads/{state.s3_key}"
+    possible_paths = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "backend", "uploads", state.s3_key),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads", state.s3_key),
+    ]
+    local_path = None
+    for p in possible_paths:
+        if os.path.exists(p):
+            local_path = p
+            break
+
     raw_text = ""
     pages_count = 0
 
-    if os.path.exists(local_path):
+    if local_path and os.path.exists(local_path):
         try:
             reader = PdfReader(local_path)
             pages_count = len(reader.pages)

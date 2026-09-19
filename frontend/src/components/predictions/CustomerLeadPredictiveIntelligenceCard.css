@@ -1,0 +1,545 @@
+/* CustomerLeadPredictiveIntelligenceCard.css
+ * Clean, modern light theme styling for LogisticsHQ predictive customer and lead intelligence.
+ */
+
+.cl-pred-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.cl-pred-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+}
+
+/* Severity borders */
+.cl-pred-card--severity-critical {
+  border-left: 4px solid #e11d48;
+}
+
+.cl-pred-card--severity-high {
+  border-left: 4px solid #f97316;
+}
+
+.cl-pred-card--severity-medium {
+  border-left: 4px solid #eab308;
+}
+
+.cl-pred-card--severity-low {
+  border-left: 4px solid #10b981;
+}
+
+/* Loading & Empty States */
+.cl-pred-card--loading,
+.cl-pred-card--empty,
+.cl-pred-card--error {
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cl-pred-card__loading-content,
+.cl-pred-card__empty-content,
+.cl-pred-card__error-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.cl-pred-card__loading-text {
+  font-size: 0.875rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.cl-pred-card__empty-text {
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.cl-pred-card__error-body {
+  flex: 1;
+}
+
+.cl-pred-card__error-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b91c1c;
+  margin: 0;
+}
+
+.cl-pred-card__error-desc {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+/* Header */
+.cl-pred-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cl-pred-card__title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.cl-pred-card__icon-wrapper {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cl-pred-card__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f172a;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.cl-pred-card__meta {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+}
+
+.cl-pred-card__actions-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cl-pred-card__refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.cl-pred-card__refresh-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Category Badges */
+.cl-category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.cl-category-badge--conversion {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.cl-category-badge--repeat {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.cl-category-badge--inactivity {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+}
+
+.cl-category-badge--churn {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.cl-category-badge--engagement {
+  background: #fdf4ff;
+  color: #a21caf;
+  border: 1px solid #f5d0fe;
+}
+
+.cl-category-badge--neutral {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Ribbon */
+.cl-pred-card__ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.cl-status-pill {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.cl-status-pill--published {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.cl-status-pill--acknowledged {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.cl-status-pill--action_requested {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.cl-status-pill--superseded {
+  background: #f8fafc;
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.cl-pred-card__horizon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Statement Box */
+.cl-pred-card__statement-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+}
+
+.cl-pred-card__statement-icon {
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+
+.cl-pred-card__statement-content {
+  flex: 1;
+}
+
+.cl-pred-card__statement-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.cl-pred-card__explanation-text {
+  font-size: 0.8125rem;
+  color: #475569;
+  line-height: 1.45;
+  margin: 0.375rem 0 0 0;
+}
+
+/* Signals Grid */
+.cl-pred-card__signals-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cl-pred-card__section-subtitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.cl-pred-card__signals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.625rem;
+}
+
+.cl-signal-tile {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.cl-signal-tile__name {
+  font-size: 0.6875rem;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.cl-signal-tile__values {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.cl-signal-tile__observed {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.cl-signal-tile__baseline {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+}
+
+.cl-signal-tile__weight {
+  font-size: 0.6875rem;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+/* Recommendation Box */
+.cl-pred-card__recommendation-box {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cl-pred-card__rec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cl-pred-card__hitl-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #6b21a8;
+  background: #ede9fe;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cl-pred-card__internal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+.cl-pred-card__rec-text {
+  font-size: 0.8125rem;
+  color: #334155;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.cl-pred-card__rec-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.cl-pred-card__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+}
+
+.cl-pred-card__btn--primary {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+.cl-pred-card__btn--primary:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.cl-pred-card__btn--secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.cl-pred-card__btn--secondary:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.cl-pred-card__action-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2563eb;
+  background: #dbeafe;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+}
+
+/* Evidence Accordion */
+.cl-pred-card__evidence-wrapper {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.625rem;
+}
+
+.cl-pred-card__evidence-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0.25rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.cl-pred-card__evidence-toggle:hover {
+  color: #0f172a;
+}
+
+.cl-pred-card__evidence-body {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cl-pred-card__evidence-table-container {
+  overflow-x: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.cl-pred-card__evidence-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+  text-align: left;
+}
+
+.cl-pred-card__evidence-table th {
+  background: #f8fafc;
+  padding: 0.375rem 0.625rem;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cl-pred-card__evidence-table td {
+  padding: 0.375rem 0.625rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.cl-ref-pill {
+  display: inline-block;
+  font-family: monospace;
+  background: #f1f5f9;
+  padding: 0.1rem 0.375rem;
+  border-radius: 3px;
+  font-size: 0.6875rem;
+  color: #334155;
+}
+
+.cl-pred-card__evidence-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  font-family: monospace;
+  padding: 0.25rem 0;
+}
+
+/* Success Banner */
+.cl-pred-card__banner--success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #065f46;
+  font-weight: 500;
+}

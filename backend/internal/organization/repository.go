@@ -2,6 +2,7 @@ package organization
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -113,20 +114,34 @@ func (r *repository) GetNotificationPreferences(ctx context.Context, orgID int64
 	var prefs NotificationPreferences
 	query := `SELECT * FROM org_notification_preferences WHERE org_id = ?`
 	err := r.db.GetContext(ctx, &prefs, query, orgID)
+	if err == sql.ErrNoRows {
+		return &NotificationPreferences{
+			OrgID:                 orgID,
+			NewRFQReceived:        true,
+			NewQuoteReceived:      true,
+			ShipmentStatusUpdates: true,
+			ShipmentExceptions:    true,
+			InvitationAccepted:    true,
+			InvoicePaymentEvents:  true,
+			SystemSecurityAlerts:  true,
+		}, nil
+	}
 	return &prefs, err
 }
 
 func (r *repository) UpdateNotificationPreferences(ctx context.Context, prefs *NotificationPreferences) error {
-	query := `UPDATE org_notification_preferences SET 
-		new_rfq_received = :new_rfq_received,
-		new_quote_received = :new_quote_received,
-		shipment_status_updates = :shipment_status_updates,
-		shipment_exceptions = :shipment_exceptions,
-		invitation_accepted = :invitation_accepted,
-		invoice_payment_events = :invoice_payment_events,
-		system_security_alerts = :system_security_alerts,
-		updated_at = NOW()
-	WHERE org_id = :org_id`
+	query := `INSERT INTO org_notification_preferences 
+		(org_id, new_rfq_received, new_quote_received, shipment_status_updates, shipment_exceptions, invitation_accepted, invoice_payment_events, system_security_alerts, created_at, updated_at)
+		VALUES (:org_id, :new_rfq_received, :new_quote_received, :shipment_status_updates, :shipment_exceptions, :invitation_accepted, :invoice_payment_events, :system_security_alerts, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE 
+		new_rfq_received = VALUES(new_rfq_received),
+		new_quote_received = VALUES(new_quote_received),
+		shipment_status_updates = VALUES(shipment_status_updates),
+		shipment_exceptions = VALUES(shipment_exceptions),
+		invitation_accepted = VALUES(invitation_accepted),
+		invoice_payment_events = VALUES(invoice_payment_events),
+		system_security_alerts = VALUES(system_security_alerts),
+		updated_at = NOW()`
 	_, err := r.db.NamedExecContext(ctx, query, prefs)
 	return err
 }
@@ -135,16 +150,26 @@ func (r *repository) GetEmailSettings(ctx context.Context, orgID int64) (*EmailS
 	var settings EmailSettings
 	query := `SELECT * FROM org_email_settings WHERE org_id = ?`
 	err := r.db.GetContext(ctx, &settings, query, orgID)
+	if err == sql.ErrNoRows {
+		return &EmailSettings{
+			OrgID:                     orgID,
+			ProcessLogisticsInquiries: true,
+			TrackEmailThreads:         true,
+			SmartFiltering:            true,
+		}, nil
+	}
 	return &settings, err
 }
 
 func (r *repository) UpdateEmailSettings(ctx context.Context, settings *EmailSettings) error {
-	query := `UPDATE org_email_settings SET 
-		process_logistics_inquiries = :process_logistics_inquiries,
-		track_email_threads = :track_email_threads,
-		smart_filtering = :smart_filtering,
-		updated_at = NOW()
-	WHERE org_id = :org_id`
+	query := `INSERT INTO org_email_settings 
+		(org_id, process_logistics_inquiries, track_email_threads, smart_filtering, created_at, updated_at)
+		VALUES (:org_id, :process_logistics_inquiries, :track_email_threads, :smart_filtering, NOW(), NOW())
+		ON DUPLICATE KEY UPDATE 
+		process_logistics_inquiries = VALUES(process_logistics_inquiries),
+		track_email_threads = VALUES(track_email_threads),
+		smart_filtering = VALUES(smart_filtering),
+		updated_at = NOW()`
 	_, err := r.db.NamedExecContext(ctx, query, settings)
 	return err
 }

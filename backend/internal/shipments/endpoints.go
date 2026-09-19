@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/freel/backend/internal/carrier/adapters"
@@ -245,6 +246,33 @@ func makeGetShipmentEP(svc Service) endpoint.Endpoint {
 		if err != nil {
 			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
 		}
+		if len(milestones) == 0 {
+			// Initialize default milestones for active shipment
+			defaultCodes := []struct {
+				code string
+				desc string
+			}{
+				{"BOOKED", "Booking confirmed with carrier"},
+				{"DEPARTED", "Origin departure / Vessel sail"},
+				{"IN_TRANSIT", "Ocean transit in progress"},
+				{"ARRIVED", "Vessel arrived at destination port"},
+				{"DELIVERED", "Customs clearance and final delivery"},
+			}
+			for _, dc := range defaultCodes {
+				desc := dc.desc
+				st := "PLANNED"
+				if sh.Status == dc.code || (sh.Status == "BOOKED" && dc.code == "BOOKED") {
+					st = "COMPLETED"
+				}
+				_ = svc.CreateMilestone(ctx, &spec.ShipmentMilestone{
+					ShipmentID:    sh.ID,
+					MilestoneCode: dc.code,
+					Description:   &desc,
+					Status:        st,
+				})
+			}
+			milestones, _ = svc.GetMilestones(ctx, req.ID)
+		}
 
 		exceptions, err := svc.GetShipmentExceptions(ctx, orgID, req.ID)
 		if err != nil {
@@ -428,6 +456,9 @@ func makeUpdateMilestoneInternalEP(svc Service) endpoint.Endpoint {
 
 		err := svc.UpdateMilestone(ctx, *req.OrgID, req.ID, req.MilestoneCode, &req.ActualDate, req.Location, req.Notes)
 		if err != nil {
+			if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+				return nil, svcerror.NewServiceError(svcerror.ErrResourceNotFound)
+			}
 			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
 		}
 
@@ -444,6 +475,9 @@ func makeCreateExceptionInternalEP(svc Service) endpoint.Endpoint {
 
 		err := svc.CreateShipmentException(ctx, *req.OrgID, req.ID, req.ExceptionType, req.Severity, req.Title, req.Description, req.SourceEventID)
 		if err != nil {
+			if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "access denied") {
+				return nil, svcerror.NewServiceError(svcerror.ErrResourceNotFound)
+			}
 			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
 		}
 
@@ -458,8 +492,22 @@ func makeCallbackInternalEP(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*spec.CallbackInternalRequest)
 
+		if req.OrgID <= 0 {
+			return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+		}
+
+		if req.ShipmentID > 0 {
+			sh, err := svc.GetShipmentByID(ctx, req.OrgID, req.ShipmentID)
+			if err != nil || sh == nil {
+				return nil, svcerror.NewServiceError(svcerror.ErrResourceNotFound)
+			}
+		}
+
 		if req.EventID != "" {
-			_ = svc.CompleteCarrierEvent(ctx, req.EventID, req.OrgID, req.ShipmentID, req.HasCriticalException, req.AISummary)
+			err := svc.CompleteCarrierEvent(ctx, req.EventID, req.OrgID, req.ShipmentID, req.HasCriticalException, req.AISummary)
+			if err != nil {
+				return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			}
 		}
 
 		log.Printf("[Shipment Callback] Processing agent results for Shipment #%d. Critical Exception: %t, Summary: %s",
@@ -493,6 +541,20 @@ func makeUpdateMilestoneEP(svc Service) endpoint.Endpoint {
 	}
 }
 
+func mapShipmentExceptionError(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	if strings.Contains(msg, "missing required") || strings.Contains(msg, "invalid") || strings.Contains(msg, "cannot") {
+		return svcerror.WrapServiceError(svcerror.ErrInvalidArgument, err)
+	}
+	if strings.Contains(msg, "not found") || strings.Contains(msg, "access denied") || strings.Contains(msg, "mismatch") {
+		return svcerror.WrapServiceError(svcerror.ErrResourceNotFound, err)
+	}
+	return svcerror.WrapServiceError(svcerror.ErrInternal, err)
+}
+
 func makeGetShipmentExceptionsEP(svc Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*spec.EvaluateExceptionsRequest)
@@ -503,7 +565,7 @@ func makeGetShipmentExceptionsEP(svc Service) endpoint.Endpoint {
 
 		exceptions, err := svc.GetShipmentExceptions(ctx, orgID, req.ShipmentID)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -523,7 +585,7 @@ func makeCreateShipmentExceptionEP(svc Service) endpoint.Endpoint {
 
 		err = svc.CreateShipmentException(ctx, orgID, req.ShipmentID, req.ExceptionType, req.Severity, req.Title, req.Description, req.SourceEventID)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -543,7 +605,7 @@ func makeUpdateShipmentExceptionEP(svc Service) endpoint.Endpoint {
 
 		err = svc.UpdateShipmentException(ctx, orgID, req.ShipmentID, req.ID, req.Status, req.Severity, req.Notes)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -563,7 +625,7 @@ func makeAcknowledgeShipmentExceptionEP(svc Service) endpoint.Endpoint {
 
 		err = svc.AcknowledgeShipmentException(ctx, orgID, req.ShipmentID, req.ID)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -586,7 +648,7 @@ func makeResolveShipmentExceptionEP(svc Service) endpoint.Endpoint {
 
 		err = svc.ResolveShipmentException(ctx, orgID, req.ShipmentID, req.ID, req.ResolutionNotes, req.ResolvedBy)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -606,7 +668,7 @@ func makeDismissShipmentExceptionEP(svc Service) endpoint.Endpoint {
 
 		err = svc.DismissShipmentException(ctx, orgID, req.ShipmentID, req.ID)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{
@@ -626,7 +688,7 @@ func makeEvaluateShipmentExceptionsEP(svc Service) endpoint.Endpoint {
 
 		err = svc.EvaluateShipmentExceptions(ctx, orgID, req.ShipmentID)
 		if err != nil {
-			return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
+			return nil, mapShipmentExceptionError(err)
 		}
 
 		return &spec.APIResponse{

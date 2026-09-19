@@ -91,6 +91,7 @@ const (
 	CapSpotRates     Capability = "SPOT_RATES"
 	CapBooking       Capability = "BOOKING"
 	CapDocuments     Capability = "DOCUMENTS"
+	CapWebhook       Capability = "WEBHOOK"
 )
 
 func ParseCapability(s string) (Capability, bool) {
@@ -108,6 +109,8 @@ func ParseCapability(s string) (Capability, bool) {
 		return CapBooking, true
 	case "DOCUMENTS":
 		return CapDocuments, true
+	case "WEBHOOK", "WEBHOOKS":
+		return CapWebhook, true
 	default:
 		return "", false
 	}

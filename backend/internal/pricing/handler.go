@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
+	"strings"
 
+	"github.com/freel/backend/internal/approvals"
+	"github.com/freel/backend/internal/audit"
+	"github.com/freel/backend/internal/audit/domain"
+	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/rates"
 	"github.com/freel/backend/internal/rfq"
 	rfqspec "github.com/freel/backend/internal/rfq/spec"
@@ -16,9 +20,10 @@ import (
 
 // Handler handles internal pricing API endpoints.
 type Handler struct {
-	rulesSvc Service
-	rfqBL    rfq.BusinessLogic
-	rateSvc  rates.Service
+	rulesSvc     Service
+	rfqBL        rfq.BusinessLogic
+	rateSvc      rates.Service
+	approvalsSvc approvals.Service
 }
 
 // NewHandler creates a new Handler instance.
@@ -30,11 +35,14 @@ func NewHandler(rulesSvc Service, rfqBL rfq.BusinessLogic, rateSvc rates.Service
 	}
 }
 
+func (h *Handler) SetApprovalsService(svc approvals.Service) {
+	h.approvalsSvc = svc
+}
+
 // GetRules handles GET /internal/pricing/rules (invoked by sidecar tool)
 func (h *Handler) GetRules(w http.ResponseWriter, r *http.Request) {
-	// Authentication
-	if err := h.authenticate(r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
@@ -52,7 +60,7 @@ func (h *Handler) GetRules(w http.ResponseWriter, r *http.Request) {
 
 	rules, err := h.rulesSvc.GetApplicableRules(r.Context(), orgID, origin, destination, tier, equipment)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "DB_ERROR")
+		utils.Error(w, http.StatusInternalServerError, "Failed to retrieve pricing rules", "DB_ERROR")
 		return
 	}
 
@@ -61,15 +69,14 @@ func (h *Handler) GetRules(w http.ResponseWriter, r *http.Request) {
 
 // GetRFQDetails handles GET /internal/rfqs/{id} (invoked by sidecar tool)
 func (h *Handler) GetRFQDetails(w http.ResponseWriter, r *http.Request) {
-	// Authentication
-	if err := h.authenticate(r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 32)
-	if err != nil {
+	if err != nil || id <= 0 {
 		utils.Error(w, http.StatusBadRequest, "Invalid rfq id", "INVALID_PARAM")
 		return
 	}
@@ -82,8 +89,8 @@ func (h *Handler) GetRFQDetails(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rfqObj, err := h.rfqBL.GetRFQ(r.Context(), int32(orgID), int32(id))
-	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "DB_ERROR")
+	if err != nil || rfqObj == nil {
+		utils.Error(w, http.StatusNotFound, "RFQ not found or access denied", "NOT_FOUND")
 		return
 	}
 
@@ -92,9 +99,8 @@ func (h *Handler) GetRFQDetails(w http.ResponseWriter, r *http.Request) {
 
 // SearchRates handles GET /internal/rates/search (bypasses Cognito for AI sidecar)
 func (h *Handler) SearchRates(w http.ResponseWriter, r *http.Request) {
-	// Authentication
-	if err := h.authenticate(r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
@@ -124,7 +130,7 @@ func (h *Handler) SearchRates(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.rateSvc.SearchRates(r.Context(), rateQuery)
 	if err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "SEARCH_FAILED")
+		utils.Error(w, http.StatusInternalServerError, "Failed to search rates", "SEARCH_FAILED")
 		return
 	}
 
@@ -150,9 +156,8 @@ type CreateDraftQuotesRequest struct {
 
 // CreateDraftQuotes handles POST /internal/pricing/quotes/draft (invoked by sidecar validation/save node)
 func (h *Handler) CreateDraftQuotes(w http.ResponseWriter, r *http.Request) {
-	// Authentication
-	if err := h.authenticate(r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
@@ -167,7 +172,18 @@ func (h *Handler) CreateDraftQuotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Tenant ownership verification: Ensure RFQ exists and belongs to the specified org_id
+	rfqObj, err := h.rfqBL.GetRFQ(r.Context(), req.OrgID, req.RFQID)
+	if err != nil || rfqObj == nil {
+		utils.Error(w, http.StatusNotFound, "RFQ not found or organization mismatch", "NOT_FOUND")
+		return
+	}
+
 	for _, q := range req.Quotes {
+		if strings.TrimSpace(q.CarrierName) == "" || q.BuyPrice < 0 || q.SellPrice < 0 {
+			utils.Error(w, http.StatusBadRequest, "Invalid quote pricing or missing carrier name", "INVALID_PAYLOAD")
+			return
+		}
 		quote := &rfqspec.Quote{
 			RFQID:                 req.RFQID,
 			CarrierName:           q.CarrierName,
@@ -181,10 +197,28 @@ func (h *Handler) CreateDraftQuotes(w http.ResponseWriter, r *http.Request) {
 			Status:                "DRAFT",
 		}
 		if err := h.rfqBL.AddQuote(r.Context(), req.OrgID, quote); err != nil {
-			utils.Error(w, http.StatusInternalServerError, err.Error(), "ADD_QUOTE_FAILED")
+			utils.Error(w, http.StatusInternalServerError, "Failed to create draft quote", "ADD_QUOTE_FAILED")
 			return
 		}
 	}
+
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+		OrgID:        int64(req.OrgID),
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: PricingAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionCreate,
+		Module:       domain.ModuleQuotations,
+		ResourceType: "QUOTE",
+		ResourceID:   strconv.Itoa(int(req.RFQID)),
+		Description:  fmt.Sprintf("AI Pricing Agent created %d draft quote(s) for RFQ #%d", len(req.Quotes), req.RFQID),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"rfq_id": req.RFQID,
+			"source": "AI_AGENT",
+		},
+	})
 
 	utils.Success(w, http.StatusOK, "Draft quotes created successfully", nil)
 }
@@ -199,9 +233,8 @@ type PricingCallbackRequest struct {
 
 // Callback handles POST /internal/pricing/callback (invoked by sidecar agent)
 func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
-	// Authentication
-	if err := h.authenticate(r); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+	if err := middleware.ValidateInternalServiceToken(r); err != nil {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized access: Invalid service key token", "UNAUTHORIZED")
 		return
 	}
 
@@ -216,6 +249,13 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Tenant ownership verification: Ensure RFQ exists and belongs to the specified org_id
+	rfqObj, err := h.rfqBL.GetRFQ(r.Context(), req.OrgID, req.RFQID)
+	if err != nil || rfqObj == nil {
+		utils.Error(w, http.StatusNotFound, "RFQ not found or organization mismatch", "NOT_FOUND")
+		return
+	}
+
 	// Map AgentStatus string to represent in RFQ entity UI
 	agentStatus := "COLLECTING_INFORMATION"
 	switch req.Status {
@@ -223,34 +263,59 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		agentStatus = "DRAFT_READY"
 	case "FAILED":
 		agentStatus = "FAILED"
-	case "NEEDS_REVIEW":
+	case "NEEDS_REVIEW", "WAITING_FOR_HUMAN":
 		agentStatus = "WAITING_FOR_HUMAN"
 	}
 
 	if err := h.rfqBL.UpdateAgentStatus(r.Context(), req.OrgID, req.RFQID, agentStatus); err != nil {
-		utils.Error(w, http.StatusInternalServerError, err.Error(), "UPDATE_STATUS_FAILED")
+		utils.Error(w, http.StatusInternalServerError, "Failed to update RFQ agent status", "UPDATE_STATUS_FAILED")
 		return
 	}
 
+	// If human approval is required, create or link canonical approval request
+	if agentStatus == "WAITING_FOR_HUMAN" && h.approvalsSvc != nil {
+		threadID := fmt.Sprintf("rfq-%d", req.RFQID)
+		approvalRef := fmt.Sprintf("approval-pricing.anomaly-rfq%d", req.RFQID)
+		_, _ = h.approvalsSvc.ProposeAIApproval(r.Context(), int64(req.OrgID), &approvals.ProposeAIApprovalInput{
+			Title:              fmt.Sprintf("Pricing Anomaly Approval for RFQ #%d", req.RFQID),
+			Category:           "COMMERCIAL",
+			Type:               "Pricing Anomaly Approval",
+			Priority:           "HIGH",
+			RelatedEntityType:  "RFQ",
+			RelatedEntityID:    int64(req.RFQID),
+			RelatedRef:         fmt.Sprintf("RFQ #%d", req.RFQID),
+			Description:        req.AiReasoning,
+			ActorType:          "AI_AGENT",
+			Source:             "langgraph.pricing",
+			ActionName:         "pricing.save_draft_quotes",
+			RiskLevel:          "HIGH_RISK",
+			RequiredPermission: "rfqs:approve",
+			ThreadID:           threadID,
+			ApprovalReference:  approvalRef,
+			CorrelationID:      req.CorrelationID,
+			ExpiresInHours:     48,
+		})
+	}
+
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(r.Context(), domain.CreateAuditLogParams{
+		OrgID:        int64(req.OrgID),
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: PricingAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionUpdate,
+		Module:       domain.ModuleRFQs,
+		ResourceType: "RFQ",
+		ResourceID:   strconv.Itoa(int(req.RFQID)),
+		Description:  fmt.Sprintf("AI Pricing Agent callback processed with status %s: %s", req.Status, agentStatus),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"rfq_id":         req.RFQID,
+			"source":         "AI_AGENT",
+			"status":         req.Status,
+			"correlation_id": req.CorrelationID,
+		},
+	})
+
 	utils.Success(w, http.StatusOK, "Pricing callback processed successfully", nil)
-}
-
-func (h *Handler) authenticate(r *http.Request) error {
-	token := r.Header.Get("X-LogisticsHQ-Service-Key")
-	if token == "" {
-		token = r.URL.Query().Get("service_key")
-	}
-
-	expectedToken := os.Getenv("INTERNAL_SERVICE_TOKEN")
-	if expectedToken == "" {
-		if os.Getenv("APP_ENV") == "production" {
-			return fmt.Errorf("Configuration error: INTERNAL_SERVICE_TOKEN must be specified in production environments")
-		}
-		expectedToken = "internal-service-key-logisticshq"
-	}
-
-	if token != expectedToken {
-		return fmt.Errorf("Unauthorized access: Invalid service key token")
-	}
-	return nil
 }

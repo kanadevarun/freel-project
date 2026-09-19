@@ -604,8 +604,8 @@ export default function Navbar() {
 
         {/* CTA Buttons */}
         <div className="navbar-actions">
+          <Link to="/demo" className="btn-start">Request Demo →</Link>
           <Link to="/login" className="btn-login">Log In</Link>
-          <Link to="/signup" className="btn-start">Get Started →</Link>
           {/* Mobile Hamburger */}
           <button
             className="mobile-toggle"
@@ -674,8 +674,8 @@ export default function Navbar() {
           <Link to="/contact" className="mobile-nav-link" onClick={() => setMobileOpen(false)}>Contact</Link>
 
           <div className="mobile-nav-cta">
+            <Link to="/demo" className="btn-start-mobile" onClick={() => setMobileOpen(false)}>Request Demo →</Link>
             <Link to="/login" className="btn-login-mobile" onClick={() => setMobileOpen(false)}>Log In</Link>
-            <Link to="/signup" className="btn-start-mobile" onClick={() => setMobileOpen(false)}>Get Started →</Link>
           </div>
         </div>
       )}

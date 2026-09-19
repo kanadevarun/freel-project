@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -153,7 +154,11 @@ func TestRFQContextMergeAndIdempotencyIntegration(t *testing.T) {
 
 		h := leads.NewEmailHandler(bl, &mockRFQBL{}, "http://localhost:8080")
 		req := httptest.NewRequest(http.MethodPost, "/internal/sales/callback", strings.NewReader(string(rawBytes)))
-		req.Header.Set("X-LogisticsHQ-Service-Key", "internal-service-key-logisticshq")
+		svcToken := os.Getenv("INTERNAL_SERVICE_TOKEN")
+		if svcToken == "" {
+			svcToken = "dev-local-only-insecure-service-token-not-for-prod"
+		}
+		req.Header.Set("X-LogisticsHQ-Service-Key", svcToken)
 		req.Header.Set("Content-Type", "application/json")
 		assert.NotNil(t, h)
 

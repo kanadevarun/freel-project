@@ -6,12 +6,13 @@ import httpx
 from typing import Dict, Any, Optional
 from app.state.sales_state import SalesAgentState
 from app.agents.llm_utils import execute_llm_json, execute_llm_text
+from app.prompts.prompt_registry import get_prompt
 from app.tools.web_search import get_web_search_tool
 from app.tools.leads_tool import create_rfq_from_email_tool
+from app.tools.auth_utils import get_internal_service_token
 
 # Backend endpoint configurations
 go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
-service_token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
 
 def resolve_locode(query: str) -> Optional[str]:
     """Helper to call standard UN/LOCODE normalizer in Go backend."""
@@ -22,7 +23,7 @@ def resolve_locode(query: str) -> Optional[str]:
         return query
         
     url = f"{go_backend_url}/internal/ports/normalize"
-    headers = {"X-LogisticsHQ-Service-Key": service_token}
+    headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
     params = {"query": query}
     try:
         resp = httpx.get(url, params=params, headers=headers, timeout=5.0)
@@ -65,31 +66,18 @@ the customer explicitly changes them. If the customer provides a value for a kno
 use the new value.
 """
 
-    prompt = f"""
-    Analyze the following inbound email from a shipper and extract key metadata:
-    
-    Email From: {sender}
-    Subject: {subject}
-    Body:
-    {body}
-    {prior_context_section}
-    Extract the following fields and return ONLY a JSON object:
-    - intent: "RFQ_REQUEST" (if requesting a shipping quote), "QUESTION" (general inquiry), "MEETING" (scheduling), "UNSUBSCRIBE" (opt-out), "FOLLOW_UP" (reply to existing thread).
-    - sentiment: "POSITIVE", "NEUTRAL", "NEGATIVE".
-    - confidence: integer from 0 to 100 representing your confidence in intent classification.
-    - lead_name: The sender's name if signed or mentioned, or null.
-    - company_domain: The domain of the sender (e.g. extract from from_email like 'tataexports.com', but exclude generic domains like 'gmail.com', 'yahoo.com', 'outlook.com', etc.).
-    - origin_port: The name of the origin port or city mentioned (e.g., "Nhava Sheva", "Mumbai", "INNSA"), or null.
-    - destination_port: The name of the destination port or city mentioned (e.g., "Hamburg", "DEHAM"), or null.
-    - incoterms: The Incoterms code mentioned (e.g. FOB, CIF, EXW, FCA), or null.
-    - cargo_description: Text description of the commodity/goods, or null.
-    - cargo_weight: Weight in KG (as float), or null.
-    - cargo_volume: Volume in CBM (as float), or null.
-    - target_date: Cargo ready date if mentioned (formatted as YYYY-MM-DD). If a relative date is mentioned (e.g., "next month", "in 2 weeks"), calculate the approximate YYYY-MM-DD date based on today's date ({today_str}) and use that, or null if completely unspecified.
-    - ai_summary: A short, concise summary (1-2 sentences) of the email's request.
-    
-    Response JSON:
-    """
+    from app.prompts.prompt_registry import get_prompt
+    prompt = get_prompt(
+        "sales.email_classification",
+        "1.0.0",
+        {
+            "Sender": sender,
+            "Subject": subject,
+            "Body": body,
+            "PriorContext": prior_context_section,
+            "Today": today_str,
+        }
+    )
 
     res = execute_llm_json(prompt)
     if not res:
@@ -244,18 +232,18 @@ def check_completeness_node(state: SalesAgentState) -> Dict[str, Any]:
         if is_reply:
             reply_context = "Note: The customer has already replied once with some information. Acknowledge the information they provided and politely ask only for what is still missing."
         
-        email_prompt = f"""
-        Draft a polite, professional, and concise email reply to a customer who sent a quote request but missed some mandatory details.
-        
-        Original Email Subject: {state.get("email_subject", "")}
-        Original Email Body:
-        {state.get("email_body", "")}
-        
-        Today's Date: {time.strftime("%Y-%m-%d", time.localtime())}
-        Missing Mandatory Fields that you MUST request: {', '.join(missing_fields)}
-        {reply_context}
-        Write only the email body. Do not include subject line or header fields. Start with the greeting "{greeting}" and sign off professionally as "LogisticsHQ Sales Team".
-        """
+        email_prompt = get_prompt(
+            "sales.reply_draft",
+            "1.0.0",
+            {
+                "Subject": state.get("email_subject", ""),
+                "Body": state.get("email_body", ""),
+                "Today": time.strftime("%Y-%m-%d", time.localtime()),
+                "MissingFields": ", ".join(missing_fields),
+                "ReplyContext": reply_context,
+                "Greeting": greeting,
+            }
+        )
         drafted_email = execute_llm_text(email_prompt)
         print(f"[Sales Agent] Drafted email reply for missing info: {drafted_email}")
         
@@ -360,7 +348,7 @@ def save_and_callback_node(state: SalesAgentState) -> Dict[str, Any]:
     callback_url = state.get("callback_url", f"{go_backend_url}/internal/sales/callback")
     print(f"[Sales Agent] Sending callback to Go backend: url={callback_url}, payload={payload}")
     
-    token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+    token = get_internal_service_token()
     headers = {
         "X-LogisticsHQ-Service-Key": token,
         "Content-Type": "application/json"

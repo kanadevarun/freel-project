@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, CheckCircle2, Clock, AlertTriangle, FileText, Check, X, ArrowDown } from 'lucide-react';
+import { MoreHorizontal, CheckCircle2, Clock, AlertTriangle, FileText, Check, X, ArrowDown, Sparkles } from 'lucide-react';
+import AgentStatusBadge from '../../../../components/agent/AgentStatusBadge';
 import './InvoiceTable.css';
 
 export default function InvoiceTable({
   invoices,
   selectedInvoice,
   onSelectInvoice,
-  onActionClick
+  onActionClick,
+  onOpenAdaptiveCollection,
+  aiTasksByRef = {}
 }) {
   const [activeActionMenuId, setActiveActionMenuId] = useState(null);
 
@@ -78,6 +81,7 @@ export default function InvoiceTable({
         <tbody>
           {invoices.map((inv) => {
             const isSelected = selectedInvoice?.id === inv.id;
+            const aiTask = aiTasksByRef[inv.invoiceNumber] || aiTasksByRef[inv.id] || null;
 
             return (
               <tr
@@ -117,7 +121,17 @@ export default function InvoiceTable({
                 </td>
 
                 <td className="td-status">
-                  {renderStatusBadge(inv.status)}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                    {renderStatusBadge(inv.status)}
+                    {aiTask && (
+                      <AgentStatusBadge
+                        status={aiTask.workforce_status}
+                        error={aiTask.safe_error_msg}
+                        mockMode={aiTask.mock_mode}
+                        providerFailover={aiTask.provider_failover}
+                      />
+                    )}
+                  </div>
                 </td>
 
                 <td className="td-balance">
@@ -126,26 +140,60 @@ export default function InvoiceTable({
                   </span>
                 </td>
 
-                <td className="td-actions" onClick={(e) => e.stopPropagation()}>
-                  <div className="action-menu-container">
+                <td className="td-actions" onClick={(e) => e.stopPropagation()} style={{ position: 'relative', zIndex: 5 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
                     <button
-                      className="inv-action-dots-btn"
-                      onClick={() => setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id)}
-                      title="More actions"
+                      type="button"
+                      className="inv-action-ai-btn"
+                      onClick={() => onOpenAdaptiveCollection ? onOpenAdaptiveCollection(inv) : onActionClick?.('adaptiveCollections', inv)}
+                      title="Open Adaptive Collections AI"
+                      data-testid={`btn-ai-collection-${inv.id}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        borderRadius: '4px',
+                        backgroundColor: '#eff6ff',
+                        color: '#1d4ed8',
+                        border: '1px solid #bfdbfe',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <MoreHorizontal size={16} />
+                      <Sparkles size={12} />
+                      <span>AI Collection</span>
                     </button>
 
-                    {activeActionMenuId === inv.id && (
-                      <div className="inv-dropdown-menu">
-                        <button
-                          onClick={() => {
-                            setActiveActionMenuId(null);
-                            onSelectInvoice(inv);
-                          }}
-                        >
-                          View Details
-                        </button>
+                    <div className="action-menu-container">
+                      <button
+                        className="inv-action-dots-btn"
+                        onClick={() => setActiveActionMenuId(activeActionMenuId === inv.id ? null : inv.id)}
+                        title="More actions"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+
+                      {activeActionMenuId === inv.id && (
+                        <div className="inv-dropdown-menu">
+                          <button
+                            onClick={() => {
+                              setActiveActionMenuId(null);
+                              onOpenAdaptiveCollection ? onOpenAdaptiveCollection(inv) : onActionClick?.('adaptiveCollections', inv);
+                            }}
+                            data-testid={`menu-item-ai-collection-${inv.id}`}
+                          >
+                            Adaptive Collections AI
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveActionMenuId(null);
+                              onSelectInvoice(inv);
+                            }}
+                          >
+                            View Details
+                          </button>
                         <button
                           onClick={() => {
                             setActiveActionMenuId(null);
@@ -173,7 +221,8 @@ export default function InvoiceTable({
                       </div>
                     )}
                   </div>
-                </td>
+                </div>
+              </td>
               </tr>
             );
           })}

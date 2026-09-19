@@ -41,37 +41,14 @@ def content_to_text(content: Any) -> str:
 
     return str(content)
     
+from app.prompts.prompt_registry import get_prompt
+
 llm_with_tools = get_chat_model(tools=tools)
 
-SYSTEM_PROMPT = """You are a Senior Pricing Analyst Agent for a Freight Forwarder.
-Your goal is to recommend the best quotation options (up to 3 carrier quote options) for an RFQ based on:
-1. Candidate rates (contract and spot rates returned by search_rates_tool)
-2. Active markup and minimum margin rules (returned by get_pricing_rules_tool)
-3. Live port congestion, carrier General Rate Increases (GRIs), or seasonal surcharges (using the search tool to verify if needed).
+def get_pricing_system_prompt() -> str:
+    return get_prompt("pricing.analyst", "1.0.0")
 
-To compute the sell price:
-- Apply the appropriate markup percentage (from pricing rules) to the buy price. E.g. if markup is 20%, sell = buy * 1.20.
-- Verify that the resulting margin (Sell - Buy) / Sell meets or exceeds the min_margin_pct defined in the rules.
-- If multiple rules match, prioritize LANE rules over DEFAULT rules, and CUSTOMER_TIER rules. Higher priority values always apply first.
-
-When you are ready to conclude and return the recommended options:
-Your final AIMessage MUST contain a JSON block representing the suggested quotes list in the following format:
-```json
-[
-  {
-    "carrier_name": "Maersk",
-    "transit_time_days": 14,
-    "buy_price": 2800.00,
-    "sell_price": 3360.00,
-    "is_recommended": true,
-    "reliability_score": 92,
-    "historical_success_rate": 0.95,
-    "ai_reasoning": "Standard contract rate. Safe transit duration."
-  }
-]
-```
-Also, summarize your overall reasoning outside the JSON block.
-"""
+SYSTEM_PROMPT = get_pricing_system_prompt()
 
 def pricing_agent_node(state: PricingAgentState) -> dict:
     messages = list(state.get("messages", []))

@@ -1,10 +1,10 @@
 import os
 import httpx
 from langchain_core.tools import tool
+from app.tools.auth_utils import get_internal_service_token
 
-# Retrieve the backend location and security keys from environment parameters.
+# Retrieve the backend location from environment parameters.
 go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
-service_token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
 
 @tool
 def get_rfq_details_tool(rfq_id: int, org_id: int = 1) -> str:
@@ -14,7 +14,7 @@ def get_rfq_details_tool(rfq_id: int, org_id: int = 1) -> str:
 	Use this tool at the start of the pricing agent workflow to inspect what needs pricing.
 	"""
 	url = f"{go_backend_url}/internal/rfqs/{rfq_id}"
-	headers = {"X-LogisticsHQ-Service-Key": service_token}
+	headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
 	params = {"org_id": org_id}
 	
 	try:
@@ -32,7 +32,7 @@ def search_rates_tool(origin: str, destination: str, equipment_type: str = "40GP
 	Use this tool to find matching candidate rate offers.
 	"""
 	url = f"{go_backend_url}/internal/rates/search"
-	headers = {"X-LogisticsHQ-Service-Key": service_token}
+	headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
 	params = {
 		"org_id": org_id,
 		"origin": origin,
@@ -56,7 +56,7 @@ def get_pricing_rules_tool(org_id: int = 1, origin: str = "", destination: str =
 	Use this tool to evaluate markups and minimum margin requirements before recommending final prices.
 	"""
 	url = f"{go_backend_url}/internal/pricing/rules"
-	headers = {"X-LogisticsHQ-Service-Key": service_token}
+	headers = {"X-LogisticsHQ-Service-Key": get_internal_service_token()}
 	params = {
 		"org_id": org_id,
 		"origin": origin,
@@ -89,21 +89,19 @@ def save_draft_quotes_tool(rfq_id: int, quotes: list, org_id: int = 1) -> str:
 	  "ai_reasoning": "Excellent rate with short transit."
 	}
 	"""
-	url = f"{go_backend_url}/internal/pricing/quotes/draft"
-	headers = {
-		"X-LogisticsHQ-Service-Key": service_token,
-		"Content-Type": "application/json"
-	}
-	payload = {
-		"rfq_id": rfq_id,
-		"org_id": org_id,
-		"quotes": quotes
-	}
-	
-	try:
-		response = httpx.post(url, json=payload, headers=headers, timeout=5.0)
-		if response.status_code == 200:
-			return "Success: Draft quotes saved successfully."
-		return f"Error: Backend API responded with status {response.status_code}: {response.text}"
-	except Exception as e:
-		return f"Failed to connect to Go backend quotes draft API: {str(e)}"
+	from app.tools.action_bridge import execute_action
+
+	res = execute_action(
+		action_name="pricing.save_draft_quotes",
+		org_id=org_id,
+		input_data={
+			"rfq_id": rfq_id,
+			"quotes": quotes
+		},
+		source="langgraph.pricing"
+	)
+
+	if res.get("success"):
+		return "Success: Draft quotes saved successfully."
+	err_msg = res.get("error", {}).get("message", "Unknown error")
+	return f"Error saving draft quotes: {err_msg}"

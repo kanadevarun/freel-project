@@ -203,9 +203,26 @@ export default function DocumentsPage() {
     }
   };
 
-  const getDownloadUrl = (doc) => {
-    if (doc.file_path && doc.file_path.startsWith('http')) return doc.file_path;
-    return `http://localhost:8080/uploads/${doc.s3_key || doc.file_name}`;
+  const handleDownloadDoc = async (e, doc) => {
+    e.stopPropagation();
+    if (!doc?.id) return;
+    try {
+      const res = await api.get(`/api/v1/documents/${doc.id}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', doc.original_file_name || doc.file_name || `document_${doc.id}`);
+      window.document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download document. Please try again.');
+    }
   };
 
   const getUploadInitialType = () => {
@@ -662,15 +679,14 @@ export default function DocumentsPage() {
                         <Eye size={15} />
                       </button>
 
-                      <a
-                        href={getDownloadUrl(d)}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        type="button"
                         className="doc-action-btn"
                         title="Download Document"
+                        onClick={(e) => handleDownloadDoc(e, d)}
                       >
                         <Download size={15} />
-                      </a>
+                      </button>
                     </div>
                   </td>
                 </tr>

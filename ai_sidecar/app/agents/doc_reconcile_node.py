@@ -23,10 +23,10 @@ def doc_reconcile_node(state: ComplianceState) -> ComplianceState:
     # Call internal shipments endpoint to fetch current shipment metadata
     # Secure token validation headers included
     import os
-    token = os.getenv("INTERNAL_SERVICE_TOKEN", "internal-service-key-logisticshq")
+    from app.tools.auth_utils import get_internal_service_token
     go_backend_url = os.getenv("GO_BACKEND_URL", "http://localhost:8080")
     internal_headers = {
-        "X-LogisticsHQ-Service-Key": token,
+        "X-LogisticsHQ-Service-Key": get_internal_service_token(),
         "Content-Type": "application/json"
     }
 

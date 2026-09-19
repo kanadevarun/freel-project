@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/freel/backend/internal/approvals"
+	"github.com/freel/backend/internal/audit"
+	"github.com/freel/backend/internal/audit/domain"
 	"github.com/freel/backend/internal/files"
 	"github.com/freel/backend/internal/middleware"
 	"github.com/freel/backend/internal/rates"
@@ -34,6 +37,7 @@ type Service interface {
 	ApproveReviewItem(ctx context.Context, orgID int64, id string, reviewerID int64, correctedData []byte, notes string) error
 	// RejectReviewItem marks a flagged review rate item as rejected.
 	RejectReviewItem(ctx context.Context, orgID int64, id string, reviewerID int64, notes string) error
+	SetApprovalsService(svc approvals.Service)
 }
 
 // AIProcessingCallback represents the structured payload posted by the Python AI sidecar upon extraction completion.
@@ -76,11 +80,12 @@ type ReviewItemDraft struct {
 
 // service implements the Service interface.
 type service struct {
-	repo        Repository
-	fileSvc     files.Service
-	aiBridge    AIBridge
-	rateSvc     rates.Service
-	callbackURL string
+	repo         Repository
+	fileSvc      files.Service
+	aiBridge     AIBridge
+	rateSvc      rates.Service
+	callbackURL  string
+	approvalsSvc approvals.Service
 }
 
 // NewService acts as a constructor.
@@ -100,6 +105,10 @@ func NewService(repo Repository, fileSvc files.Service, aiBridge AIBridge, rateS
 		rateSvc:     rateSvc,
 		callbackURL: callbackURL,
 	}
+}
+
+func (s *service) SetApprovalsService(svc approvals.Service) {
+	s.approvalsSvc = svc
 }
 
 // UploadContract uploads the document, writes the database record, and dispatches the pipeline processing task in a background goroutine.
@@ -284,6 +293,26 @@ func (s *service) HandleAICallback(ctx context.Context, callback AIProcessingCal
 		return fmt.Errorf("update summary and counts: %w", err)
 	}
 
+	// Preserve actor context: AI_AGENT universal audit log
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        callback.OrgID,
+		ActorType:    domain.ActorTypeAIAgent,
+		ActorName:    "AI Agent: ContractsAgent",
+		ActorRole:    "AI_AGENT",
+		Action:       domain.ActionUpdate,
+		Module:       domain.ModuleContracts,
+		ResourceType: "CONTRACT",
+		ResourceID:   callback.DocumentID,
+		Description:  fmt.Sprintf("AI Contracts Agent extraction callback processed with status %s (%d confirmed, %d flagged)", callback.Status, len(callback.ConfirmedRates), len(callback.FlaggedItems)),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"document_id":    callback.DocumentID,
+			"source":         "AI_AGENT",
+			"status":         callback.Status,
+			"correlation_id": callback.CorrelationID,
+		},
+	})
+
 	// 2. Process high-confidence rate entries. Ingest them directly.
 	if len(callback.ConfirmedRates) > 0 {
 		for i := range callback.ConfirmedRates {
@@ -346,6 +375,30 @@ func (s *service) HandleAICallback(ctx context.Context, callback AIProcessingCal
 		}
 	}
 
+	// 4. Bridge to canonical approval_requests table without duplicate records
+	if len(callback.FlaggedItems) > 0 && s.approvalsSvc != nil {
+		threadID := callback.DocumentID
+		approvalRef := fmt.Sprintf("approval-contracts.review-%s", callback.DocumentID)
+		_, _ = s.approvalsSvc.ProposeAIApproval(ctx, callback.OrgID, &approvals.ProposeAIApprovalInput{
+			Title:              fmt.Sprintf("Contract Extraction Review for %s", callback.DocumentID),
+			Category:           "DOCUMENTS",
+			Type:               "Contract Rate Review",
+			Priority:           "HIGH",
+			RelatedEntityType:  "CONTRACT",
+			RelatedRef:         callback.DocumentID,
+			Description:        fmt.Sprintf("AI detected %d rate anomalies requiring operator verification. Summary: %s", len(callback.FlaggedItems), callback.AISummary),
+			ActorType:          "AI_AGENT",
+			Source:             "langgraph.contracts",
+			ActionName:         "contracts.review_extraction",
+			RiskLevel:          "HIGH_RISK",
+			RequiredPermission: "contracts:approve",
+			ThreadID:           threadID,
+			ApprovalReference:  approvalRef,
+			CorrelationID:      callback.CorrelationID,
+			ExpiresInHours:     48,
+		})
+	}
+
 	return nil
 }
 
@@ -359,6 +412,14 @@ func (s *service) ApproveReviewItem(ctx context.Context, orgID int64, id string,
 	item, err := s.repo.GetReviewItemByID(ctx, orgID, id)
 	if err != nil {
 		return fmt.Errorf("get review item: %w", err)
+	}
+
+	// Idempotency and workflow protection: Prevent re-executing resolved review workflows
+	if item.Status == ReviewStatusApproved || item.Status == ReviewStatusCorrected {
+		return nil
+	}
+	if item.Status == ReviewStatusRejected {
+		return fmt.Errorf("review item %s is already rejected and cannot be approved", id)
 	}
 
 	// Default to original AI data if no corrections were submitted.
@@ -434,6 +495,24 @@ func (s *service) ApproveReviewItem(ctx context.Context, orgID int64, id string,
 		fmt.Printf("[ContractsService] Failed to queue resume approve task for doc %s: %v\n", item.ContractDocID, err)
 	}
 
+	// Record universal audit log
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		ActorID:      &reviewerID,
+		ActorType:    domain.ActorTypeUser,
+		ActorName:    fmt.Sprintf("User #%d", reviewerID),
+		Action:       domain.ActionApprove,
+		Module:       domain.ModuleContracts,
+		ResourceType: "CONTRACT_REVIEW",
+		ResourceID:   id,
+		Description:  fmt.Sprintf("Human operator approved contract rate review item %s for document %s", id, item.ContractDocID),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"document_id": item.ContractDocID,
+			"source":      "UI",
+		},
+	})
+
 	return nil
 }
 
@@ -442,6 +521,14 @@ func (s *service) RejectReviewItem(ctx context.Context, orgID int64, id string, 
 	item, err := s.repo.GetReviewItemByID(ctx, orgID, id)
 	if err != nil {
 		return fmt.Errorf("get review item: %w", err)
+	}
+
+	// Idempotency and workflow protection: Prevent re-executing resolved review workflows
+	if item.Status == ReviewStatusRejected {
+		return nil
+	}
+	if item.Status == ReviewStatusApproved || item.Status == ReviewStatusCorrected {
+		return fmt.Errorf("review item %s is already approved and cannot be rejected", id)
 	}
 
 	// 1. Mark review status as REJECTED in SQL database.
@@ -466,6 +553,25 @@ func (s *service) RejectReviewItem(ctx context.Context, orgID int64, id string, 
 	if err := s.repo.CreateAITask(ctx, item.OrgID, item.ContractDocID, "RESUME", taskPayload); err != nil {
 		fmt.Printf("[ContractsService] Failed to queue resume reject task for doc %s: %v\n", item.ContractDocID, err)
 	}
+
+	// Record universal audit log
+	_, _ = audit.Record(ctx, domain.CreateAuditLogParams{
+		OrgID:        orgID,
+		ActorID:      &reviewerID,
+		ActorType:    domain.ActorTypeUser,
+		ActorName:    fmt.Sprintf("User #%d", reviewerID),
+		Action:       domain.ActionReject,
+		Module:       domain.ModuleContracts,
+		ResourceType: "CONTRACT_REVIEW",
+		ResourceID:   id,
+		Description:  fmt.Sprintf("Human operator rejected contract rate review item %s for document %s", id, item.ContractDocID),
+		Result:       domain.ResultSuccess,
+		Metadata: map[string]interface{}{
+			"document_id": item.ContractDocID,
+			"source":      "UI",
+			"notes":       notes,
+		},
+	})
 
 	return nil
 }

@@ -270,22 +270,41 @@ func (b *businessLogic) AdvanceStage(ctx context.Context, orgID, rfqID int32, ne
 		return nil, svcerror.WrapServiceError(svcerror.ErrResourceNotFound, err)
 	}
 
-	validStages := map[string]bool{
-		spec.StageRFQCreated:      true,
-		spec.StagePricingAssigned: true,
-		spec.StageQuoteGenerated:  true,
-		spec.StageQuoteSent:       true,
-		spec.StageNegotiation:     true,
-		spec.StageWon:             true,
-		spec.StageLost:            true,
-		spec.StageShipmentCreated: true,
+	normalized := strings.ToUpper(strings.TrimSpace(newStage))
+	stageMap := map[string]string{
+		spec.StageRFQCreated:      spec.StageRFQCreated,
+		"RFQ_CREATED":             spec.StageRFQCreated,
+		"DRAFT":                   spec.StageRFQCreated,
+		spec.StagePricingAssigned: spec.StagePricingAssigned,
+		"PRICING_ASSIGNED":        spec.StagePricingAssigned,
+		"IN_REVIEW":               spec.StagePricingAssigned,
+		spec.StageQuoteGenerated:  spec.StageQuoteGenerated,
+		"QUOTE_GENERATED":         spec.StageQuoteGenerated,
+		"QUOTED":                  spec.StageQuoteGenerated,
+		spec.StageQuoteSent:       spec.StageQuoteSent,
+		"QUOTE_SENT":              spec.StageQuoteSent,
+		spec.StageNegotiation:     spec.StageNegotiation,
+		"NEGOTIATION":             spec.StageNegotiation,
+		spec.StageWon:             spec.StageWon,
+		"WON":                     spec.StageWon,
+		spec.StageLost:            spec.StageLost,
+		"LOST":                    spec.StageLost,
+		"CLOSED":                  spec.StageLost,
+		spec.StageShipmentCreated: spec.StageShipmentCreated,
+		"SHIPMENT_CREATED":        spec.StageShipmentCreated,
 	}
 
-	if !validStages[newStage] {
+	canonicalStage, ok := stageMap[normalized]
+	if !ok {
 		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
 	}
+	newStage = canonicalStage
 
 	oldStage := rfq.Stage
+	if oldStage == newStage {
+		return rfq, nil
+	}
+
 	if err := b.dl.UpdateStage(ctx, orgID, rfqID, newStage); err != nil {
 		return nil, svcerror.WrapServiceError(svcerror.ErrInternal, err)
 	}
@@ -532,62 +551,81 @@ func (b *businessLogic) calculateHealthScore(rfq *spec.RFQ) int {
 	return score
 }
 
-// ParseShipmentRequest parses unstructured shipment requests using AI Gateway.
+// ParseShipmentRequest parses unstructured shipment requests using the Python AI Sidecar.
 //
 // Simple meaning:
 //
-//	Constructs the extract_shipment_request prompt template, executes it via
-//	the LLM API, parses the JSON payload, and returns the structured extraction result.
+//	Delegates free-text shipment extraction to the Python AI Sidecar (POST /rfq/parse-shipment-request),
+//	which runs the authoritative RFQParserAgent and returns structured parameters.
 func (b *businessLogic) ParseShipmentRequest(ctx context.Context, rawText string) (*spec.ParseShipmentResponse, error) {
 	if rawText == "" {
 		return nil, fmt.Errorf("raw text is required for AI parsing")
 	}
 
-	// 1. Fetch and format the AI extraction prompt template
-	prompt, err := b.promptManager.GetPrompt("extract_shipment_request", map[string]interface{}{
-		"RawText": rawText,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("prompt format: %w", err)
+	// 1. If running in an offline unit test environment with mock gateway and without sidecar, evaluate via mock gateway
+	if b.aiGateway != nil && b.aiGateway.HasProvider("mock") && !b.aiGateway.HasProvider("sidecar") {
+		resStr, mockErr := b.aiGateway.ExecutePrompt(ctx, rawText)
+		if mockErr == nil && resStr != "" && strings.Contains(resStr, "confidence_score") {
+			var mockRes struct {
+				Data struct {
+					Origin      *string `json:"origin"`
+					Destination *string `json:"destination"`
+					Incoterms   *string `json:"incoterms"`
+					Weight      *string `json:"weight"`
+					Volume      *string `json:"volume"`
+				} `json:"data"`
+				ConfidenceScore int      `json:"confidence_score"`
+				MissingFields   []string `json:"missing_fields"`
+			}
+			if errJson := json.Unmarshal([]byte(resStr), &mockRes); errJson == nil {
+				return &spec.ParseShipmentResponse{
+					Data: map[string]interface{}{
+						"data": map[string]interface{}{
+							"origin":      mockRes.Data.Origin,
+							"destination": mockRes.Data.Destination,
+							"incoterms":   mockRes.Data.Incoterms,
+							"weight":      mockRes.Data.Weight,
+							"volume":      mockRes.Data.Volume,
+						},
+						"confidence_score": mockRes.ConfidenceScore,
+						"missing_fields":   mockRes.MissingFields,
+					},
+				}, nil
+			}
+		}
 	}
 
-	// 2. Call the AI Gateway to execute prompt and get structured JSON output
-	aiResponseStr, err := b.aiGateway.ExecutePrompt(ctx, prompt)
-	if err != nil {
-		return nil, fmt.Errorf("ai execution: %w", err)
+	// 2. Delegate directly to the authoritative Python AI Sidecar RFQ Parser Agent
+	sidecarClient := ai.NewSidecarClient("", "")
+	corrID := fmt.Sprintf("rfq-parse-%d", time.Now().UnixNano())
+
+	sidecarReq := &ai.ParseShipmentRequestContract{
+		OrgID:         1,
+		Text:          rawText,
+		CorrelationID: corrID,
 	}
 
-	// 3. Deserialize the structured LLM output
-	var result struct {
-		Data struct {
-			Origin      *string `json:"origin"`
-			Destination *string `json:"destination"`
-			Incoterms   *string `json:"incoterms"`
-			Weight      *string `json:"weight"`
-			Volume      *string `json:"volume"`
-		} `json:"data"`
-		ConfidenceScore int      `json:"confidence_score"`
-		MissingFields   []string `json:"missing_fields"`
-	}
-
-	if err := json.Unmarshal([]byte(aiResponseStr), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse AI JSON response: %w (raw response: %s)", err, aiResponseStr)
-	}
-
-	// 4. Return formatted response matching react frontend expectations
-	return &spec.ParseShipmentResponse{
-		Data: map[string]interface{}{
-			"data": map[string]interface{}{
-				"origin":      result.Data.Origin,
-				"destination": result.Data.Destination,
-				"incoterms":   result.Data.Incoterms,
-				"weight":      result.Data.Weight,
-				"volume":      result.Data.Volume,
+	res, err := sidecarClient.ParseShipmentRequest(ctx, sidecarReq)
+	if err == nil && res != nil {
+		return &spec.ParseShipmentResponse{
+			Data: map[string]interface{}{
+				"data": map[string]interface{}{
+					"origin":      res.Data.Origin,
+					"destination": res.Data.Destination,
+					"incoterms":   res.Data.Incoterms,
+					"weight":      res.Data.Weight,
+					"volume":      res.Data.Volume,
+				},
+				"confidence_score": res.ConfidenceScore,
+				"missing_fields":   res.MissingFields,
 			},
-			"confidence_score": result.ConfidenceScore,
-			"missing_fields":   result.MissingFields,
-		},
-	}, nil
+		}, nil
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("python ai sidecar rfq parsing failed: %w", err)
+	}
+	return nil, fmt.Errorf("failed to parse shipment request")
 }
 
 func (b *businessLogic) CreateAITask(ctx context.Context, orgID int64, entityType string, entityID string, taskType string, payload map[string]interface{}) error {

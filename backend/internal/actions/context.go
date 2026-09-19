@@ -24,6 +24,10 @@ type ActionContext struct {
 	ActorType      ActorType
 	RequestID      string
 	IdempotencyKey *string
+	Source         string
+	TaskID         string
+	ThreadID       string
+	IsConfirmed    bool
 }
 
 // NewActionContext creates a new ActionContext.
@@ -40,5 +44,14 @@ func NewActionContext(ctx context.Context, orgID int64, userID int64, actorType 
 // WithIdempotencyKey attaches an idempotency key to the context for safe retries.
 func (ac *ActionContext) WithIdempotencyKey(key string) *ActionContext {
 	ac.IdempotencyKey = &key
+	return ac
+}
+
+// WithMetadata attaches task, thread, source and confirmation flags to the context.
+func (ac *ActionContext) WithMetadata(source, taskID, threadID string, isConfirmed bool) *ActionContext {
+	ac.Source = source
+	ac.TaskID = taskID
+	ac.ThreadID = threadID
+	ac.IsConfirmed = isConfirmed
 	return ac
 }

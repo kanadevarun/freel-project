@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"path/filepath"
+	"time"
 
 	"github.com/freel/backend/internal/files"
 	"github.com/jmoiron/sqlx"
@@ -16,6 +18,8 @@ type Service interface {
 	UploadGeneralDocument(ctx context.Context, orgID int64, doc *ShipmentDocument, fileReader io.Reader) (*ShipmentDocument, error)
 	GetDocumentsByShipment(ctx context.Context, orgID int64, shipmentID int64) ([]*ShipmentDocument, error)
 	GetDocumentsByOrg(ctx context.Context, orgID int64) ([]*ShipmentDocument, error)
+	GetDocumentByID(ctx context.Context, orgID int64, id string) (*ShipmentDocument, error)
+	GetDocumentFile(ctx context.Context, orgID int64, id string) ([]byte, string, string, error)
 	GetDiscrepancies(ctx context.Context, orgID int64, shipmentID int64) ([]*ShipmentDocumentDiscrepancy, error)
 	ResolveDiscrepancy(ctx context.Context, orgID int64, id int64, userID int64) error
 	DeleteDocument(ctx context.Context, orgID int64, id string) error
@@ -49,7 +53,9 @@ func (s *service) UploadGeneralDocument(ctx context.Context, orgID int64, doc *S
 	}
 
 	if fileReader != nil && s.filesSvc != nil {
-		s3Key, err := s.filesSvc.UploadFile(ctx, doc.FileName, fileReader)
+		safeFileName := filepath.Base(doc.FileName)
+		scopedKey := fmt.Sprintf("orgs/%d/docs/%d_%s", orgID, time.Now().UnixNano(), safeFileName)
+		s3Key, err := s.filesSvc.UploadFile(ctx, scopedKey, fileReader)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save document file: %w", err)
 		}
@@ -57,7 +63,8 @@ func (s *service) UploadGeneralDocument(ctx context.Context, orgID int64, doc *S
 		filePath, _ := s.filesSvc.GetFileURL(ctx, s3Key)
 		doc.FilePath = &filePath
 	} else if doc.S3Key == "" {
-		doc.S3Key = "docs/" + doc.FileName
+		safeFileName := filepath.Base(doc.FileName)
+		doc.S3Key = fmt.Sprintf("orgs/%d/docs/%s", orgID, safeFileName)
 	}
 
 	err := s.repo.InsertDocument(ctx, doc)
@@ -128,6 +135,41 @@ func (s *service) GetDocumentsByShipment(ctx context.Context, orgID int64, shipm
 
 func (s *service) GetDocumentsByOrg(ctx context.Context, orgID int64) ([]*ShipmentDocument, error) {
 	return s.repo.GetDocumentsByOrg(ctx, orgID)
+}
+
+func (s *service) GetDocumentByID(ctx context.Context, orgID int64, id string) (*ShipmentDocument, error) {
+	return s.repo.GetDocumentByID(ctx, orgID, id)
+}
+
+func (s *service) GetDocumentFile(ctx context.Context, orgID int64, id string) ([]byte, string, string, error) {
+	doc, err := s.repo.GetDocumentByID(ctx, orgID, id)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("document not found: %w", err)
+	}
+	if doc == nil {
+		return nil, "", "", fmt.Errorf("document not found")
+	}
+
+	targetKey := doc.S3Key
+	if targetKey == "" {
+		targetKey = doc.FileName
+	}
+
+	if s.filesSvc != nil {
+		data, mime, err := s.filesSvc.DownloadFile(ctx, targetKey)
+		if err == nil {
+			return data, mime, doc.FileName, nil
+		}
+		// Fallback to fileName if s3_key failed
+		if doc.FileName != "" && doc.FileName != targetKey {
+			data, mime, err = s.filesSvc.DownloadFile(ctx, doc.FileName)
+			if err == nil {
+				return data, mime, doc.FileName, nil
+			}
+		}
+	}
+
+	return nil, "", "", fmt.Errorf("file content not found in storage")
 }
 
 func (s *service) GetDiscrepancies(ctx context.Context, orgID int64, shipmentID int64) ([]*ShipmentDocumentDiscrepancy, error) {

@@ -1,0 +1,106 @@
+name: LogisticsHQ CI / CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, staging, 'release/**' ]
+  pull_request:
+    branches: [ main, master, staging ]
+
+jobs:
+  backend-test-and-build:
+    name: Backend Go Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.24
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: backend/go.sum
+
+      - name: Download Go Modules
+        working-directory: ./backend
+        run: go mod download
+
+      - name: Run Backend Tests
+        working-directory: ./backend
+        run: go test -v -race ./internal/...
+
+      - name: Build Go Server Binary
+        working-directory: ./backend
+        run: CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o freel-server ./cmd/server
+
+  sportal-frontend-build:
+    name: SPortal Frontend Build & Chunk Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: sportal/package-lock.json
+
+      - name: Install SPortal Dependencies
+        working-directory: ./sportal
+        run: npm ci
+
+      - name: Build SPortal Production Bundle
+        working-directory: ./sportal
+        run: npm run build
+        env:
+          VITE_API_URL: https://api.logisticshq.in
+          VITE_APP_URL: https://sportal.logisticshq.in
+          VITE_APP_ENV: production
+
+  cportal-frontend-build:
+    name: CPortal Frontend Build Regression
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install CPortal Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build CPortal Production Bundle
+        working-directory: ./frontend
+        run: npm run build
+
+  ai-sidecar-test:
+    name: Python AI Sidecar Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: ai_sidecar/requirements.txt
+
+      - name: Install Python Dependencies
+        working-directory: ./ai_sidecar
+        run: pip install -r requirements.txt pytest
+
+      - name: Run Pytest AI Test Suite
+        working-directory: ./ai_sidecar
+        run: pytest tests/ -v
+        env:
+          APP_ENV: test
+          INTERNAL_SERVICE_TOKEN: ci-m2m-test-token

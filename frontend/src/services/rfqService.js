@@ -188,9 +188,18 @@ export const rfqService = {
   },
 
   /**
-   * Fetch shipment handoff and execution status linked to an RFQ.
+   * Fetch shipment handoff status, containers, and active shipments for an RFQ.
    */
   getRFQShipments: async (id) => {
     return api.get(`/api/v1/rfqs/${id}/shipments`);
   },
+
+  /**
+   * Fetch 360-degree RFQ & Pricing Intelligence (Phase 1 Task 1.3).
+   * Read-only deterministic quotation spread, margin health, conversion, and grounded AI insights.
+   */
+  getRFQ360PricingIntelligence: async (id) => {
+    return api.get(`/api/v1/rfqs/${id}/intelligence`);
+  },
 };
+

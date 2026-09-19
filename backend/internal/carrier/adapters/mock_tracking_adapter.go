@@ -28,7 +28,7 @@ func (a *MockTrackingAdapter) checkConfig(capability string) error {
 	if a.Config == nil {
 		return fmt.Errorf("carrier not configured for this organization")
 	}
-	if a.Config.APIKey == "" || a.Config.APIKey == "invalid" {
+	if a.Config.APIKey == "invalid" || (capability != "WEBHOOK" && a.Config.APIKey == "") {
 		return fmt.Errorf("API authentication failure: invalid credentials")
 	}
 	if !a.Config.Capabilities[capability] {
@@ -155,12 +155,13 @@ func (a *MockTrackingAdapter) ParseWebhookPayload(payload []byte) (*carrier.Trac
 			milestone = "DEPARTED"
 		}
 		return &carrier.TrackingEvent{
-			EventID:       fmt.Sprintf("MAEU-WK-%d", time.Now().UnixNano()),
-			MilestoneCode: milestone,
-			EventTime:     t,
-			Location:      maerskBody.Location,
-			Description:   fmt.Sprintf("Maersk Event: %s at %s", maerskBody.Status, maerskBody.Location),
-			RawPayload:    payload,
+			EventID:         fmt.Sprintf("MAEU-WK-%d", time.Now().UnixNano()),
+			ContainerNumber: maerskBody.Container,
+			MilestoneCode:   milestone,
+			EventTime:       t,
+			Location:        maerskBody.Location,
+			Description:     fmt.Sprintf("Maersk Event: %s at %s", maerskBody.Status, maerskBody.Location),
+			RawPayload:      payload,
 		}, nil
 	}
 
@@ -181,12 +182,13 @@ func (a *MockTrackingAdapter) ParseWebhookPayload(payload []byte) (*carrier.Trac
 			milestone = "DEPARTED"
 		}
 		return &carrier.TrackingEvent{
-			EventID:       fmt.Sprintf("MSC-WK-%d", time.Now().UnixNano()),
-			MilestoneCode: milestone,
-			EventTime:     t,
-			Location:      mscBody.Port,
-			Description:   fmt.Sprintf("MSC Milestone: %s at %s", mscBody.Milestone, mscBody.Port),
-			RawPayload:    payload,
+			EventID:         fmt.Sprintf("MSC-WK-%d", time.Now().UnixNano()),
+			ContainerNumber: mscBody.EquipmentNo,
+			MilestoneCode:   milestone,
+			EventTime:       t,
+			Location:        mscBody.Port,
+			Description:     fmt.Sprintf("MSC Milestone: %s at %s", mscBody.Milestone, mscBody.Port),
+			RawPayload:      payload,
 		}, nil
 	}
 
@@ -201,6 +203,7 @@ func (a *MockTrackingAdapter) ParseWebhookPayload(payload []byte) (*carrier.Trac
 	if err := json.Unmarshal(payload, &body); err == nil && body.EventID != "" {
 		return &carrier.TrackingEvent{
 			EventID:       body.EventID,
+			BookingNumber: body.BookingNum,
 			MilestoneCode: body.Milestone,
 			EventTime:     time.Now(),
 			Location:      body.Location,

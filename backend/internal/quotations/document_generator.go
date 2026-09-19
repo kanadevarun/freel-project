@@ -112,8 +112,40 @@ func buildQuotationPDF(quote *CustomerQuotationPreview, version int) []byte {
 	if companyName == "" {
 		companyName = "LogisticsHQ"
 	}
-	c.text("F2", 18, margin, pageHeight-42, companyName, 1, 1, 1)
-	c.text("F1", 9, margin, pageHeight-58, "OPERATING SYSTEM FOR MODERN GLOBAL FREIGHT", 0.58, 0.64, 0.72)
+
+	// Company Initials Monogram Badge / Emblem
+	brandInitials := "HQ"
+	words := strings.Fields(companyName)
+	if len(words) >= 2 {
+		r1 := []rune(words[0])
+		r2 := []rune(words[1])
+		if len(r1) > 0 && len(r2) > 0 {
+			brandInitials = strings.ToUpper(string(r1[0]) + string(r2[0]))
+		}
+	} else if len(words) == 1 && len([]rune(words[0])) >= 2 {
+		r := []rune(words[0])
+		brandInitials = strings.ToUpper(string(r[:2]))
+	}
+
+	// Draw Company Brand Emblem / Container Box in header
+	c.rect(margin, pageHeight-66, 44, 48, 0.145, 0.388, 0.922, 0.23, 0.51, 0.96, 1) // #2563EB
+	c.text("F2", 14, margin+10, pageHeight-42, brandInitials, 1, 1, 1)
+	if quote.CompanyLogoURL != "" {
+		c.text("F2", 6.0, margin+5, pageHeight-59, "BRAND LOGO", 0.85, 0.92, 1)
+	} else {
+		c.text("F1", 6.0, margin+8, pageHeight-59, "OFFICIAL", 0.85, 0.92, 1)
+	}
+
+	// Company Name & Forwarder Details
+	c.text("F2", 14, margin+54, pageHeight-34, truncateStr(companyName, 32), 1, 1, 1)
+	if quote.CompanyAddress != "" {
+		c.text("F1", 7.5, margin+54, pageHeight-47, truncateStr(quote.CompanyAddress, 48), 0.72, 0.78, 0.88)
+	}
+	if quote.CompanyContact != "" {
+		c.text("F1", 7.5, margin+54, pageHeight-59, truncateStr(quote.CompanyContact, 48), 0.65, 0.72, 0.82)
+	} else {
+		c.text("F1", 7.5, margin+54, pageHeight-59, "Operating System for Modern Global Freight", 0.58, 0.64, 0.72)
+	}
 
 	c.text("F2", 14, pageWidth-margin-210, pageHeight-38, "FREIGHT QUOTATION", 0.23, 0.51, 0.96) // Blue #3B82F6
 	c.text("F1", 9, pageWidth-margin-210, pageHeight-54, fmt.Sprintf("Quote #: %s   (v%d)", quote.QuotationNumber, version), 0.9, 0.9, 0.9)
@@ -127,12 +159,8 @@ func buildQuotationPDF(quote *CustomerQuotationPreview, version int) []byte {
 	// Left Column: Bill To / Customer
 	c.text("F2", 8, margin+12, curY-16, "CUSTOMER / BILL TO", 0.39, 0.45, 0.55)
 	c.text("F2", 11, margin+12, curY-30, quote.CustomerName, 0.06, 0.09, 0.16)
-	if quote.CompanyAddress != "" {
-		c.text("F1", 8, margin+12, curY-43, quote.CompanyAddress, 0.28, 0.33, 0.41)
-	}
-	if quote.CompanyContact != "" {
-		c.text("F1", 8, margin+12, curY-55, quote.CompanyContact, 0.28, 0.33, 0.41)
-	}
+	c.text("F1", 8, margin+12, curY-43, "Authorized Consignee / Commercial Account", 0.39, 0.45, 0.55)
+	c.text("F1", 8, margin+12, curY-55, fmt.Sprintf("Quote Ref: %s", quote.QuotationNumber), 0.39, 0.45, 0.55)
 
 	// Middle Column: Route & Transport
 	midX := margin + 200.0
@@ -268,7 +296,7 @@ func buildQuotationPDF(quote *CustomerQuotationPreview, version int) []byte {
 	c.text("F1", 8, margin+300, curY-48, "Date: _________________________", 0.28, 0.33, 0.41)
 
 	// Footer Stamp
-	c.text("F1", 7, margin, 18, fmt.Sprintf("Generated on %s | Freight OS LogisticsHQ Platform | Quotation # %s", time.Now().Format("2006-01-02 15:04:05"), quote.QuotationNumber), 0.6, 0.65, 0.72)
+	c.text("F1", 7, margin, 18, fmt.Sprintf("Issued by %s | Powered by LogisticsHQ Freight Platform | Quotation # %s | %s", companyName, quote.QuotationNumber, time.Now().Format("2006-01-02 15:04:05")), 0.6, 0.65, 0.72)
 
 	return compilePDF(c.buf.Bytes(), pageWidth, pageHeight)
 }

@@ -35,7 +35,7 @@ func setupTestDB(t *testing.T) (*service.Service, int64, int64, func()) {
 
 	// Ensure test organizations and test user exist
 	_, _ = db.Exec("INSERT INTO organizations (id, name, created_at, updated_at) VALUES (?, 'Audit Test Org A', NOW(), NOW()), (?, 'Audit Test Org B', NOW(), NOW()) ON DUPLICATE KEY UPDATE name=VALUES(name)", testOrgA, testOrgB)
-	_, _ = db.Exec("INSERT INTO users (id, cognito_sub, email, first_name, last_name, created_at, updated_at) VALUES (999001, 'sub-audit-999001', 'operator@freel-testing.local', 'Varun', 'Kanade', NOW(), NOW()) ON DUPLICATE KEY UPDATE first_name=VALUES(first_name)")
+	_, _ = db.Exec("INSERT INTO users (id, cognito_sub, email, first_name, last_name, created_at, updated_at) VALUES (999001, 'sub-audit-999001', 'operator@freel-testing.local', 'Test', 'Operator', NOW(), NOW()) ON DUPLICATE KEY UPDATE first_name=VALUES(first_name)")
 
 	// Clean any previous test audit records for these org IDs
 	_, _ = db.Exec("DELETE FROM audit_logs WHERE org_id IN (?, ?)", testOrgA, testOrgB)
@@ -63,7 +63,7 @@ func TestBasicAuditEvent(t *testing.T) {
 		OrgID:        orgA,
 		ActorID:      &actorID,
 		ActorType:    domain.ActorTypeUser,
-		ActorName:    "Varun Sharma",
+		ActorName:    "Test Operator",
 		ActorRole:    "Operations",
 		Action:       domain.ActionCreate,
 		Module:       domain.ModuleShipments,

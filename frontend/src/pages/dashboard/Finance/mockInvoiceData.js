@@ -6,38 +6,38 @@
 
 export const INITIAL_KPI_STATS = {
   totalInvoices: {
-    amount: '$2,480,000.00',
-    displayAmount: '$2.48M',
-    count: 128,
-    label: '128 Invoices',
-    trend: '18.6%',
+    amount: '$0.00',
+    displayAmount: '$0.00',
+    count: 0,
+    label: '0 Invoices',
+    trend: '0.0%',
     trendDirection: 'up',
     trendPeriod: 'vs last 7 days'
   },
   outstanding: {
-    amount: '$1,420,000.00',
-    displayAmount: '$1.42M',
-    count: 86,
-    label: '86 Invoices',
-    trend: '12.4%',
+    amount: '$0.00',
+    displayAmount: '$0.00',
+    count: 0,
+    label: '0 Invoices',
+    trend: '0.0%',
     trendDirection: 'up',
     trendPeriod: 'vs last 7 days'
   },
   paidThisMonth: {
-    amount: '$96,420.00',
-    displayAmount: '$96,420',
-    count: 32,
-    label: '32 Invoices',
-    trend: '24.8%',
+    amount: '$0.00',
+    displayAmount: '$0.00',
+    count: 0,
+    label: '0 Invoices',
+    trend: '0.0%',
     trendDirection: 'up',
     trendPeriod: 'vs last 7 days'
   },
   overdue: {
-    amount: '$38,750.00',
-    displayAmount: '$38,750',
-    count: 14,
-    label: '14 Invoices',
-    trend: '8.2%',
+    amount: '$0.00',
+    displayAmount: '$0.00',
+    count: 0,
+    label: '0 Invoices',
+    trend: '0.0%',
     trendDirection: 'up',
     trendPeriod: 'vs last 7 days'
   }
@@ -58,7 +58,7 @@ export const MOCK_INVOICES = [
   {
     id: 'inv-001',
     invoiceNumber: 'INV-2026-0456',
-    creator: 'By Varun Sharma',
+    creator: 'By Billing Operations',
     customer: 'Global Traders Inc.',
     customerCountry: 'USA',
     shipmentId: 'SH-2026-00124',
@@ -92,9 +92,9 @@ export const MOCK_INVOICES = [
       { id: 'doc-3', name: 'Packing List.pdf', size: '180 KB', type: 'application/pdf', uploadedAt: 'Aug 15, 2026' }
     ],
     history: [
-      { id: 'h-1', title: 'Invoice Issued', description: 'Issued to customer Global Traders Inc.', timestamp: 'Aug 15, 2026 10:30 AM', user: 'Varun Sharma' },
+      { id: 'h-1', title: 'Invoice Issued', description: 'Issued to customer Global Traders Inc.', timestamp: 'Aug 15, 2026 10:30 AM', user: 'Billing Operations' },
       { id: 'h-2', title: 'Approval Passed', description: 'Internal billing review approved by Finance Team', timestamp: 'Aug 14, 2026 04:15 PM', user: 'Finance Lead' },
-      { id: 'h-3', title: 'Draft Created', description: 'Generated from Shipment SH-2026-00124', timestamp: 'Aug 14, 2026 02:00 PM', user: 'Varun Sharma' }
+      { id: 'h-3', title: 'Draft Created', description: 'Generated from Shipment SH-2026-00124', timestamp: 'Aug 14, 2026 02:00 PM', user: 'Billing Operations' }
     ]
   },
   {
@@ -142,7 +142,7 @@ export const MOCK_INVOICES = [
   {
     id: 'inv-003',
     invoiceNumber: 'INV-2026-0454',
-    creator: 'By Varun Sharma',
+    creator: 'By Billing Operations',
     customer: 'Bright Star Ltd.',
     customerCountry: 'UK',
     shipmentId: 'SH-2026-00122',
@@ -174,7 +174,7 @@ export const MOCK_INVOICES = [
     ],
     history: [
       { id: 'h-1', title: 'Payment Overdue Notice', description: 'Automated reminder sent to billing contact', timestamp: 'Aug 28, 2026 09:00 AM', user: 'System' },
-      { id: 'h-2', title: 'Invoice Issued', description: 'Issued to Bright Star Ltd.', timestamp: 'Aug 12, 2026 03:30 PM', user: 'Varun Sharma' }
+      { id: 'h-2', title: 'Invoice Issued', description: 'Issued to Bright Star Ltd.', timestamp: 'Aug 12, 2026 03:30 PM', user: 'Billing Operations' }
     ]
   },
   {
@@ -257,7 +257,7 @@ export const MOCK_INVOICES = [
   {
     id: 'inv-006',
     invoiceNumber: 'INV-2026-0451',
-    creator: 'By Varun Sharma',
+    creator: 'By Billing Operations',
     customer: 'Alpha Logistics',
     customerCountry: 'Singapore',
     shipmentId: 'SH-2026-00119',
@@ -287,7 +287,7 @@ export const MOCK_INVOICES = [
       { id: 'doc-1', name: 'Draft_Invoice_AlphaLogistics.pdf', size: '160 KB', type: 'application/pdf', uploadedAt: 'Aug 09, 2026' }
     ],
     history: [
-      { id: 'h-1', title: 'Submitted for Approval', description: 'Pending approval by Finance Manager', timestamp: 'Aug 09, 2026 11:15 AM', user: 'Varun Sharma' }
+      { id: 'h-1', title: 'Submitted for Approval', description: 'Pending approval by Finance Manager', timestamp: 'Aug 09, 2026 11:15 AM', user: 'Billing Operations' }
     ]
   },
   {

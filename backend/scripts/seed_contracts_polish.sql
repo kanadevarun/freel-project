@@ -17,7 +17,7 @@ INSERT INTO contracts (
     1, 'Maersk Line', 'DRAFT', 'OCEAN',
     750000.00, 'USD', '2026-10-01', '2027-09-30',
     'Annual carrier volume commitment for Trans-Pacific Eastbound lanes covering 4,000 TEU target.',
-    'Negotiation on bunker adjustment clause in final review with procurement team.', 'Varun Kanade', 'varunkanade3456@gmail.com'
+    'Negotiation on bunker adjustment clause in final review with procurement team.', 'Contract Manager', 'contract-desk@freel.local'
 ) ON DUPLICATE KEY UPDATE contract_name = VALUES(contract_name);
 
 -- Contract 2: Active Healthy Customer SLA
@@ -31,7 +31,7 @@ INSERT INTO contracts (
     2, 'Acme Corp Industries', 'ACTIVE', 'AIR',
     1200000.00, 'USD', '2026-01-01', '2027-03-31',
     'Tier-1 Customer Master Service Level Agreement with guaranteed 48-hour transit KPI and customized pricing matrix.',
-    'Quarterly rebate schedule applies if volume exceeds 500 tons per month.', 'Varun Kanade', 'varunkanade3456@gmail.com'
+    'Quarterly rebate schedule applies if volume exceeds 500 tons per month.', 'Contract Manager', 'contract-desk@freel.local'
 ) ON DUPLICATE KEY UPDATE contract_name = VALUES(contract_name);
 
 -- Contract 3: Active Expiring Soon Vendor Logistics Agreement (Expires in ~18 days)
@@ -45,7 +45,7 @@ INSERT INTO contracts (
     3, 'Apex Drayage & Intermodal', 'ACTIVE', 'ROAD',
     280000.00, 'USD', '2025-09-15', DATE_ADD(CURDATE(), INTERVAL 18 DAY),
     'Dedicated port-to-rail drayage services for Los Angeles / Long Beach and Oakland ramps.',
-    'Renewal reminder sent. Negotiating fuel surcharge index for 2026-2027 cycle.', 'Varun Kanade', 'varunkanade3456@gmail.com'
+    'Renewal reminder sent. Negotiating fuel surcharge index for 2026-2027 cycle.', 'Contract Manager', 'contract-desk@freel.local'
 ) ON DUPLICATE KEY UPDATE contract_name = VALUES(contract_name);
 
 -- Contract 4: Expired Contract
@@ -59,7 +59,7 @@ INSERT INTO contracts (
     4, 'Cargolux Airlines', 'EXPIRED', 'AIR',
     450000.00, 'USD', '2024-06-01', '2025-05-31',
     'Weekly scheduled Boeing 747-8F capacity allocation on PVG-LUX lane.',
-    'Agreement completed and archived. Succeeded by 2025 charter schedule.', 'Varun Kanade', 'varunkanade3456@gmail.com'
+    'Agreement completed and archived. Succeeded by 2025 charter schedule.', 'Contract Manager', 'contract-desk@freel.local'
 ) ON DUPLICATE KEY UPDATE contract_name = VALUES(contract_name);
 
 -- Lifecycle events for Contract 101 (Draft):
@@ -71,7 +71,7 @@ INSERT INTO contract_lifecycle_events (org_id, contract_id, event_type, previous
 VALUES 
 (1, 102, 'CREATED', NULL, 'DRAFT', 'Contract initialized via Commercial Contract Hub', 'varunkanade3456@gmail.com'),
 (1, 102, 'LINK_ADDED', 'DRAFT', 'DRAFT', 'Linked Quotation QT-2025-8840 as primary commercial rate basis', 'varunkanade3456@gmail.com'),
-(1, 102, 'STATUS_CHANGED', 'DRAFT', 'ACTIVE', 'Contract fully executed and signed by both parties', 'Varun Kanade');
+(1, 102, 'STATUS_CHANGED', 'DRAFT', 'ACTIVE', 'Contract fully executed and signed by both parties', 'Contract Manager');
 
 -- Lifecycle events for Contract 103 (Expiring Soon):
 INSERT INTO contract_lifecycle_events (org_id, contract_id, event_type, previous_status, new_status, description, performed_by)
