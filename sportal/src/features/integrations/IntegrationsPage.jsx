@@ -23,6 +23,7 @@ import { IntegrationCard } from './components/IntegrationCard';
 import { WebhookIngressTable } from './components/WebhookIngressTable';
 import { SyncJobsTable } from './components/SyncJobsTable';
 import { CarrierCatalogDrawer } from './components/CarrierCatalogDrawer';
+import { CarrierDetailsDrawer } from './components/CarrierDetailsDrawer';
 import { TestConnectionModal } from './components/TestConnectionModal';
 import { ConfigureIntegrationModal } from './components/ConfigureIntegrationModal';
 
@@ -51,6 +52,7 @@ export function IntegrationsPage() {
 
   // Modals & Drawers
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [selectedCarrierDrawer, setSelectedCarrierDrawer] = useState(null);
   const [testModalState, setTestModalState] = useState({
     isOpen: false,
     integration: null,
@@ -431,17 +433,32 @@ export function IntegrationsPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {filteredItems.map((item) => (
-                <IntegrationCard
-                  key={`${item.category}-${item.provider_name}`}
-                  integration={item}
-                  onToggle={handleToggleIntegration}
-                  onTestConnection={handleTestConnection}
-                  onConfigure={(intg) => setConfigModalState({ isOpen: true, integration: intg })}
-                  canManage={true}
-                />
-              ))}
+            <div>
+              <div className="flex items-center justify-between text-xs text-slate-500 mb-3 px-1">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span>
+                    Select any ocean carrier or click <strong>View Data</strong> to inspect active sea journeys, live DCSA webhooks, volume contracts, and real-time API latency.
+                  </span>
+                </span>
+                <span className="text-[11px] font-mono font-semibold text-slate-400">
+                  {filteredItems.length} active connectors
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {filteredItems.map((item) => (
+                  <IntegrationCard
+                    key={`${item.category}-${item.provider_name}`}
+                    integration={item}
+                    onToggle={handleToggleIntegration}
+                    onTestConnection={handleTestConnection}
+                    onConfigure={(intg) => setConfigModalState({ isOpen: true, integration: intg })}
+                    onViewDetails={(intg) => setSelectedCarrierDrawer(intg)}
+                    canManage={true}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -464,6 +481,18 @@ export function IntegrationsPage() {
               connection_method: 'API / EDI 214',
             },
           });
+        }}
+      />
+
+      {/* 6b. Carrier Operational Data & Telemetry Drawer */}
+      <CarrierDetailsDrawer
+        isOpen={Boolean(selectedCarrierDrawer)}
+        onClose={() => setSelectedCarrierDrawer(null)}
+        carrier={selectedCarrierDrawer}
+        onTestConnection={handleTestConnection}
+        onConfigure={(carrier) => {
+          setSelectedCarrierDrawer(null);
+          setConfigModalState({ isOpen: true, integration: carrier });
         }}
       />
 
