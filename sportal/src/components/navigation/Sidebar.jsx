@@ -13,7 +13,6 @@ import {
   Share2,
   FileText,
   Headphones,
-  Sparkles,
   Settings,
   ShieldCheck,
   Inbox,
@@ -34,7 +33,6 @@ const NAV_ITEMS = [
   { name: 'Integrations', path: ROUTES.INTEGRATIONS, icon: Share2 },
   { name: 'Documents & Compliance', path: ROUTES.DOCUMENTS, icon: FileText },
   { name: 'Support & Activity', path: ROUTES.SUPPORT, icon: Headphones },
-  { name: 'SPortal AI', path: ROUTES.AI, icon: Sparkles },
   { name: 'Settings', path: ROUTES.SETTINGS, icon: Settings },
 ];
 
