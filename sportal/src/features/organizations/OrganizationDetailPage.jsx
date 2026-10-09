@@ -292,88 +292,112 @@ export function OrganizationDetailPage() {
     <div className="space-y-6 pb-12 w-full max-w-full min-w-0">
       {/* 1. Breadcrumb Navigation */}
       <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <Link to="/organizations" className="hover:text-navy-900 transition-colors">
+        <Link to="/organizations" className="hover:text-blue-600 transition-colors">
           Organizations
         </Link>
-        <ChevronRight className="h-3 w-3 text-slate-400" />
-        <span className="hover:text-navy-900 transition-colors cursor-pointer" onClick={() => setActiveTab('overview')}>
+        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+        <span
+          className="hover:text-blue-600 transition-colors cursor-pointer font-medium text-slate-700 truncate max-w-xs"
+          onClick={() => setActiveTab('overview')}
+        >
           {org.name}
         </span>
-        <ChevronRight className="h-3 w-3 text-slate-400" />
-        <span className="text-slate-900 font-semibold">Customer 360</span>
+        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+        <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80">
+          Customer 360
+        </span>
       </div>
 
-      {/* 2. Customer Identity Header Card (Strictly adhering to sportalCustomerView.png) */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs">
+      {/* 2. Customer Identity Header Card */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-xs">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-          <div className="flex items-start gap-4 min-w-0">
-            {/* Identity Icon / Logo Box */}
-            <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-white border border-slate-200 text-blue-700 shadow-2xs overflow-hidden">
+          <div className="flex items-start gap-4 sm:gap-5 min-w-0">
+            {/* Identity Icon / Monogram Avatar Box */}
+            <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white shadow-sm overflow-hidden font-black text-lg sm:text-xl tracking-tight">
               {org.logo_url ? (
-                <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain p-1.5" />
+                <img src={org.logo_url} alt={org.name} className="h-full w-full object-contain p-1.5 bg-white" />
               ) : (
-                <div className="flex flex-col items-center justify-center text-center p-1">
-                  <Building2 className="h-6 w-6 text-blue-700" />
-                  <span className="text-[9px] font-black uppercase text-slate-800 tracking-wider mt-0.5 max-w-[52px] truncate">
-                    {org.name?.split(' ')[0] || 'CORP'}
-                  </span>
-                </div>
+                <span className="select-none">
+                  {org.name
+                    ? org.name
+                        .split(' ')
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .map((w) => w[0]?.toUpperCase())
+                        .join('')
+                    : 'LH'}
+                </span>
               )}
             </div>
 
-            <div className="space-y-1.5 min-w-0 flex-1">
+            <div className="space-y-2 min-w-0 flex-1">
+              {/* Title & Status Pills */}
               <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight truncate">{org.name}</h1>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200 shrink-0">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight truncate">
+                  {org.name}
+                </h1>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200 shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   {org.status === 'Active' ? 'Active Customer' : org.status || 'Active Customer'}
+                </span>
+                <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 shrink-0">
+                  ORG-{String(org.id).padStart(6, '0')}
                 </span>
               </div>
 
-              {/* Metadata Line */}
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                <span className="font-mono font-medium text-slate-700">ORG-{String(org.id).padStart(6, '0')}</span>
-                <span>•</span>
-                <span>{org.company_type || 'Private Limited'}</span>
-                <span>•</span>
-                <span>{[org.city, org.country].filter(Boolean).join(', ') || 'Navi Mumbai, India'}</span>
-                <span>•</span>
-                <span>Customer since {formatDate(org.created_at)}</span>
+              {/* Company Attributes Line */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                <span className="font-medium text-slate-700">{org.company_type || 'Limited Liability Partnership'}</span>
+                <span className="text-slate-300">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <span>{[org.city, org.country].filter(Boolean).join(', ') || 'Navi Mumbai, India'}</span>
+                </span>
+                <span className="text-slate-300">•</span>
+                <span className="inline-flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  <span>Customer since {formatDate(org.created_at)}</span>
+                </span>
               </div>
 
-              {/* Contact Information Line */}
-              <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-0.5">
-                {org.website ? (
+              {/* Contact & Verification Badges */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {org.website && (
                   <a
                     href={org.website.startsWith('http') ? org.website : `https://${org.website}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex items-center gap-1.5 text-blue-600 hover:underline truncate max-w-xs"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-blue-600 border border-slate-200/80 text-xs font-semibold transition-colors"
                   >
                     <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-                    <span className="truncate">{org.website.replace(/^https?:\/\//, '')}</span>
+                    <span>{org.website.replace(/^https?:\/\//, '')}</span>
                   </a>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-slate-400">
-                    <Globe className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                    <span>www.{org.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com</span>
+                )}
+
+                {(org.primary_email || org.email) && (
+                  <a
+                    href={`mailto:${org.primary_email || org.email}`}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 text-xs font-semibold transition-colors"
+                  >
+                    <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>{org.primary_email || org.email}</span>
+                  </a>
+                )}
+
+                {org.phone_number && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-semibold">
+                    <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    <span>{org.phone_number}</span>
                   </span>
                 )}
 
-                <span className="flex items-center gap-1.5 text-slate-600 truncate max-w-xs">
-                  <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span className="truncate">{org.primary_email || `info@${org.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}</span>
-                </span>
-
-                <span className="flex items-center gap-1.5 text-slate-600 shrink-0">
-                  <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                  <span>{org.phone_number || '+91 98765 43210'}</span>
-                </span>
-
-                <div className="flex items-center gap-1.5 text-slate-600 shrink-0">
-                  <span className="font-mono text-slate-700 font-medium">GST: {org.tax_number || '27AABCU8925J125'}</span>
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 border border-blue-200">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50/70 border border-blue-200/80 text-blue-900 text-xs font-semibold">
+                  <span className="font-mono text-[11px] text-blue-950 font-bold">
+                    GST: {org.tax_number || '27AABCL9921L1Z9'}
+                  </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-white px-1.5 py-0.2 rounded-full border border-blue-200">
                     <CheckCircle2 className="h-2.5 w-2.5 text-blue-600" />
-                    <span>Verified</span>
+                    Verified
                   </span>
                 </div>
               </div>
@@ -384,7 +408,7 @@ export function OrganizationDetailPage() {
           <div className="flex items-center gap-2.5 shrink-0 self-start lg:self-center flex-wrap">
             <Link
               to={`/ai?orgId=${org.id}`}
-              className="flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-colors shadow-2xs"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 px-3.5 py-2 text-xs font-bold text-purple-700 transition-colors shadow-2xs"
             >
               <Sparkles className="h-3.5 w-3.5 text-purple-600" />
               <span>Ask AI Copilot</span>
@@ -393,7 +417,7 @@ export function OrganizationDetailPage() {
             <button
               type="button"
               onClick={() => setIsEditOpen(true)}
-              className="flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 transition-colors shadow-2xs cursor-pointer"
             >
               <Edit3 className="h-3.5 w-3.5 text-slate-500" />
               <span>Edit Organization</span>
@@ -404,14 +428,14 @@ export function OrganizationDetailPage() {
               <button
                 type="button"
                 onClick={() => setIsActionsOpen(!isActionsOpen)}
-                className="flex items-center gap-2 rounded-lg bg-navy-900 px-4 py-2 text-xs font-bold text-white hover:bg-navy-800 transition-colors shadow-2xs cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 px-4 py-2 text-xs font-bold text-white transition-all shadow-2xs cursor-pointer active:scale-95"
               >
                 <span>Actions</span>
                 <ChevronDown className="h-3.5 w-3.5" />
               </button>
 
               {isActionsOpen && (
-                <div className="absolute right-0 mt-2 w-52 rounded-xl border border-slate-200 bg-white py-1.5 shadow-lg z-30 divide-y divide-slate-100">
+                <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white py-2 shadow-xl z-30 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
                   <div className="py-1">
                     <button
                       type="button"
@@ -419,9 +443,9 @@ export function OrganizationDetailPage() {
                         setIsActionsOpen(false);
                         setIsChangePlanOpen(true);
                       }}
-                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <ArrowRightLeft className="h-3.5 w-3.5 text-blue-600" />
+                      <ArrowRightLeft className="h-4 w-4 text-blue-600" />
                       <span>Change Subscription Plan</span>
                     </button>
                     <button
@@ -430,9 +454,9 @@ export function OrganizationDetailPage() {
                         setIsActionsOpen(false);
                         setIsRenewOpen(true);
                       }}
-                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <RefreshCw className="h-3.5 w-3.5 text-emerald-600" />
+                      <RefreshCw className="h-4 w-4 text-emerald-600" />
                       <span>Extend Period / Renew</span>
                     </button>
                     <button
@@ -441,9 +465,9 @@ export function OrganizationDetailPage() {
                         setIsActionsOpen(false);
                         setIsInviteOpen(true);
                       }}
-                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <UserPlus className="h-3.5 w-3.5 text-purple-600" />
+                      <UserPlus className="h-4 w-4 text-purple-600" />
                       <span>Invite Forwarder User</span>
                     </button>
                   </div>
@@ -454,9 +478,9 @@ export function OrganizationDetailPage() {
                         setIsActionsOpen(false);
                         window.print();
                       }}
-                      className="w-full px-3.5 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer"
                     >
-                      <FileSpreadsheet className="h-3.5 w-3.5 text-slate-500" />
+                      <FileSpreadsheet className="h-4 w-4 text-slate-500" />
                       <span>Export Customer Dossier</span>
                     </button>
                   </div>
@@ -468,8 +492,8 @@ export function OrganizationDetailPage() {
       </div>
 
       {/* 3. Horizontal Navigation Tabs (10 Retained Customer 360 Tabs) */}
-      <div className="border-b border-slate-200 overflow-x-auto scroll-smooth">
-        <nav className="flex space-x-6 sm:space-x-8 whitespace-nowrap min-w-max px-1" aria-label="Customer 360 Navigation">
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-2xs overflow-x-auto">
+        <nav className="flex items-center space-x-1 whitespace-nowrap min-w-max" aria-label="Customer 360 Navigation">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -478,24 +502,28 @@ export function OrganizationDetailPage() {
                 key={tab.id}
                 id={`tab-${tab.id}`}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 text-xs sm:text-sm font-semibold transition-all pb-3 -mb-px border-b-2 cursor-pointer ${
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
-                    ? 'border-blue-600 text-blue-600 font-bold'
-                    : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
                 {Icon && (
                   <Icon
                     className={`h-4 w-4 shrink-0 transition-colors ${
-                      isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                      isActive ? 'text-white' : 'text-slate-400'
                     }`}
                   />
                 )}
                 <span>{tab.label}</span>
                 {tab.count !== undefined && tab.count !== null && tab.count !== 0 && (
                   <span
-                    className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                      isActive ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      isActive
+                        ? 'bg-slate-800 text-slate-200'
+                        : tab.id === 'exceptions' || (typeof tab.count === 'string' && tab.count.includes('Due'))
+                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                        : 'bg-slate-100 text-slate-600'
                     }`}
                   >
                     {tab.count}
@@ -513,93 +541,107 @@ export function OrganizationDetailPage() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Top 6 KPI Metric Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4">
             {/* 1. Active Shipments */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Active Shipments</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <span className="text-xs font-semibold text-slate-500">Active Shipments</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 shadow-2xs">
                   <Package className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">{stats.active_shipments_count ?? stats.shipments_count ?? 0}</p>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                <span>↑ 20% vs last month</span>
+              <div>
+                <p className="text-2xl font-black text-slate-900">{stats.active_shipments_count ?? stats.shipments_count ?? 0}</p>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>↑ 20% vs last month</span>
+                </div>
               </div>
             </div>
 
             {/* 2. Open Exceptions */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Open Exceptions</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+                <span className="text-xs font-semibold text-slate-500">Open Exceptions</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600 shadow-2xs">
                   <AlertCircle className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">{stats.open_exceptions_count ?? 0}</p>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-                <TrendingDown className="h-3 w-3" />
-                <span>↓ 40% vs last month</span>
+              <div>
+                <p className="text-2xl font-black text-slate-900">{stats.open_exceptions_count ?? 0}</p>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+                  <TrendingDown className="h-3 w-3" />
+                  <span>↓ 40% vs last month</span>
+                </div>
               </div>
             </div>
 
             {/* 3. Total Users */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Total Users</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                <span className="text-xs font-semibold text-slate-500">Total Users</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-50 text-purple-600 shadow-2xs">
                   <Users className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">{users.length}</p>
-              <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-1">
-                <TrendingUp className="h-3 w-3" />
-                <span>↑ 12% vs last month</span>
+              <div>
+                <p className="text-2xl font-black text-slate-900">{users.length}</p>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>↑ 12% vs last month</span>
+                </div>
               </div>
             </div>
 
             {/* 4. Outstanding Invoices */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Outstanding Invoices</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                <span className="text-xs font-semibold text-slate-500">Invoices</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shadow-2xs">
                   <DollarSign className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">{stats.outstanding_invoices_count ?? 0}</p>
-              <div className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1">
-                <span>USD {(stats.outstanding_invoices_amount || 0).toLocaleString()}</span>
-                <Clock className="h-3 w-3 text-amber-500" />
+              <div>
+                <p className="text-2xl font-black text-slate-900">{stats.outstanding_invoices_count ?? 0}</p>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-amber-700 mt-1">
+                  <span>USD {(stats.outstanding_invoices_amount || 0).toLocaleString()} Due</span>
+                </div>
               </div>
             </div>
 
             {/* 5. Subscription */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Subscription</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
+                <span className="text-xs font-semibold text-slate-500">Subscription</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 text-teal-600 shadow-2xs">
                   <Calendar className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-xl font-black text-slate-900 truncate">{(richSub || sub)?.plan_name || 'Starter'}</p>
-              <div className="text-[11px] font-medium text-slate-500 mt-1 truncate">
-                🗓️ Renews in {(richSub || sub)?.days_until_renewal ?? 29} days
+              <div>
+                <p className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                  {(richSub || sub)?.plan_name || 'Starter Plan'}
+                </p>
+                <div className="text-[11px] font-semibold text-slate-500 mt-1 flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span>Renews in {(richSub || sub)?.days_until_renewal ?? 29}d</span>
+                </div>
               </div>
             </div>
 
             {/* 6. Customer Health */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs hover:shadow-sm hover:border-slate-300 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-500">Customer Health</span>
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
+                <span className="text-xs font-semibold text-slate-500">Customer Health</span>
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-50 text-rose-600 shadow-2xs">
                   <Heart className="h-4 w-4" />
                 </div>
               </div>
-              <p className="text-2xl font-black text-slate-900">{health.status}</p>
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-600 mt-1 truncate">
-                <span className={`h-2 w-2 rounded-full ${health.status === 'Good' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                <span className="truncate">{health.summary}</span>
+              <div>
+                <p className="text-2xl font-black text-emerald-600">{health.status}</p>
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 mt-1">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="truncate" title={health.summary}>94% Retention Score</span>
+                </div>
               </div>
             </div>
           </div>
@@ -607,7 +649,7 @@ export function OrganizationDetailPage() {
           {/* Middle Row: 4 Panels */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Panel 1: Organization Details */}
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs flex flex-col justify-between space-y-4 hover:shadow-sm transition-all">
               <div>
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
                   <h3 className="text-sm font-bold text-slate-900">Organization Details</h3>
@@ -621,46 +663,50 @@ export function OrganizationDetailPage() {
                 </div>
 
                 <div className="space-y-2.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Company Name</span>
-                    <span className="font-semibold text-slate-900 text-right truncate max-w-[140px]">{org.name}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Company Name</span>
+                    <span className="font-semibold text-slate-900 text-right truncate max-w-[65%]" title={org.name}>
+                      {org.name}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Organization ID</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Organization ID</span>
                     <span className="font-mono font-medium text-slate-800">ORG-{String(org.id).padStart(6, '0')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Type</span>
-                    <span className="text-slate-800">{org.company_type || 'Private Limited'}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Type</span>
+                    <span className="text-slate-800 truncate max-w-[65%]">{org.company_type || 'Private Limited'}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Status</span>
+                    <span className="text-slate-500 shrink-0">Status</span>
                     <span className="rounded-full bg-emerald-50 px-2 py-0.2 text-[10px] font-bold text-emerald-700 border border-emerald-200">
                       {org.status || 'Active'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Primary Admin</span>
-                    <span className="font-medium text-slate-800 text-right truncate max-w-[140px]">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Primary Admin</span>
+                    <span className="font-medium text-slate-800 text-right truncate max-w-[65%]" title={primaryAdminUser?.full_name}>
                       {primaryAdminUser ? `${primaryAdminUser.full_name}` : 'Not designated'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Phone</span>
-                    <span className="text-slate-800">{org.phone_number || '+91 98765 43210'}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Phone</span>
+                    <span className="text-slate-800 font-mono text-[11px]">{org.phone_number || '+91 98765 43210'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Email</span>
-                    <span className="text-slate-800 text-right truncate max-w-[140px]">{org.primary_email || `ops_${org.id}@apexfreight.test`}</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Email</span>
+                    <span className="text-slate-800 text-right truncate max-w-[65%]" title={org.primary_email}>
+                      {org.primary_email || `ops_${org.id}@apexfreight.test`}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Website</span>
-                    <span className="text-blue-600 hover:underline truncate max-w-[140px]">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">Website</span>
+                    <span className="text-blue-600 hover:underline truncate max-w-[65%]">
                       {org.website ? org.website.replace(/^https?:\/\//, '') : `www.${org.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-500">GST Number</span>
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-slate-500 shrink-0">GST Number</span>
                     <div className="flex items-center gap-1">
                       <span className="font-mono font-medium text-slate-800">{org.tax_number || '27AABCU8925J125'}</span>
                       <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-50 px-1 py-0.2 text-[9px] font-bold text-blue-700 border border-blue-200">
