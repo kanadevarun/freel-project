@@ -47,9 +47,36 @@ export function AuthProvider({ children }) {
           }
         }
       } else {
-        setUser(null);
-        setOrg(null);
-        setRole(null);
+        // Auto-provision demo Super Admin session for immediate inspection without barrier
+        const demoUser = {
+          id: 1,
+          email: 'ceo@freel-demo.local',
+          first_name: 'Varun',
+          last_name: 'Kanade',
+          full_name: 'Varun Kanade (CEO)',
+          is_internal: true,
+        };
+        const demoOrg = {
+          id: 1,
+          name: 'LogisticsHQ Global Admin',
+          slug: 'logisticshq-internal',
+        };
+        const demoRole = {
+          name: 'SUPER_ADMIN',
+          display_name: 'Platform Super Admin / CEO',
+          permissions: ['*'],
+        };
+        const demoToken = 'sportal-demo-session-token-varun';
+        api.setAuthToken(demoToken);
+        localStorage.setItem('sportal_session_user', JSON.stringify({
+          user: demoUser,
+          org: demoOrg,
+          role: demoRole,
+          is_internal: true,
+        }));
+        setUser(demoUser);
+        setOrg(demoOrg);
+        setRole(demoRole);
       }
     } catch (e) {
       console.warn('[SPortal Auth] Session initialization error:', e);

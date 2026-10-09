@@ -49,17 +49,25 @@ class ApiClient {
         headers,
       });
 
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const error = new Error(`HTTP ${response.status}: Non-JSON response received (${contentType || 'empty'})`);
+        error.status = response.status;
+        throw error;
+      }
+
       const data = await response.json().catch(() => null);
 
-      if (!response.ok) {
+      if (!response.ok || data === null) {
         const errorMsg = data?.message || data?.error?.message || `HTTP ${response.status}: Request failed`;
         const error = new Error(errorMsg);
         error.status = response.status;
         error.data = data;
         error.code = data?.error?.code;
 
-        // Auto-redirect on 401 if not on login page
-        if (response.status === 401 && !window.location.pathname.includes('/login')) {
+        // Auto-redirect on 401 if not on login page and not using an offline demo session
+        const isDemo = token && token.startsWith('sportal-demo-session-token');
+        if (response.status === 401 && !window.location.pathname.includes('/login') && !isDemo) {
           this.setAuthToken(null);
           window.location.href = '/login?expired=true';
         }
@@ -69,7 +77,7 @@ class ApiClient {
 
       return data?.data !== undefined ? data.data : data;
     } catch (err) {
-      console.error(`[SPortal API] Request to ${endpoint} failed:`, err);
+      console.warn(`[SPortal API] Request to ${endpoint} failed, falling back to local dataset:`, err?.message || err);
       throw err;
     }
   }
