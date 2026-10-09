@@ -61,10 +61,10 @@ export function ChangeSubscriptionPlanModal({ isOpen, onClose, subscription, pla
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs overflow-y-auto">
+      <div className="w-full max-w-lg max-h-[calc(100vh-2rem)] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/50 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
               <ArrowRightLeft className="h-5 w-5" />
@@ -84,15 +84,16 @@ export function ChangeSubscriptionPlanModal({ isOpen, onClose, subscription, pla
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {error && (
-            <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/60 p-3.5 text-xs text-rose-700">
-              <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
-              <div>
-                <span className="font-semibold">Mutation Failed:</span> {error}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+            {error && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-rose-200 bg-rose-50/60 p-3.5 text-xs text-rose-700">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600 mt-0.5" />
+                <div>
+                  <span className="font-semibold">Mutation Failed:</span> {error}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Current Plan vs Target Plan Comparison */}
           <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2">
@@ -214,8 +215,10 @@ export function ChangeSubscriptionPlanModal({ isOpen, onClose, subscription, pla
             />
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          </div>
+
+          {/* Actions - Fixed at bottom */}
+          <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-slate-100 bg-slate-50/50 shrink-0">
             <button
               type="button"
               onClick={onClose}
