@@ -119,7 +119,9 @@ export function ChangeSubscriptionPlanModal({ isOpen, onClose, subscription, pla
               {plans.map((p) => {
                 const isCurrent = p.id === subscription.plan_id;
                 const isSelected = String(p.id) === String(selectedPlanId);
-                const price = billingCycle === 'annual' ? p.price_annual : p.price_monthly;
+                const price = billingCycle === 'annual'
+                  ? (p.price_annual ?? p.annual_price ?? 0)
+                  : (p.price_monthly ?? p.monthly_price ?? 0);
                 const periodLabel = billingCycle === 'annual' ? '/yr' : '/mo';
 
                 return (

@@ -25,8 +25,8 @@ export function PlanEditorModal({ isOpen, onClose, plan, onSuccess }) {
     if (plan) {
       setName(plan.name || '');
       setDescription(plan.description || '');
-      setPriceMonthly(String(plan.price_monthly ?? ''));
-      setPriceAnnual(String(plan.price_annual ?? ''));
+      setPriceMonthly(String(plan.price_monthly ?? plan.monthly_price ?? ''));
+      setPriceAnnual(String(plan.price_annual ?? plan.annual_price ?? ''));
       setFeatures(Array.isArray(plan.features) ? [...plan.features] : []);
       setLimits({
         team_members: plan.limits?.team_members ?? 5,

@@ -39,7 +39,7 @@ export function BillingPage() {
   const [plans, setPlans] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [orgs, setOrgs] = useState([]);
-  const [selectedOrgId, setSelectedOrgId] = useState(2);
+  const [selectedOrgId, setSelectedOrgId] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
@@ -51,7 +51,7 @@ export function BillingPage() {
       try {
         const res = await sportalService.getOrganizations({ pageSize: 100 });
         const orgItems = res?.items || res?.data?.items || [];
-        const customerOrgs = orgItems.filter((o) => o.id !== 1);
+        const customerOrgs = orgItems.filter((o) => o.id > 0);
         setOrgs(customerOrgs);
         if (customerOrgs.length > 0) {
           const found = customerOrgs.find((o) => o.id === selectedOrgId);
@@ -74,7 +74,7 @@ export function BillingPage() {
       const [subRes, planRes, invRes] = await Promise.allSettled([
         sportalService.getSubscriptions({ limit: 100 }),
         sportalService.getSubscriptionPlans(),
-        sportalService.getCustomerInvoices(orgId || 2, 100),
+        sportalService.getCustomerInvoices(orgId || 1, 100),
       ]);
 
       if (subRes.status === 'fulfilled') {
@@ -109,16 +109,18 @@ export function BillingPage() {
 
   // Derived metrics from authoritative persisted records
   const activeSubs = useMemo(() => {
-    return subscriptions.filter((s) => s.status === 'ACTIVE' || s.status === 'active');
+    return subscriptions.filter((s) => (s.status || '').toUpperCase() === 'ACTIVE');
   }, [subscriptions]);
 
   const computedMRR = useMemo(() => {
     if (metrics.monthly_recurring_rev > 0) return metrics.monthly_recurring_rev;
-    return activeSubs.reduce((sum, s) => sum + Number(s.amount || s.price || 0), 0);
+    if (metrics.total_mrr > 0) return metrics.total_mrr;
+    return activeSubs.reduce((sum, s) => sum + Number(s.amount || s.mrr || s.price || 0), 0);
   }, [metrics, activeSubs]);
 
   const computedARR = useMemo(() => {
     if (metrics.annual_run_rate > 0) return metrics.annual_run_rate;
+    if (metrics.arr > 0) return metrics.arr;
     return computedMRR * 12;
   }, [metrics, computedMRR]);
 

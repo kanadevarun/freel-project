@@ -92,7 +92,9 @@ export function AssignSubscriptionModal({ isOpen, onClose, organization, plans =
             <div className="grid grid-cols-1 gap-2.5">
               {plans.map((p) => {
                 const isSelected = String(p.id) === String(selectedPlanId);
-                const price = billingCycle === 'annual' ? p.price_annual : p.price_monthly;
+                const price = billingCycle === 'annual'
+                  ? (p.price_annual ?? p.annual_price ?? 0)
+                  : (p.price_monthly ?? p.monthly_price ?? 0);
                 const periodLabel = billingCycle === 'annual' ? '/yr' : '/mo';
 
                 return (
