@@ -22,6 +22,7 @@ import {
   Activity,
   Layers,
   ChevronRight,
+  ChevronLeft,
   ChevronDown,
   Info,
   UserPlus,
@@ -290,22 +291,49 @@ export function OrganizationDetailPage() {
 
   return (
     <div className="space-y-6 pb-12 w-full max-w-full min-w-0">
-      {/* 1. Breadcrumb Navigation */}
-      <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <Link to="/organizations" className="hover:text-blue-600 transition-colors">
-          Organizations
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-        <span
-          className="hover:text-blue-600 transition-colors cursor-pointer font-medium text-slate-700 truncate max-w-xs"
-          onClick={() => setActiveTab('overview')}
-        >
-          {org.name}
-        </span>
-        <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-        <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/80">
-          Customer 360
-        </span>
+      {/* 1. Breadcrumb Navigation Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-4.5 py-3 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="flex items-center gap-2 text-xs flex-wrap">
+          <Link
+            to="/organizations"
+            className="flex items-center gap-1.5 font-bold text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            <Building2 className="h-4 w-4 text-blue-600 shrink-0" />
+            <span>Organizations</span>
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <span
+            className="font-bold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer flex items-center gap-1.5"
+            onClick={() => handleTabChange('overview')}
+            title={org.name}
+          >
+            <span className="h-2 w-2 rounded-full bg-blue-600 shrink-0" />
+            <span className="truncate max-w-xs">{org.name || 'Organization'}</span>
+          </span>
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-black text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/80 shadow-2xs">
+            <Compass className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+            <span>Customer 360</span>
+          </span>
+          {activeTab !== 'overview' && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 capitalize">
+                {navTabs.find((t) => t.id === activeTab)?.label || activeTab}
+              </span>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono text-[11px] font-bold bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 text-slate-700">
+            ID: #{org.id || organizationId}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            {org.status === 'Active' ? 'Active Customer' : org.status || 'Active Customer'}
+          </span>
+        </div>
       </div>
 
       {/* 2. Customer Identity Header Card */}
@@ -491,48 +519,81 @@ export function OrganizationDetailPage() {
         </div>
       </div>
 
-      {/* 3. Horizontal Navigation Tabs (10 Retained Customer 360 Tabs) */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-2xs overflow-x-auto">
-        <nav className="flex items-center space-x-1 whitespace-nowrap min-w-max" aria-label="Customer 360 Navigation">
-          {navTabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                id={`tab-${tab.id}`}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                }`}
-              >
-                {Icon && (
-                  <Icon
-                    className={`h-4 w-4 shrink-0 transition-colors ${
-                      isActive ? 'text-white' : 'text-slate-400'
-                    }`}
-                  />
-                )}
-                <span>{tab.label}</span>
-                {tab.count !== undefined && tab.count !== null && tab.count !== 0 && (
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      isActive
-                        ? 'bg-slate-800 text-slate-200'
-                        : tab.id === 'exceptions' || (typeof tab.count === 'string' && tab.count.includes('Due'))
-                        ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
+      {/* 3. Horizontal Navigation Tabs (10 Retained Customer 360 Tabs with Scroll Controls & Highlighted Scrollbar) */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-2 shadow-2xs">
+        <div className="flex items-center gap-1.5">
+          {/* Scroll Left Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const nav = document.getElementById('customer-360-tabs-nav');
+              if (nav) nav.scrollBy({ left: -260, behavior: 'smooth' });
+            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
+            title="Scroll tabs left"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          {/* Scrollable Nav with Highlighted Scrollbar */}
+          <nav
+            id="customer-360-tabs-nav"
+            className="flex items-center space-x-1.5 whitespace-nowrap overflow-x-auto pb-2 highlighted-scrollbar flex-1 scroll-smooth"
+            aria-label="Customer 360 Navigation"
+          >
+            {navTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  id={`tab-${tab.id}`}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  {Icon && (
+                    <Icon
+                      className={`h-4 w-4 shrink-0 transition-colors ${
+                        isActive ? 'text-white' : 'text-slate-400'
+                      }`}
+                    />
+                  )}
+                  <span>{tab.label}</span>
+                  {tab.count !== undefined && tab.count !== null && tab.count !== 0 && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        isActive
+                          ? 'bg-slate-800 text-slate-200'
+                          : tab.id === 'exceptions' || (typeof tab.count === 'string' && tab.count.includes('Due'))
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Scroll Right Button */}
+          <button
+            type="button"
+            onClick={() => {
+              const nav = document.getElementById('customer-360-tabs-nav');
+              if (nav) nav.scrollBy({ left: 260, behavior: 'smooth' });
+            }}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer active:scale-95"
+            title="Scroll tabs right"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* ========================================================================= */}

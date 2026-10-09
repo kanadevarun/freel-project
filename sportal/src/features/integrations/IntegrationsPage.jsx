@@ -313,7 +313,7 @@ export function IntegrationsPage() {
       {/* 4. Navigation Tabs and Filter Controls */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1.5 highlighted-scrollbar">
           {[
             { id: 'ALL', label: 'All Connectors', icon: Layers, count: allItems.length },
             {
