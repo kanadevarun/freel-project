@@ -46,6 +46,9 @@ export function CustomerExceptionsView({
   const [copiedId, setCopiedId] = useState(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [statusSuccessMsg, setStatusSuccessMsg] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [newNoteText, setNewNoteText] = useState('');
+  const [localNotes, setLocalNotes] = useState({});
 
   // New Exception Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -925,8 +928,8 @@ export function CustomerExceptionsView({
               <div className="pt-2">
                 <button
                   type="button"
-                  onClick={() => onNavigateTab && onNavigateTab('support')}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 py-2.5 px-3 text-xs font-bold text-white transition-colors shadow-2xs cursor-pointer"
+                  onClick={() => setIsDetailModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-2.5 px-3 text-xs font-bold text-white transition-all shadow-2xs hover:shadow-sm cursor-pointer active:scale-95"
                 >
                   <span>View Full Details</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -1091,6 +1094,263 @@ export function CustomerExceptionsView({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Exception Full Details Modal ──────────────────────────── */}
+      {isDetailModalOpen && selectedException && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 bg-slate-50/80 flex items-start justify-between gap-4">
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-slate-900 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-2xs">
+                    {selectedException.id}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyId(selectedException.id)}
+                    className="p-1 text-slate-400 hover:text-slate-700 rounded transition-colors"
+                    title="Copy Exception ID"
+                  >
+                    {copiedId === selectedException.id ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border ${getPriorityBadgeClass(
+                      selectedException.priority
+                    )}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${getPriorityDotClass(selectedException.priority)}`} />
+                    <span>Priority: {selectedException.priority}</span>
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold border ${getStatusBadgeClass(
+                      selectedException.status
+                    )}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusDotClass(selectedException.status)}`} />
+                    <span>Status: {selectedException.status}</span>
+                  </span>
+                </div>
+                <h3 className="text-base font-black text-slate-900 leading-snug">
+                  {selectedException.subject}
+                </h3>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-200 text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Incident Description */}
+              <div>
+                <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
+                  Incident Description & Operational Context
+                </span>
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-slate-700 leading-relaxed font-normal whitespace-pre-wrap">
+                  {selectedException.description}
+                </div>
+              </div>
+
+              {/* 6-box Metadata Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Category</span>
+                  <span className="font-bold text-slate-900 mt-0.5 block">{selectedException.category}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Reference</span>
+                  <span className="font-mono font-bold text-blue-600 mt-0.5 block">{selectedException.shipmentRef}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Raised By</span>
+                  <span className="font-bold text-slate-900 mt-0.5 block">{selectedException.raisedBy}</span>
+                  <span className="text-[10px] text-slate-500">{selectedException.raisedByRole}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Customer Tenant</span>
+                  <span className="font-bold text-slate-900 mt-0.5 block truncate">{org.name}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Raised On</span>
+                  <span className="font-medium text-slate-800 mt-0.5 block">{selectedException.raisedOn}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">Last Activity</span>
+                  <span className="font-medium text-slate-800 mt-0.5 block">{selectedException.lastUpdated}</span>
+                </div>
+              </div>
+
+              {/* Status Update Quick Action */}
+              <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800">Update Escalation Lifecycle State</span>
+                  {statusSuccessMsg && (
+                    <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      {statusSuccessMsg}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus || selectedException.status === 'Open'}
+                    onClick={() => handleUpdateStatus('Open')}
+                    className={`py-2 px-3 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                      selectedException.status === 'Open'
+                        ? 'bg-rose-600 text-white shadow-2xs'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    ● Open
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus || selectedException.status === 'In Progress'}
+                    onClick={() => handleUpdateStatus('In Progress')}
+                    className={`py-2 px-3 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                      selectedException.status === 'In Progress'
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    ● In Progress
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUpdatingStatus || selectedException.status === 'Resolved'}
+                    onClick={() => handleUpdateStatus('Resolved')}
+                    className={`py-2 px-3 rounded-lg font-bold text-xs transition-all cursor-pointer ${
+                      selectedException.status === 'Resolved'
+                        ? 'bg-emerald-600 text-white shadow-2xs'
+                        : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    ✓ Resolved
+                  </button>
+                </div>
+              </div>
+
+              {/* Operator Notes & Activity Log */}
+              <div className="space-y-3">
+                <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider block">
+                  Operator Notes & Activity Log
+                </span>
+
+                <div className="space-y-2">
+                  {/* Default Timeline events */}
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start gap-2.5">
+                    <div className="h-6 w-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                      CU
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{selectedException.raisedBy}</span>
+                        <span className="text-[10px] text-slate-400">{selectedException.raisedOn}</span>
+                      </div>
+                      <p className="text-slate-600 mt-0.5">Raised customer escalation: {selectedException.subject}</p>
+                    </div>
+                  </div>
+
+                  {selectedException.status === 'Resolved' && (
+                    <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-100 flex items-start gap-2.5">
+                      <div className="h-6 w-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-emerald-900">LogisticsHQ Operations</span>
+                          <span className="text-[10px] text-slate-400">{selectedException.lastUpdated}</span>
+                        </div>
+                        <p className="text-emerald-800 mt-0.5">Resolution verified and acknowledged with customer.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dynamic user notes added */}
+                  {(localNotes[selectedException.id] || []).map((note, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-purple-50/60 border border-purple-100 flex items-start gap-2.5">
+                      <div className="h-6 w-6 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
+                        VK
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-purple-900">Varun Kanade (CEO / Super Admin)</span>
+                          <span className="text-[10px] text-slate-400">Just now</span>
+                        </div>
+                        <p className="text-slate-800 mt-0.5">{note}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add note input */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={newNoteText}
+                    onChange={(e) => setNewNoteText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newNoteText.trim()) {
+                        e.preventDefault();
+                        const exId = selectedException.id;
+                        setLocalNotes((prev) => ({
+                          ...prev,
+                          [exId]: [...(prev[exId] || []), newNoteText.trim()],
+                        }));
+                        setNewNoteText('');
+                      }
+                    }}
+                    placeholder="Add an internal note or operator update..."
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                  <button
+                    type="button"
+                    disabled={!newNoteText.trim()}
+                    onClick={() => {
+                      if (newNoteText.trim()) {
+                        const exId = selectedException.id;
+                        setLocalNotes((prev) => ({
+                          ...prev,
+                          [exId]: [...(prev[exId] || []), newNoteText.trim()],
+                        }));
+                        setNewNoteText('');
+                      }
+                    }}
+                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    Add Note
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+              <span className="text-[11px] text-slate-500 font-medium">
+                LogisticsHQ SPortal • Authoritative Escalation Record
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-colors shadow-2xs cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
           </div>
         </div>
       )}
