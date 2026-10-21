@@ -215,7 +215,8 @@ export default function LoginPage() {
             <span>OR</span>
           </div>
 
-          {/* Secondary Auth */}
+          {/* Secondary Auth - Demo sign in disabled / hidden */}
+          {/*
           <button
             type="button"
             className="login-demo-btn"
@@ -240,6 +241,7 @@ export default function LoginPage() {
           >
             ⚡ Launch Demo Workspace (CEO / Super Admin)
           </button>
+          */}
 
           <button type="button" className="login-google-btn" onClick={handleGoogleLogin}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
