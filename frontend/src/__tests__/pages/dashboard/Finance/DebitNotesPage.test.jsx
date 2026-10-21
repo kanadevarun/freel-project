@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import DebitNotesPage from '../../../../pages/dashboard/Finance/DebitNotesPage';
 import api from '../../../../services/api';
+import { generateDebitNotePDF } from '../../../../pages/dashboard/Finance/utils/debitNotePdfGenerator';
+
+vi.mock('../../../../pages/dashboard/Finance/utils/debitNotePdfGenerator', () => ({
+  generateDebitNotePDF: vi.fn(),
+}));
 
 vi.mock('../../../../services/api', () => ({
   default: {
@@ -122,7 +127,7 @@ describe('DebitNotesPage Component', () => {
     });
   });
 
-  it('opens details panel when clicking a debit note row', async () => {
+  it('opens details drawer with dark backdrop when clicking a debit note row and allows PDF download', async () => {
     render(<DebitNotesPage />);
 
     await waitFor(() => {
@@ -133,7 +138,35 @@ describe('DebitNotesPage Component', () => {
     fireEvent.click(row);
 
     await waitFor(() => {
+      expect(screen.getByTestId('dn-drawer-backdrop')).toBeInTheDocument();
       expect(screen.getByText('Port Demurrage - 3 Days')).toBeInTheDocument();
+      expect(screen.getByText('COMMERCIAL DEBIT NOTE')).toBeInTheDocument();
     });
+
+    // Verify Download PDF button exists in drawer and triggers PDF generator
+    const pdfButtons = screen.getAllByText('Download PDF');
+    expect(pdfButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(pdfButtons[0]);
+    expect(generateDebitNotePDF).toHaveBeenCalled();
+
+    // Verify clicking the backdrop dismisses the drawer
+    const backdrop = screen.getByTestId('dn-drawer-backdrop');
+    fireEvent.click(backdrop);
+    await waitFor(() => {
+      expect(screen.queryByTestId('dn-drawer-backdrop')).not.toBeInTheDocument();
+    });
+  });
+
+  it('triggers PDF download from the table row action directly', async () => {
+    render(<DebitNotesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('DN-20260907-0001')).toBeInTheDocument();
+    });
+
+    const rowPdfButtons = screen.getAllByTitle('Download PDF');
+    expect(rowPdfButtons.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(rowPdfButtons[0]);
+    expect(generateDebitNotePDF).toHaveBeenCalled();
   });
 });

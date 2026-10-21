@@ -11,7 +11,6 @@ import {
   ChevronsRight,
   FileText,
   AlertCircle,
-  Bot,
   RefreshCw,
   RotateCcw,
   CheckCircle2,
@@ -23,7 +22,6 @@ import {
 
 import api from '../../../services/api';
 import aiTaskService from '../../../services/aiTaskService';
-import AgentStatusBadge from '../../../components/agent/AgentStatusBadge';
 import InvoiceKpiCards from './components/InvoiceKpiCards';
 import InvoiceTable from './components/InvoiceTable';
 import InvoiceDetailsPanel from './components/InvoiceDetailsPanel';
@@ -33,6 +31,7 @@ import RecordPaymentModal from './components/RecordPaymentModal';
 import FinanceCollectionsAdaptiveDrawer from '../../../components/autonomy/FinanceCollectionsAdaptiveDrawer';
 
 import { INITIAL_KPI_STATS, INVOICE_STATUSES } from './mockInvoiceData';
+import { generateInvoicePDF } from './utils/invoicePdfGenerator';
 import './InvoicesPage.css';
 
 export default function InvoicesPage() {
@@ -430,7 +429,8 @@ export default function InvoicesPage() {
         showToast(`Send invoice ${payload?.invoiceNumber} to ${payload?.customer}`, 'info');
         break;
       case 'downloadPdf':
-        showToast(`Downloading PDF for ${payload?.invoiceNumber}...`, 'info');
+        showToast(`Generating official PDF for ${payload?.invoiceNumber || 'invoice'}...`, 'info');
+        generateInvoicePDF(payload);
         break;
       case 'cancelInvoice':
         try {
@@ -498,170 +498,8 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* ── AI Finance & Reconciliation Visibility Strip ── */}
-          <div className="ai-finance-audit-banner">
-            <div className="ai-finance-audit-left">
-              <div className="ai-finance-audit-icon">
-                <Bot size={18} />
-              </div>
-              <div className="ai-finance-audit-info">
-                <div className="ai-finance-audit-title">
-                  <span>AI Finance & Discrepancy Reconciliation</span>
-                  {primaryAiTask ? (
-                    <AgentStatusBadge
-                      status={primaryAiTask.workforce_status}
-                      error={primaryAiTask.safe_error_msg}
-                      mockMode={primaryAiTask.mock_mode}
-                      providerFailover={primaryAiTask.provider_failover}
-                    />
-                  ) : (
-                    <span className="ai-finance-badge-idle">● Idle & Ready</span>
-                  )}
-                </div>
-                <span className="ai-finance-audit-desc">
-                  {primaryAiTask?.workforce_status === 'processing'
-                    ? `Currently reconciling ledger items for ${primaryAiTask.related_ref || 'invoices'}...`
-                    : primaryAiTask?.workforce_status === 'waiting_for_approval'
-                    ? 'Invoice discrepancy flagged — human sign-off required before ledger posting'
-                    : primaryAiTask?.workforce_status === 'failed'
-                    ? `Audit fault: ${primaryAiTask.safe_error_msg || 'Execution interrupted'}`
-                    : 'Automated 3-way matching and discrepancy checks active across customer billings.'}
-                </span>
-              </div>
-            </div>
-            <div className="ai-finance-audit-actions">
-              {primaryAiTask?.can_retry && (
-                <button
-                  className="btn-ai-audit-action retry"
-                  onClick={() => handleRetryAiTask(primaryAiTask.task_id)}
-                >
-                  <RotateCcw size={12} /> Retry Audit
-                </button>
-              )}
-              {primaryAiTask?.requires_approval && (
-                <button
-                  className="btn-ai-audit-action approval"
-                  onClick={() => navigate('/dashboard/approvals')}
-                >
-                  <CheckCircle2 size={12} /> Sign Off
-                </button>
-              )}
-              <button
-                className="btn-ai-audit-refresh"
-                onClick={fetchAiFinanceTasks}
-                title="Refresh AI Finance Status"
-              >
-                <RefreshCw size={13} className={aiFinanceLoading ? 'spin-icon' : ''} />
-              </button>
-            </div>
-          </div>
-
           {/* ── KPI Cards ── */}
           <InvoiceKpiCards kpiData={kpiStats} />
-
-          {/* ── AI Collections & Aging Intelligence Strip (Task 2.5) ── */}
-          <div className="ai-collections-intelligence-strip" data-testid="ai-collections-overview-banner" style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderLeft: '4px solid #2563eb',
-            borderRadius: '8px',
-            padding: '12px 16px',
-            marginBottom: '16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#eff6ff',
-                color: '#2563eb',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}>
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                    AI Collections & Aging Intelligence
-                  </span>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: '#fef2f2',
-                    color: '#991b1b',
-                    border: '1px solid #fecaca'
-                  }}>
-                    {kpiStats.overdue?.count || 0} Overdue ({kpiStats.overdue?.displayAmount || '$0.00'})
-                  </span>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569'
-                  }}>
-                    Aging Bands: 1-15d • 16-30d • 31-60d • 60+d
-                  </span>
-                </div>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
-                  Deterministic receivables prioritization, compounding customer delinquency alerts, and controlled collection draft generation.
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button
-                type="button"
-                className="btn-secondary-action"
-                style={{ fontSize: '12px', padding: '6px 10px', height: 'auto' }}
-                onClick={() => {
-                  setStatusFilter('Overdue');
-                  setCurrentPage(1);
-                }}
-                data-testid="btn-quick-filter-overdue"
-              >
-                <AlertTriangle size={13} className="text-rose-600" />
-                <span>Show Overdue Only</span>
-              </button>
-
-              <button
-                type="button"
-                className="btn-primary-action"
-                style={{ fontSize: '12px', padding: '6px 12px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
-                onClick={() => navigate('/dashboard/recommendations?category=finance')}
-                data-testid="btn-open-recommendation-collections"
-              >
-                <span>Collections Assistant</span>
-                <ExternalLink size={12} />
-              </button>
-
-              <button
-                type="button"
-                className="btn-primary-action"
-                style={{ fontSize: '12px', padding: '6px 12px', height: 'auto', display: 'inline-flex', alignItems: 'center', gap: '5px', backgroundColor: '#2563eb', color: '#ffffff' }}
-                onClick={() => {
-                  const targetInv = invoices.find(i => i.status === 'Overdue') || invoices[0];
-                  if (targetInv) setSelectedAdaptiveInvoice(targetInv);
-                }}
-                data-testid="btn-open-adaptive-collections-banner"
-              >
-                <Sparkles size={13} />
-                <span>Adaptive Collections AI</span>
-              </button>
-            </div>
-          </div>
 
           {/* ── Primary View Tabs & Action Toolbar ── */}
           <div className="invoices-toolbar-card">

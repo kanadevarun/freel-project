@@ -56,8 +56,9 @@ type Endpoints struct {
 	CreateShipmentFromBookingEP  endpoint.Endpoint
 
 	// Task 5: Live Carrier Booking Integration
-	BookWithCarrierEP    endpoint.Endpoint
-	SyncCarrierBookingEP endpoint.Endpoint
+	BookWithCarrierEP     endpoint.Endpoint
+	SyncCarrierBookingEP  endpoint.Endpoint
+	GetCarrierDocumentsEP endpoint.Endpoint
 }
 
 func NewAllRFQEndpoints(bl BusinessLogic) Endpoints {
@@ -97,6 +98,7 @@ func NewAllRFQEndpoints(bl BusinessLogic) Endpoints {
 		CreateShipmentFromBookingEP: makeCreateShipmentFromBookingEndpoint(bl),
 		BookWithCarrierEP:           makeBookWithCarrierEndpoint(bl),
 		SyncCarrierBookingEP:        makeSyncCarrierBookingEndpoint(bl),
+		GetCarrierDocumentsEP:       makeGetCarrierDocumentsEndpoint(bl),
 	}
 }
 
@@ -823,6 +825,27 @@ func makeSyncCarrierBookingEndpoint(bl BusinessLogic) endpoint.Endpoint {
 		}, nil
 	}
 }
+
+func makeGetCarrierDocumentsEndpoint(bl BusinessLogic) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		req := request.(*spec.GetCarrierDocumentsRequest)
+		orgID, err := getOrgID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		resp, err := bl.GetCarrierDocuments(ctx, orgID, req.BookingID)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]interface{}{
+			"message": "Carrier documents retrieved successfully",
+			"data":    resp,
+		}, nil
+	}
+}
+
 
 
 

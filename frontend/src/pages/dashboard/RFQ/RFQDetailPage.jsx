@@ -15,7 +15,6 @@ import RFQShipmentHandoff from './components/RFQShipmentHandoff';
 import RFQPricingIntelligenceSection from './components/RFQPricingIntelligenceSection';
 import RFQIntelligentPricingWorkflowSection from './components/RFQIntelligentPricingWorkflowSection';
 import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
-import PricingMarginPredictiveIntelligenceCard from '../../../components/predictions/PricingMarginPredictiveIntelligenceCard';
 import './RFQDetailPage.css';
 
 export default function RFQDetailPage() {
@@ -389,9 +388,6 @@ export default function RFQDetailPage() {
           sourceRef={rfq?.rfq_number}
           onRefreshNeeded={refreshAllData}
         />
-
-        {/* Phase 4 Task 4.5: Predictive Pricing & Margin Intelligence */}
-        <PricingMarginPredictiveIntelligenceCard recordType="rfq" recordId={id} />
 
         {/* 3. Tab Content Panels */}
         {activeTab === 'overview' && (

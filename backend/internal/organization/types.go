@@ -184,7 +184,8 @@ type CarrierIntegration struct {
 	CarrierSCAC      string     `json:"carrier_scac" db:"carrier_scac"`
 	CarrierName      string     `json:"carrier_name" db:"carrier_name"`
 	ConnectionMethod string     `json:"connection_method" db:"connection_method"`
-	CredentialsJSON  *string    `json:"-" db:"credentials_json"` // Never return credentials to frontend
+	CredentialsJSON      *string    `json:"-" db:"credentials_json"` // Never return credentials to frontend
+	EncryptedCredentials *string    `json:"-" db:"encrypted_credentials"`
 	Environment      string     `json:"environment" db:"environment"`
 	ConnectionStatus string     `json:"connection_status" db:"connection_status"`
 	SyncStatus       *string    `json:"sync_status" db:"sync_status"`

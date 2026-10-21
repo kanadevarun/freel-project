@@ -30,6 +30,7 @@ type Repository interface {
 
 	// Customer info for detail panel
 	GetCustomerInfo(ctx context.Context, orgID, customerID int64) (*QuotationCustomerInfo, error)
+	GetQuotationRFQContext(ctx context.Context, orgID, rfqID int64) (*QuotationRFQContext, error)
 
 	// Quotation Pricing & Charges (Task 18.2)
 	CreateQuotationCharge(ctx context.Context, charge *QuotationChargeItem) error
@@ -76,6 +77,8 @@ type Repository interface {
 	RevokeQuotationPublicLink(ctx context.Context, orgID, quotationID, linkID, actorUserID int64, reason string) error
 	IncrementPublicLinkAccess(ctx context.Context, linkID int64) error
 	GetOrganizationBranding(ctx context.Context, orgID int64) (*OrganizationBranding, error)
+	GetUserAccountInfo(ctx context.Context, userID int64) (*UserAccountInfo, error)
+	GetUserAccountByName(ctx context.Context, name string) (*UserAccountInfo, error)
 
 	// Quotation-to-Booking Operational Conversion (Task 18.6)
 	GetQuotationConversionHistory(ctx context.Context, orgID, quotationID int64) ([]*QuotationConversionHistory, error)
@@ -377,7 +380,7 @@ func (r *repository) ListQuotations(ctx context.Context, filters *QuotationListF
 			q.valid_from, q.valid_until, q.updated_at
 		FROM quotations q
 		`+where+`
-		ORDER BY q.updated_at DESC
+		ORDER BY q.updated_at DESC, q.id DESC
 		LIMIT ? OFFSET ?
 	`, listArgs...)
 	if err != nil {
@@ -470,6 +473,70 @@ func (r *repository) GetCustomerInfo(ctx context.Context, orgID, customerID int6
 		ContactPhone: c.ContactPhone,
 		ContactEmail: c.ContactEmail,
 	}, nil
+}
+
+func (r *repository) GetQuotationRFQContext(ctx context.Context, orgID, rfqID int64) (*QuotationRFQContext, error) {
+	ctxData := &QuotationRFQContext{
+		ContainerType: "1 x 40' HC",
+	}
+
+	// 1. Query rfqs for incoterms
+	var rfqRow struct {
+		Incoterms sql.NullString `db:"incoterms"`
+	}
+	_ = r.db.GetContext(ctx, &rfqRow, `SELECT incoterms FROM rfqs WHERE org_id = ? AND id = ?`, orgID, rfqID)
+	if rfqRow.Incoterms.Valid && strings.TrimSpace(rfqRow.Incoterms.String) != "" {
+		ctxData.Incoterms = strings.TrimSpace(rfqRow.Incoterms.String)
+	}
+
+	// 2. Query rfq_items for cargo details
+	var itemRow struct {
+		Description    sql.NullString  `db:"description"`
+		TotalWeightKg  sql.NullFloat64 `db:"total_weight"`
+		TotalVolumeCbm sql.NullFloat64 `db:"total_volume"`
+		PackageCount   sql.NullInt64   `db:"pkg_count"`
+	}
+	_ = r.db.GetContext(ctx, &itemRow, `
+		SELECT 
+			COALESCE(MIN(description), '') AS description,
+			COALESCE(SUM(weight_kg), 0) AS total_weight,
+			COALESCE(SUM(volume_cbm), 0) AS total_volume,
+			COALESCE(SUM(quantity), 0) AS pkg_count
+		FROM rfq_items
+		WHERE rfq_id = ?
+	`, rfqID)
+	if itemRow.Description.Valid && strings.TrimSpace(itemRow.Description.String) != "" {
+		ctxData.CargoDesc = strings.TrimSpace(itemRow.Description.String)
+	}
+	if itemRow.TotalWeightKg.Valid && itemRow.TotalWeightKg.Float64 > 0 {
+		ctxData.TotalWeightKg = itemRow.TotalWeightKg.Float64
+	}
+	if itemRow.TotalVolumeCbm.Valid && itemRow.TotalVolumeCbm.Float64 > 0 {
+		ctxData.TotalVolumeCbm = itemRow.TotalVolumeCbm.Float64
+	}
+	if itemRow.PackageCount.Valid && itemRow.PackageCount.Int64 > 0 {
+		ctxData.PackageCount = int(itemRow.PackageCount.Int64)
+	}
+
+	// 3. Query rfq_quotes for carrier and transit time
+	var quoteRow struct {
+		CarrierName     sql.NullString `db:"carrier_name"`
+		TransitTimeDays sql.NullInt64  `db:"transit_time_days"`
+	}
+	_ = r.db.GetContext(ctx, &quoteRow, `
+		SELECT carrier_name, transit_time_days
+		FROM rfq_quotes
+		WHERE rfq_id = ?
+		ORDER BY is_recommended DESC, id ASC LIMIT 1
+	`, rfqID)
+	if quoteRow.CarrierName.Valid && strings.TrimSpace(quoteRow.CarrierName.String) != "" {
+		ctxData.CarrierName = strings.TrimSpace(quoteRow.CarrierName.String)
+	}
+	if quoteRow.TransitTimeDays.Valid && quoteRow.TransitTimeDays.Int64 > 0 {
+		ctxData.TransitTimeDays = int(quoteRow.TransitTimeDays.Int64)
+	}
+
+	return ctxData, nil
 }
 
 // ── Pricing & Charges Operations ──────────────────────────────────────────────
@@ -2508,8 +2575,41 @@ func (r *repository) GetOrganizationBranding(ctx context.Context, orgID int64) (
 	return &org, nil
 }
 
+type UserAccountInfo struct {
+	ID        int64  `db:"id"`
+	FirstName string `db:"first_name"`
+	LastName  string `db:"last_name"`
+	Email     string `db:"email"`
+}
 
+func (r *repository) GetUserAccountInfo(ctx context.Context, userID int64) (*UserAccountInfo, error) {
+	query := `
+		SELECT id, first_name, last_name, email
+		FROM users
+		WHERE id = ?
+		LIMIT 1
+	`
+	var u UserAccountInfo
+	err := r.db.GetContext(ctx, &u, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
 
-
-
-
+func (r *repository) GetUserAccountByName(ctx context.Context, name string) (*UserAccountInfo, error) {
+	query := `
+		SELECT id, first_name, last_name, email
+		FROM users
+		WHERE CONCAT(first_name, ' ', last_name) = ?
+		   OR first_name = ?
+		   OR email = ?
+		LIMIT 1
+	`
+	var u UserAccountInfo
+	err := r.db.GetContext(ctx, &u, query, name, name, name)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}

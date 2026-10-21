@@ -171,8 +171,19 @@ func (m *TokenManager) GetToken(ctx context.Context, req TokenRequest) (string, 
 
 // Invalidate removes cached tokens for a specific client key.
 func (m *TokenManager) Invalidate(providerCode, clientID string, env domain.Environment) {
+	m.InvalidateIfMatches(providerCode, clientID, env, "")
+}
+
+// InvalidateIfMatches removes the cached token for a specific client key only if
+// failedToken is empty or matches the currently cached AccessToken.
+// This prevents race conditions where a concurrent request already refreshed the token.
+func (m *TokenManager) InvalidateIfMatches(providerCode, clientID string, env domain.Environment, failedToken string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	cacheKey := fmt.Sprintf("%s:%s:%s", providerCode, clientID, env)
-	delete(m.tokens, cacheKey)
+	if cached, exists := m.tokens[cacheKey]; exists && cached != nil {
+		if failedToken == "" || cached.AccessToken == failedToken {
+			delete(m.tokens, cacheKey)
+		}
+	}
 }

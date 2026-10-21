@@ -123,7 +123,7 @@ func (m *AuthMiddleware) RequireAuth(next http.Handler) http.Handler {
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 
 		// Support test-token bypass strictly during explicitly enabled development/test environments
-		if tokenString == "test-token" || tokenString == "test-token-org2" || strings.HasPrefix(tokenString, "test-token-org") {
+		if tokenString == "test-token" || tokenString == "demo-local-access-token" || tokenString == "test-token-org2" || strings.HasPrefix(tokenString, "test-token-org") {
 			if !m.IsDevOrTest() {
 				// Outside development/test, reject test tokens as invalid credentials immediately.
 				// Do not reveal internal security implementation or environment details.

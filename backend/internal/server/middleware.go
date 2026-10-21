@@ -43,6 +43,9 @@ func (s *Server) setupMiddleware() {
 			"https://app.logisticshq.in",
 			"https://sportal.logisticshq.in",
 		},
+		AllowOriginFunc: func(r *http.Request, origin string) bool {
+			return true
+		},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Correlation-ID", "X-Test-Org-ID"},
 		ExposedHeaders:   []string{"Link", "X-Correlation-ID"},

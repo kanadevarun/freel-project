@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authStorage } from '../utils/authStorage';
+import { API_BASE_URL } from '../utils/apiUrl';
 
 /**
  * AuthContext — Global authentication state for the entire LogisticsHQ app.
@@ -55,8 +56,7 @@ export function AuthProvider({ children }) {
       const { accessToken } = authStorage.getTokens();
       if (!accessToken) return;
 
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (res.ok) {

@@ -151,12 +151,14 @@ func TestCarrierConnectionManagementLifecycle(t *testing.T) {
 	// Verify Credential Masking in API View
 	assert.NotEmpty(t, createdView.CredentialMask)
 	assert.Equal(t, "••••••••9999", createdView.CredentialMask["api_key"])
-	assert.Equal(t, "••••••••word", createdView.CredentialMask["api_secret"])
+	assert.Equal(t, "••••••••", createdView.CredentialMask["api_secret"])
 
-	// Verify database encryption at rest (raw secret is NOT stored in DB)
+	// Verify database encryption at rest (raw secret is NOT stored in DB, and credentials_json is NULL)
+	var dbPlain *string
 	var dbEncrypted, dbMask string
-	err = db.QueryRow("SELECT encrypted_credentials, credential_mask FROM carrier_integrations WHERE id = ?", createdView.ID).Scan(&dbEncrypted, &dbMask)
+	err = db.QueryRow("SELECT credentials_json, encrypted_credentials, credential_mask FROM carrier_integrations WHERE id = ?", createdView.ID).Scan(&dbPlain, &dbEncrypted, &dbMask)
 	require.NoError(t, err)
+	assert.Nil(t, dbPlain, "credentials_json must be NULL in DB; plaintext persistence removed")
 	assert.NotContains(t, dbEncrypted, "super-secret-production-password", "DB must not contain plaintext secrets")
 
 	decryptedJSON, err := crypto.Decrypt(dbEncrypted, encKey)

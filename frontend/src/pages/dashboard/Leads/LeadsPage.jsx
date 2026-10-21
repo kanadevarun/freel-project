@@ -12,6 +12,7 @@ import LeadConversionModal from '../Customers/LeadConversionModal';
 import { useRBAC } from '../../../context/RBACContext';
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
 import { Users, UploadCloud, Zap, Target, Building2, Plus } from 'lucide-react';
+import SHCBadge, { detectSHCCode } from '../../../components/common/SHCBadge';
 import './LeadsPage.css';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -349,18 +350,17 @@ export default function LeadsPage() {
     <div className="leads-page">
       <style>{`
         .app-shell-main {
-          overflow: visible !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
         }
         .app-shell-container {
           height: auto !important;
           min-height: 100% !important;
-          overflow: visible !important;
         }
         .leads-page {
           display: block !important;
           height: auto !important;
           min-height: 100% !important;
-          overflow: visible !important;
         }
 
         .leads-empty {
@@ -804,16 +804,15 @@ export default function LeadsPage() {
                             <div>
                               <div className="lead-company-name">{lead.company_name}</div>
                               <div className="lead-contact-name">{lead.contact_name || '—'}</div>
-                              {lead.tags && lead.tags.length > 0 && (
-                                <div className="lead-table-tags">
-                                  {lead.tags.slice(0, 2).map((t, idx) => (
-                                    <span key={idx} className="lead-tag-pill compact">{t}</span>
-                                  ))}
-                                  {lead.tags.length > 2 && (
-                                    <span className="lead-tag-pill compact count">+{lead.tags.length - 2}</span>
-                                  )}
-                                </div>
-                              )}
+                              <div className="lead-table-tags" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '3px' }}>
+                                <SHCBadge code={lead.special_handling_code || detectSHCCode(lead)} size="xs" variant="compact" />
+                                {lead.tags && lead.tags.slice(0, 2).map((t, idx) => (
+                                  <span key={idx} className="lead-tag-pill compact">{t}</span>
+                                ))}
+                                {lead.tags && lead.tags.length > 2 && (
+                                  <span className="lead-tag-pill compact count">+{lead.tags.length - 2}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>

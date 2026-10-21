@@ -199,24 +199,7 @@ export default function ModuleRecommendationsWidget({ sourceType, sourceId, sour
   }
 
   if (recommendations.length === 0) {
-    return (
-      <div style={{
-        background: '#ffffff',
-        border: '1px dashed #cbd5e1',
-        borderRadius: '12px',
-        padding: '16px 20px',
-        marginTop: '16px',
-        marginBottom: '16px',
-        color: '#64748b',
-        fontSize: '0.875rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-      }}>
-        <Compass size={16} color="#94a3b8" />
-        <span>No active AI recommendations for this {sourceType}. All signals are verified within normal operating parameters.</span>
-      </div>
-    );
+    return null;
   }
 
   return (

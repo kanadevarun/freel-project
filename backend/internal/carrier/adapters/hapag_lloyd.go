@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/freel/backend/internal/carrier/adapters/httpclient"
@@ -25,10 +26,6 @@ func NewHapagLloydAdapter() *HapagLloydAdapter {
 			CarrierSCAC: "HLCU",
 			Capabilities: []domain.Capability{
 				domain.CapTracking,
-				domain.CapRates,
-				domain.CapSpotRates,
-				domain.CapBooking,
-				domain.CapDocuments,
 			},
 		},
 	}
@@ -54,15 +51,20 @@ func (a *HapagLloydAdapter) getHTTPClient(creds domain.DecryptedCredentials, env
 	})
 }
 
+func (a *HapagLloydAdapter) getCredentials(creds domain.DecryptedCredentials) (clientID, clientSecret string) {
+	return creds.GetConsumerKey(), creds.GetAPISecret()
+}
+
 func (a *HapagLloydAdapter) buildHeaders(creds domain.DecryptedCredentials) map[string]string {
 	headers := map[string]string{
 		"Accept": "application/json",
 	}
-	if creds.APIKey != "" {
-		headers["X-IBM-Client-Id"] = creds.APIKey
+	clientID, clientSecret := a.getCredentials(creds)
+	if clientID != "" {
+		headers["X-IBM-Client-Id"] = clientID
 	}
-	if creds.ClientSecret != "" {
-		headers["X-IBM-Client-Secret"] = creds.ClientSecret
+	if clientSecret != "" {
+		headers["X-IBM-Client-Secret"] = clientSecret
 	}
 	return headers
 }
@@ -71,10 +73,11 @@ func (a *HapagLloydAdapter) buildHeaders(creds domain.DecryptedCredentials) map[
 func (a *HapagLloydAdapter) TestConnection(ctx context.Context, creds domain.DecryptedCredentials, env domain.Environment) (*domain.TestConnectionResult, error) {
 	start := time.Now()
 
-	if creds.APIKey == "" {
+	clientID, _ := a.getCredentials(creds)
+	if clientID == "" {
 		return &domain.TestConnectionResult{
 			Success:            false,
-			Message:            "Missing Hapag-Lloyd Client ID / API Key.",
+			Message:            "Missing Hapag-Lloyd Client ID / API Key. Please provide valid developer credentials.",
 			LatencyMs:          time.Since(start).Milliseconds(),
 			TestedEnvironment:  env,
 			TestedCapabilities: a.Capabilities,
@@ -92,7 +95,7 @@ func (a *HapagLloydAdapter) TestConnection(ctx context.Context, creds domain.Dec
 	if err != nil {
 		return &domain.TestConnectionResult{
 			Success:            false,
-			Message:            fmt.Sprintf("Hapag-Lloyd connection check returned: %v", err),
+			Message:            fmt.Sprintf("Hapag-Lloyd connection check returned: %s", domain.SanitizeError(err)),
 			LatencyMs:          latency,
 			TestedEnvironment:  env,
 			TestedCapabilities: a.Capabilities,
@@ -121,15 +124,18 @@ func (a *HapagLloydAdapter) GetTracking(ctx context.Context, creds domain.Decryp
 	headers := a.buildHeaders(creds)
 
 	queryParams := url.Values{}
-	ref := req.ContainerNumber
-	if req.ContainerNumber != "" {
-		queryParams.Set("equipmentReference", req.ContainerNumber)
-	} else if req.BookingNumber != "" {
-		queryParams.Set("carrierBookingReference", req.BookingNumber)
-		ref = req.BookingNumber
-	} else if req.MBLNumber != "" {
-		queryParams.Set("transportDocumentReference", req.MBLNumber)
-		ref = req.MBLNumber
+	ref := strings.TrimSpace(req.ContainerNumber)
+	bkgRef := strings.TrimSpace(req.BookingNumber)
+	mblRef := strings.TrimSpace(req.MBLNumber)
+
+	if ref != "" {
+		queryParams.Set("equipmentReference", ref)
+	} else if bkgRef != "" {
+		queryParams.Set("carrierBookingReference", bkgRef)
+		ref = bkgRef
+	} else if mblRef != "" {
+		queryParams.Set("transportDocumentReference", mblRef)
+		ref = mblRef
 	} else {
 		return nil, domain.NewIntegrationError(
 			a.Code,
@@ -146,6 +152,11 @@ func (a *HapagLloydAdapter) GetTracking(ctx context.Context, creds domain.Decryp
 	respBody, _, err := client.Execute(ctx, "GET", endpoint, headers, nil)
 	if err != nil {
 		return nil, err
+	}
+
+	trimmed := strings.TrimSpace(string(respBody))
+	if trimmed == "" || trimmed == "[]" {
+		return NormalizeDCSATrackingEvents(a.CarrierSCAC, ref, []domain.DCSAEvent{}), nil
 	}
 
 	var events []domain.DCSAEvent

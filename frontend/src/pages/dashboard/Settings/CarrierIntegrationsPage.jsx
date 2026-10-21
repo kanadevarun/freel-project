@@ -189,6 +189,11 @@ export default function CarrierIntegrationsPage() {
         capabilities: caps
       }));
     }
+
+    setTimeout(() => {
+      const modalForm = document.querySelector('.ci-modal-form');
+      if (modalForm) modalForm.scrollTop = 0;
+    }, 10);
   };
 
   const handleCredentialChange = (key, value) => {
@@ -764,9 +769,11 @@ export default function CarrierIntegrationsPage() {
                   }
 
                   const isSyncing = syncingId === carrier.id || carrier.is_syncing || carrier.sync_status === 'Syncing' || carrier.sync_status === 'Running';
+                  const isPending = carrier.connection_status === 'PENDING_CONFIGURATION' || carrier.connection_status === 'CONFIGURATION_REQUIRED' || carrier.connection_status === 'DISCONNECTED';
                   const healthState = carrier.health_state || (
                     carrier.is_active === false ? 'DISABLED' :
-                    carrier.connection_status === 'DISCONNECTED' ? 'DISCONNECTED' :
+                    isPending ? 'DISCONNECTED' :
+                    carrier.connection_status === 'NOT_CONNECTED' ? 'NOT_CONNECTED' :
                     carrier.failed_attempts >= 5 ? 'ERROR' :
                     (carrier.failed_attempts > 0 || carrier.connection_status === 'ERROR') ? 'ATTENTION' :
                     'HEALTHY'
@@ -777,7 +784,9 @@ export default function CarrierIntegrationsPage() {
                     ATTENTION: { bg: '#fffbeb', text: '#b45309', border: '#fde68a', label: 'Attention', dot: '#f59e0b' },
                     ERROR: { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', label: 'Action Required', dot: '#ef4444' },
                     DISABLED: { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', label: 'Disabled', dot: '#94a3b8' },
-                    DISCONNECTED: { bg: '#f1f5f9', text: '#475569', border: '#cbd5e1', label: 'Disconnected', dot: '#64748b' }
+                    DISCONNECTED: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe', label: 'Pending Configuration', dot: '#3b82f6' },
+                    PENDING: { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe', label: 'Pending Configuration', dot: '#3b82f6' },
+                    NOT_CONNECTED: { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', label: 'Not Connected', dot: '#94a3b8' }
                   }[healthState] || { bg: '#f8fafc', text: '#64748b', border: '#e2e8f0', label: healthState, dot: '#94a3b8' };
 
                   const isConnected = carrier.connection_status === 'CONNECTED' || carrier.connection_status === 'Connected';
@@ -788,11 +797,11 @@ export default function CarrierIntegrationsPage() {
                       <td>
                         <div className="ci-carrier-cell">
                           <div className="ci-carrier-logo" style={{
-                            background: carrier.carrier_scac === 'MAEU' ? '#e0f2fe' : carrier.carrier_scac === 'MSCU' ? '#fef3c7' : carrier.carrier_scac === 'HLCU' ? '#fee2e2' : '#f1f5f9',
-                            color: carrier.carrier_scac === 'MAEU' ? '#0284c7' : carrier.carrier_scac === 'MSCU' ? '#b45309' : carrier.carrier_scac === 'HLCU' ? '#dc2626' : '#334155',
+                            background: carrier.carrier_scac === 'MAEU' ? '#e0f2fe' : carrier.carrier_scac === 'MSCU' ? '#fef3c7' : carrier.carrier_scac === 'HLCU' ? '#fee2e2' : carrier.carrier_scac === 'CMDU' ? '#dbeafe' : '#f1f5f9',
+                            color: carrier.carrier_scac === 'MAEU' ? '#0284c7' : carrier.carrier_scac === 'MSCU' ? '#b45309' : carrier.carrier_scac === 'HLCU' ? '#dc2626' : carrier.carrier_scac === 'CMDU' ? '#1e40af' : '#334155',
                             fontWeight: 700
                           }}>
-                            {carrier.carrier_scac?.substring(0, 2) || 'CA'}
+                            {carrier.carrier_scac === 'CMDU' ? 'CMA' : (carrier.carrier_scac?.substring(0, 2) || 'CA')}
                           </div>
                           <div className="ci-carrier-info">
                             <span className="ci-carrier-name">{(carrier.carrier_name || carrier.carrier_scac || '').replace(/\uFFFD|\?+/g, '–')}</span>
@@ -900,10 +909,10 @@ export default function CarrierIntegrationsPage() {
                               background: isConnected ? '#ecfdf5' : '#eff6ff'
                             }}
                             onClick={() => isConnected ? handleTestConnection(carrier.id) : handleOpenEdit(carrier)}
-                            title={isConnected ? "Test carrier API connectivity" : "Configure and reconnect carrier credentials"}
+                            title={isConnected ? "Test carrier API connectivity" : isPending ? "Configure credentials and activate gateway" : "Configure and reconnect carrier credentials"}
                           >
                             <Radio size={12} />
-                            <span>{isConnected ? 'Test' : 'Reconnect'}</span>
+                            <span>{isConnected ? 'Test' : isPending ? 'Configure' : 'Reconnect'}</span>
                           </button>
 
                           <button 

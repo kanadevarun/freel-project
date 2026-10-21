@@ -420,7 +420,10 @@ func main() {
 
 	// Initialize Carrier Integrations Module (Foundation Architecture)
 	carrierIntegrationRepo := carrierRepoPkg.NewCarrierRepository(db)
-	carrierIntegrationSvc := carrierSvcPkg.NewCarrierService(carrierIntegrationRepo, cfg.MailboxEncryptionKey)
+	if cfg.CarrierEncryptionKey == "" {
+		log.Println("[WARN] CARRIER_ENCRYPTION_KEY is not configured; carrier credential operations will fail safely")
+	}
+	carrierIntegrationSvc := carrierSvcPkg.NewCarrierService(carrierIntegrationRepo, cfg.CarrierEncryptionKey)
 	carrierHandler := carrierTransportPkg.NewCarrierHandler(carrierIntegrationSvc)
 
 	// Wire Carrier Integration Engine into Modules (Task 4, 5, 6)

@@ -69,5 +69,11 @@ export const carrierIntegrationsService = {
   getIntegrationHealth: async (id) => {
     const response = await api.get(`/api/v1/carrier-integrations/${id}/health`);
     return response.data || response;
+  },
+
+  getDocuments: async (id, params = {}) => {
+    const response = await api.get(`/api/v1/carrier-integrations/${id}/documents`, { params });
+    return response.data || response;
   }
 };
+

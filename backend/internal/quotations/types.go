@@ -518,37 +518,60 @@ type QuotationApprovalHistory struct {
 // CustomerQuotationPreview is the dedicated, safe model returned for customer preview.
 // Internal costs, profits, gross margin percentage, internal notes, and rate intelligence are NEVER included.
 type CustomerQuotationPreview struct {
-	QuotationID     int64                        `json:"quotation_id"`
-	QuotationNumber string                       `json:"quotation_number"`
-	Status          string                       `json:"status"`
-	CustomerID      *int64                       `json:"customer_id,omitempty"`
-	CustomerName    string                       `json:"customer_name"`
-	Origin          string                       `json:"origin"`
-	OriginCode      string                       `json:"origin_code"`
-	Destination     string                       `json:"destination"`
-	DestinationCode string                       `json:"destination_code"`
-	ServiceType     string                       `json:"service_type"`
-	TransportMode   string                       `json:"transport_mode"`
-	Currency        string                       `json:"currency"`
-	PaymentTerms    string                       `json:"payment_terms"`
-	ValidFrom       *time.Time                   `json:"valid_from,omitempty"`
-	ValidUntil      *time.Time                   `json:"valid_until,omitempty"`
-	ValidityStatus  string                       `json:"validity_status"`
-	Subtotal        float64                      `json:"subtotal"`
-	DiscountTotal   float64                      `json:"discount_total"`
-	TaxTotal        float64                      `json:"tax_total"`
-	TotalAmount     float64                      `json:"total_amount"`
-	CommercialTerms string                       `json:"commercial_terms"`
-	CustomerNotes   string                       `json:"customer_notes"`
-	SentAt          *time.Time                   `json:"sent_at,omitempty"`
-	ViewedAt        *time.Time                   `json:"viewed_at,omitempty"`
-	AcceptedAt      *time.Time                   `json:"accepted_at,omitempty"`
-	DeclinedAt      *time.Time                   `json:"declined_at,omitempty"`
-	Charges         []CustomerQuotationChargeItem `json:"charges"`
-	CompanyName     string                       `json:"company_name"`
-	CompanyAddress  string                       `json:"company_address"`
-	CompanyContact  string                       `json:"company_contact"`
-	CompanyLogoURL  string                       `json:"company_logo_url,omitempty"`
+	QuotationID       int64                         `json:"quotation_id"`
+	QuotationNumber   string                        `json:"quotation_number"`
+	Status            string                        `json:"status"`
+	CustomerID        *int64                        `json:"customer_id,omitempty"`
+	CustomerName      string                        `json:"customer_name"`
+	CustomerAttention string                        `json:"customer_attention,omitempty"`
+	Origin            string                        `json:"origin"`
+	OriginCode        string                        `json:"origin_code"`
+	Destination       string                        `json:"destination"`
+	DestinationCode   string                        `json:"destination_code"`
+	ServiceType       string                        `json:"service_type"`
+	TransportMode     string                        `json:"transport_mode"`
+	Equipment         string                        `json:"equipment,omitempty"`
+	TransitTime       string                        `json:"transit_time,omitempty"`
+	Commodity         string                        `json:"commodity,omitempty"`
+	CargoWeight       string                        `json:"cargo_weight,omitempty"`
+	Incoterm          string                        `json:"incoterm,omitempty"`
+	Currency          string                        `json:"currency"`
+	PaymentTerms      string                        `json:"payment_terms"`
+	ValidFrom         *time.Time                    `json:"valid_from,omitempty"`
+	ValidUntil        *time.Time                    `json:"valid_until,omitempty"`
+	ValidityStatus    string                        `json:"validity_status"`
+	Subtotal          float64                       `json:"subtotal"`
+	DiscountTotal     float64                       `json:"discount_total"`
+	TaxTotal          float64                       `json:"tax_total"`
+	TotalAmount       float64                       `json:"total_amount"`
+	CommercialTerms   string                        `json:"commercial_terms"`
+	CustomerNotes     string                        `json:"customer_notes"`
+	SentAt            *time.Time                    `json:"sent_at,omitempty"`
+	ViewedAt          *time.Time                    `json:"viewed_at,omitempty"`
+	AcceptedAt        *time.Time                    `json:"accepted_at,omitempty"`
+	DeclinedAt        *time.Time                    `json:"declined_at,omitempty"`
+	Charges           []CustomerQuotationChargeItem `json:"charges"`
+	CompanyName       string                        `json:"company_name"`
+	CompanyAddress    string                        `json:"company_address"`
+	CompanyContact    string                        `json:"company_contact"`
+	CompanyLogoURL    string                        `json:"company_logo_url,omitempty"`
+	PreparedByName    string                        `json:"prepared_by_name,omitempty"`
+	PreparedByEmail   string                        `json:"prepared_by_email,omitempty"`
+	Inclusions        []string                      `json:"inclusions,omitempty"`
+	Exclusions        []string                      `json:"exclusions,omitempty"`
+	ConditionsText    string                        `json:"conditions_text,omitempty"`
+}
+
+// QuotationRFQContext aggregates routing, cargo, and quote metadata from an associated RFQ.
+type QuotationRFQContext struct {
+	Incoterms       string  `json:"incoterms"`
+	CargoDesc       string  `json:"cargo_description"`
+	TotalWeightKg   float64 `json:"total_weight_kg"`
+	TotalVolumeCbm  float64 `json:"total_volume_cbm"`
+	PackageCount    int     `json:"package_count"`
+	TransitTimeDays int     `json:"transit_time_days"`
+	CarrierName     string  `json:"carrier_name"`
+	ContainerType   string  `json:"container_type"`
 }
 
 // CustomerQuotationChargeItem represents a single charge item formatted safely for customer display.

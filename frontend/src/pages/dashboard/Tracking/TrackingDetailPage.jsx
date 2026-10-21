@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import ShipmentPredictiveETACard from '../../../components/predictions/ShipmentPredictiveETACard';
-import ShipmentDisruptionForecastCard from '../../../components/predictions/ShipmentDisruptionForecastCard';
-import ShipmentReadinessPredictiveIntelligenceCard from '../../../components/predictions/ShipmentReadinessPredictiveIntelligenceCard';
-import NetworkPerformancePredictiveCard from '../../../components/predictions/NetworkPerformancePredictiveCard';
+
 import {
   Ship,
   MapPin,
@@ -1120,22 +1117,7 @@ export default function TrackingDetailPage() {
         </div>
       )}
 
-      {/* ── Phase 4: Predictive Shipment ETA & Delay Intelligence ─────────── */}
-      <ShipmentPredictiveETACard shipmentId={shipmentId} authoritativeEta={shipment?.eta} />
 
-      {/* ── Phase 4: Predictive Exception & Disruption Forecasting ─────────── */}
-      <ShipmentDisruptionForecastCard shipmentId={shipmentId} />
-
-      {/* ── Phase 4: Predictive Documentation, Readiness & Compliance Intelligence ── */}
-      <ShipmentReadinessPredictiveIntelligenceCard shipmentId={shipmentId} shipment={shipment} />
-
-      {/* ── Phase 4: Predictive Carrier & Trade Corridor Intelligence ───────── */}
-      {shipment?.carrier_scac && (
-        <NetworkPerformancePredictiveCard
-          entityType="carrier"
-          entityId={shipment.carrier_scac}
-        />
-      )}
 
       {/* ── Top Intelligence Identity Card ─────────────────────────────────── */}
       <div className="trkd-identity-card">

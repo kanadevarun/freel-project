@@ -115,4 +115,56 @@ describe('CarrierIntegrationsPage Component', () => {
 
     expect(screen.getByText('Connect Carrier Integration')).toBeInTheDocument();
   });
+
+  it('renders Hapag-Lloyd with strictly Tracking capability and masked credentials', async () => {
+    const mockIntegrations = [
+      {
+        id: 202,
+        carrier_scac: 'HLCU',
+        carrier_name: 'Hapag-Lloyd',
+        carrier_code: 'HAPAG_LLOYD',
+        environment: 'SANDBOX',
+        connection_status: 'CONNECTED',
+        connection_method: 'API',
+        health_state: 'HEALTHY',
+        is_active: true,
+        capabilities: ['TRACKING'],
+        supported_capabilities: ['TRACKING'],
+        credentials_mask: { api_key: '••••••••4321' },
+        has_credentials: true,
+        last_synced_at: new Date().toISOString(),
+      },
+    ];
+
+    carrierIntegrationsService.getIntegrations.mockResolvedValue(mockIntegrations);
+    carrierIntegrationsService.getProviders.mockResolvedValue([
+      { 
+        code: 'HAPAG_LLOYD', 
+        name: 'Hapag-Lloyd', 
+        scac: 'HLCU', 
+        supported_capabilities: ['TRACKING'],
+        credential_fields: [
+          { key: 'api_key', label: 'Client ID / App Key', required: true, secret: false },
+          { key: 'api_secret', label: 'Client Secret', required: true, secret: true },
+        ]
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <CarrierIntegrationsPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Hapag-Lloyd')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('SCAC: HLCU')).toBeInTheDocument();
+    expect(screen.getByText('✓ TRACKING')).toBeInTheDocument();
+    expect(screen.queryByText('✓ RATES')).not.toBeInTheDocument();
+    expect(screen.queryByText('✓ BOOKING')).not.toBeInTheDocument();
+    expect(screen.queryByText('✓ DOCUMENTS')).not.toBeInTheDocument();
+  });
 });
+

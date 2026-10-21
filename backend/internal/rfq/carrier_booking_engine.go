@@ -184,6 +184,7 @@ func (e *CarrierBookingEngine) SubmitCarrierBooking(ctx context.Context, orgID i
 		ShipperName:       shipper,
 		ConsigneeName:     consignee,
 		CustomerReference: booking.BookingNumber,
+		IdempotencyKey:    fmt.Sprintf("lhq-org%d-bkg%d", orgID, bookingID),
 	}
 
 	// 7. Invoke carrier adapter
@@ -319,4 +320,56 @@ func (e *CarrierBookingEngine) SyncCarrierBooking(ctx context.Context, orgID int
 		fmt.Sprintf("Synchronized latest carrier booking status with %s (Status: %s)", targetIntegration.CarrierName, carrierStatus), user)
 
 	return e.dl.GetBookingWorkspaceDetail(ctx, orgID, bookingID)
+}
+
+// GetCarrierDocuments retrieves transport documents for a booking from the integrated carrier.
+func (e *CarrierBookingEngine) GetCarrierDocuments(ctx context.Context, orgID int32, bookingID int64) ([]carrierDomain.NormalizedDocumentResult, error) {
+	if e.carrierSvc == nil {
+		return nil, fmt.Errorf("carrier integration service is not available")
+	}
+
+	booking, err := e.dl.GetBookingByIDOnly(ctx, orgID, bookingID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch booking: %w", err)
+	}
+	if booking == nil {
+		return nil, fmt.Errorf("booking %d not found for organization", bookingID)
+	}
+
+	ref := ""
+	if booking.CarrierBookingReference != nil && *booking.CarrierBookingReference != "" {
+		ref = *booking.CarrierBookingReference
+	} else {
+		ref = booking.BookingNumber
+	}
+
+	carrierSCAC := ResolveCarrierSCAC("", booking.CarrierName)
+	if booking.CarrierSCAC != nil && *booking.CarrierSCAC != "" {
+		carrierSCAC = *booking.CarrierSCAC
+	}
+
+	integrations, err := e.carrierSvc.GetIntegrations(ctx, int64(orgID))
+	if err != nil {
+		return nil, fmt.Errorf("failed to check carrier integrations: %w", err)
+	}
+
+	var targetIntegration *carrierDomain.CarrierIntegrationView
+	for i := range integrations {
+		ci := &integrations[i]
+		if strings.EqualFold(ci.CarrierSCAC, carrierSCAC) || strings.EqualFold(ci.CarrierName, booking.CarrierName) {
+			targetIntegration = ci
+			break
+		}
+	}
+
+	if targetIntegration == nil {
+		return nil, fmt.Errorf("carrier integration for %s is not configured", booking.CarrierName)
+	}
+
+	docReq := carrierDomain.DocumentRequest{
+		CarrierSCAC:   carrierSCAC,
+		BookingNumber: ref,
+	}
+
+	return e.carrierSvc.GetDocuments(ctx, int64(orgID), targetIntegration.ID, docReq)
 }

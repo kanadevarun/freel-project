@@ -593,12 +593,16 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(4px);
-  z-index: 100;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 99999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding: 32px 16px;
+  overflow-y: auto;
+  box-sizing: border-box;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -611,26 +615,33 @@
   background: #ffffff;
   width: 100%;
   max-width: 680px;
-  border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: calc(100vh - 64px);
+  margin: auto 0;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.08);
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 @keyframes modalSlideUp {
-  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .ci-modal-header {
-  padding: 24px 32px;
+  padding: 20px 28px;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: linear-gradient(to right, #ffffff, #f8fafc);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .ci-modal-header h2 {
@@ -658,13 +669,13 @@
 }
 
 .ci-modal-form {
-  padding: 28px 32px 36px 32px;
+  padding: 24px 28px 28px 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 20px;
   overflow-y: auto;
-  max-height: calc(100vh - 120px);
-  min-height: 420px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .ci-form-row {
@@ -780,9 +791,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 12px;
-  padding-top: 20px;
+  margin: 16px -28px -20px -28px;
+  padding: 16px 28px 20px 28px;
   border-top: 1px solid #e2e8f0;
+  position: sticky;
+  bottom: -20px;
+  background: #ffffff;
+  z-index: 10;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .ci-btn-text {

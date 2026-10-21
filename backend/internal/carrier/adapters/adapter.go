@@ -21,6 +21,9 @@ type CarrierAdapter interface {
 	// HasCapability checks if a specific capability is supported by this adapter.
 	HasCapability(cap domain.Capability) bool
 
+	// SupportsCapability is an alias for HasCapability to check feature support.
+	SupportsCapability(cap domain.Capability) bool
+
 	// TestConnection verifies connectivity, credentials validity, and ping latency against carrier servers.
 	TestConnection(ctx context.Context, creds domain.DecryptedCredentials, env domain.Environment) (*domain.TestConnectionResult, error)
 

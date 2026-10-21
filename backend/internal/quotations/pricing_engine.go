@@ -103,6 +103,15 @@ func CalculateQuotationPricing(quotation *Quotation, charges []*QuotationChargeI
 	}
 
 	if len(charges) == 0 {
+		if quotation != nil && quotation.TotalAmount > 0 {
+			summary.Subtotal = quotation.Subtotal
+			summary.FreightAmount = quotation.Subtotal
+			summary.TotalAmount = quotation.TotalAmount
+			summary.TotalCost = quotation.TotalCost
+			summary.GrossProfit = quotation.GrossProfit
+			summary.GrossMarginPercentage = quotation.GrossMarginPct
+			summary.Currency = quoteCurrency
+		}
 		return summary, nil
 	}
 

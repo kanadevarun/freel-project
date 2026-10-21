@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/freel/backend/internal/common/crypto"
 )
 
 type Queryer interface {
@@ -46,8 +48,21 @@ func GetIntegrationConfig(ctx context.Context, db Queryer, orgID int64, scac str
 	scacUpper := strings.ToUpper(scac)
 	
 	var creds map[string]interface{}
-	if row.CredentialsJSON != nil && *row.CredentialsJSON != "" {
-		json.Unmarshal([]byte(*row.CredentialsJSON), &creds)
+	encKey := os.Getenv("CARRIER_ENCRYPTION_KEY")
+	if encKey == "" {
+		encKey = os.Getenv("MAILBOX_ENCRYPTION_KEY")
+	}
+	if idx := strings.Index(encKey, "#"); idx != -1 {
+		encKey = encKey[:idx]
+	}
+	encKey = strings.TrimSpace(encKey)
+
+	if row.EncryptedCredentials != nil && *row.EncryptedCredentials != "" && encKey != "" {
+		if decrypted, err := crypto.Decrypt(*row.EncryptedCredentials, encKey); err == nil {
+			_ = json.Unmarshal([]byte(decrypted), &creds)
+		}
+	} else if row.CredentialsJSON != nil && *row.CredentialsJSON != "" {
+		_ = json.Unmarshal([]byte(*row.CredentialsJSON), &creds)
 	}
 
 	getCred := func(key string) string {

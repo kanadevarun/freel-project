@@ -3696,6 +3696,7 @@
 }
 @media (max-width: 768px) {
   .sd-container { padding: 16px 16px 48px; }
+  .sd-tabs-shell { margin: 0 -16px 20px -16px; padding: 6px 16px 0 16px; }
   .sd-summary-strip { flex-direction: column; align-items: flex-start; }
   .sd-sum-divider { display: none; }
   .sd-lineage-row { grid-template-columns: 1fr; }
@@ -5224,14 +5225,14 @@
    SHIPMENT DETAIL TAB NAVIGATION & WORKSPACE SHELL
 ========================================================= */
 .sd-tabs-shell {
-  margin: 0 0 20px 0;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   position: sticky;
-  top: 0;
-  z-index: 10;
+  top: -20px;
+  z-index: 40;
+  background: #ffffff;
+  margin: 0 -32px 24px -32px;
+  padding: 8px 32px 0 32px;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
 }
 
 .sd-tabs-scroll {

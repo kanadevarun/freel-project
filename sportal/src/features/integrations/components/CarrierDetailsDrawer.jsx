@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Ship,
   X,
@@ -36,35 +36,52 @@ export function CarrierDetailsDrawer({
   onTestConnection,
   onConfigure,
 }) {
-  const [activeTab, setActiveTab] = useState('SHIPMENTS'); // SHIPMENTS, WEBHOOKS, CONTRACTS, CONFIG
+  const scac = (carrier?.scac || carrier?.provider_name || 'CARRIER').toUpperCase();
+  const brand = CARRIER_COLORS[scac] || { bg: 'bg-slate-700', text: 'text-slate-700', border: 'border-slate-200', light: 'bg-slate-50' };
+  const isCma = scac === 'CMDU' || carrier?.provider_name === 'CMA_CGM' || carrier?.code === 'CMA_CGM';
+
+  const [activeTab, setActiveTab] = useState('ARCHITECTURE');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [expandedWebhookId, setExpandedWebhookId] = useState(null);
 
+  useEffect(() => {
+    if (carrier) {
+      setActiveTab(isCma ? 'ARCHITECTURE' : 'SHIPMENTS');
+      setTestResult(null);
+    }
+  }, [carrier?.code, carrier?.scac, isCma]);
+
   if (!isOpen || !carrier) return null;
 
-  const scac = (carrier.scac || carrier.provider_name || 'CARRIER').toUpperCase();
-  const brand = CARRIER_COLORS[scac] || { bg: 'bg-slate-700', text: 'text-slate-700', border: 'border-slate-200', light: 'bg-slate-50' };
-
-  // Filter linked shipments for this carrier
-  const linkedShipments = MOCK_SHIPMENTS.filter(
-    (s) => s.carrier_scac?.toUpperCase() === scac || (scac === 'CMDU' && s.carrier_scac === 'CMA')
-  );
+  // Filter linked shipments for this carrier (empty for unconfigured CMA CGM)
+  const linkedShipments = isCma
+    ? []
+    : MOCK_SHIPMENTS.filter((s) => s.carrier_scac?.toUpperCase() === scac);
 
   // Filter linked webhooks
-  const linkedWebhooks = MOCK_WEBHOOKS.filter(
-    (w) => w.scac?.toUpperCase() === scac
-  );
+  const linkedWebhooks = isCma
+    ? []
+    : MOCK_WEBHOOKS.filter((w) => w.scac?.toUpperCase() === scac);
 
   // Filter linked contracts
-  const linkedContracts = MOCK_CONTRACTS.filter(
-    (c) => c.carrier_scac?.toUpperCase() === scac
-  );
+  const linkedContracts = isCma
+    ? []
+    : MOCK_CONTRACTS.filter((c) => c.carrier_scac?.toUpperCase() === scac);
 
   const handleTest = async () => {
     setTesting(true);
     setTestResult(null);
     try {
+      if (isCma) {
+        await new Promise((r) => setTimeout(r, 400));
+        setTestResult({
+          success: false,
+          latency: 0,
+          message: 'CMA CGM gateway connection is pending live partner credentials & API onboarding. Capabilities: Tracking (DCSA 2.2), Rates, Contract Rates, Space Booking, and Documents are ready for endpoint configuration in Go adapter (CMDU).',
+        });
+        return;
+      }
       if (onTestConnection) {
         const res = await onTestConnection(carrier);
         setTestResult({
@@ -107,9 +124,21 @@ export function CarrierDetailsDrawer({
                 </span>
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {carrier.status === 'CONFIGURATION_REQUIRED' ? 'Configuration Required' : 'Connected & Synced'}
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                  isCma || carrier.status === 'PENDING_CONFIGURATION'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : carrier.status === 'CONFIGURATION_REQUIRED'
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    isCma || carrier.status === 'PENDING_CONFIGURATION' ? 'bg-blue-500' : carrier.status === 'CONFIGURATION_REQUIRED' ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'
+                  }`} />
+                  {isCma || carrier.status === 'PENDING_CONFIGURATION'
+                    ? 'Pending Configuration'
+                    : carrier.status === 'CONFIGURATION_REQUIRED'
+                    ? 'Configuration Required'
+                    : 'Connected & Synced'}
                 </span>
                 <span className="text-slate-400 text-xs">•</span>
                 <span className="text-xs font-mono text-slate-500">
@@ -133,25 +162,25 @@ export function CarrierDetailsDrawer({
           <div className="p-2 rounded-xl bg-slate-800/60">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Active TEU / Cargo</span>
             <span className="text-sm font-black text-white mt-0.5 block">
-              {carrier.active_containers_count || linkedShipments.length * 2 || 12} Containers
+              {isCma ? '0 Containers' : `${carrier.active_containers_count || linkedShipments.length * 2 || 12} Containers`}
             </span>
           </div>
           <div className="p-2 rounded-xl bg-slate-800/60">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Confirmed Bookings</span>
             <span className="text-sm font-black text-white mt-0.5 block">
-              {carrier.active_bookings_count || linkedShipments.length || 4} Active
+              {isCma ? '0 Active' : `${carrier.active_bookings_count || linkedShipments.length || 4} Active`}
             </span>
           </div>
           <div className="p-2 rounded-xl bg-slate-800/60">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">30D Ingress Events</span>
             <span className="text-sm font-black text-sky-400 mt-0.5 block">
-              {carrier.event_count_30d ? carrier.event_count_30d.toLocaleString() : '3,100'}
+              {isCma ? '0 Events' : (carrier.event_count_30d ? carrier.event_count_30d.toLocaleString() : '3,100')}
             </span>
           </div>
           <div className="p-2 rounded-xl bg-slate-800/60">
             <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Avg Gateway Ping</span>
             <span className="text-sm font-black text-emerald-400 mt-0.5 block">
-              {carrier.latency_ms || 142}ms
+              {isCma ? 'Pending Config' : `${carrier.latency_ms || 142}ms`}
             </span>
           </div>
         </div>
@@ -159,6 +188,7 @@ export function CarrierDetailsDrawer({
         {/* 3. Sub-Navigation Tabs */}
         <div className="px-5 border-b border-slate-200 bg-white flex items-center gap-2 overflow-x-auto">
           {[
+            { id: 'ARCHITECTURE', label: 'API Architecture & Specs', icon: Code },
             { id: 'SHIPMENTS', label: 'Active Shipments', count: linkedShipments.length, icon: Ship },
             { id: 'WEBHOOKS', label: 'Carrier Webhooks', count: linkedWebhooks.length, icon: Radio },
             { id: 'CONTRACTS', label: 'Rate Contracts', count: linkedContracts.length, icon: FileText },
@@ -191,6 +221,129 @@ export function CarrierDetailsDrawer({
 
         {/* 4. Tab Body Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/50">
+          {/* TAB: ARCHITECTURE */}
+          {activeTab === 'ARCHITECTURE' && (
+            <div className="space-y-4 text-xs">
+              {/* Architecture Overview Banner */}
+              <div className="bg-white rounded-xl border border-blue-200 p-4 shadow-2xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full bg-blue-600" />
+                    <h4 className="font-bold text-slate-900 text-sm">CMA CGM API Integration Architecture</h4>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200">
+                    SCAC: CMDU / CMA
+                  </span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11.5px]">
+                  LogisticsHQ connects to ocean carriers using standard DCSA REST protocols and EDI gateways. 
+                  The CMA CGM adapter is registered in our Go microservices backend and is prepared to activate live 
+                  container telemetry, spot rates, and e-booking dispatch upon exchange of partner API credentials.
+                </p>
+              </div>
+
+              {/* 4 Architecture Pillars */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Pillar 1: Authentication */}
+                <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold">
+                    <Key className="h-4 w-4 text-amber-600" />
+                    <span>Authentication & Key Vault</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-slate-600">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>OAuth 2.0 Client Credentials:</strong> Access tokens exchanged via CMA CGM API gateway.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Token Caching:</strong> In-memory token management with automated refresh before expiration.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>AES-256-GCM:</strong> Client secrets encrypted at rest; never exposed in logs or UI.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Pillar 2: Protocols */}
+                <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold">
+                    <Radio className="h-4 w-4 text-blue-600" />
+                    <span>Protocols & DCSA Standards</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-slate-600">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>DCSA Track & Trace v2.2:</strong> Container milestones, vessel AIS, and ETA updates.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>DCSA Booking v1.0:</strong> Direct e-booking requests, booking confirmations, and shipping orders.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>EDI 304 / 214:</strong> Shipping instructions and legacy carrier milestone fallback.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Pillar 3: Data Normalization */}
+                <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold">
+                    <Box className="h-4 w-4 text-emerald-600" />
+                    <span>Data Normalization & Event Mesh</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-slate-600">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Unified Milestones:</strong> Standardizes carrier-specific events into unified shipment milestones.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Exception Engine:</strong> Automated alerts for rolled cargo, customs holds, and ETA drifts.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Tenant Isolation:</strong> Telemetry partitioned strictly by customer organization ID.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Pillar 4: Implementation Status */}
+                <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold">
+                    <Code className="h-4 w-4 text-indigo-600" />
+                    <span>Implementation & Readiness</span>
+                  </div>
+                  <ul className="space-y-1.5 text-[11px] text-slate-600">
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Backend Adapter:</strong> <code className="bg-slate-100 px-1 rounded text-[10px]">CmaCgmAdapter</code> registered in Go service registry.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-blue-600 font-bold">•</span>
+                      <span><strong>Capability Matrix:</strong> Tracking, Rates, Contract Rates, Booking, Documents.</span>
+                    </li>
+                    <li className="flex items-start gap-1.5">
+                      <span className="text-amber-600 font-bold">•</span>
+                      <span><strong>Status:</strong> <span className="font-semibold text-amber-700">Pending Live Credentials</span> (Ready for handshake).</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Status Note */}
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2.5">
+                <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="text-[11.5px] leading-relaxed">
+                  <strong>Discussion Agenda for CMA CGM Meeting:</strong> Review CMA CGM developer portal onboarding, 
+                  OAuth 2.0 sandbox credentials, webhook callback URL endpoints, and rate discovery parameter mapping.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* TAB: SHIPMENTS */}
           {activeTab === 'SHIPMENTS' && (
             <div className="space-y-3">

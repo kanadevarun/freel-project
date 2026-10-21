@@ -1661,7 +1661,7 @@ func (s *service) GetCustomerQuotationPreview(ctx context.Context, orgID, quotat
 
 	companyName := "LogisticsHQ Global Freight"
 	companyAddress := "742 Evergreen Terrace, Logistics Park, Suite 400"
-	companyContact := "support@logisticshq.io • +1 (800) 555-LOGI"
+	companyContact := "support@logisticshq.io | +1 (800) 555-LOGI"
 	var companyLogoURL string
 
 	if orgBranding, err := s.repo.GetOrganizationBranding(ctx, orgID); err == nil && orgBranding != nil {
@@ -1701,7 +1701,7 @@ func (s *service) GetCustomerQuotationPreview(ctx context.Context, orgID, quotat
 			contactParts = append(contactParts, strings.TrimSpace(*orgBranding.PhoneNumber))
 		}
 		if len(contactParts) > 0 {
-			companyContact = strings.Join(contactParts, " • ")
+			companyContact = strings.Join(contactParts, " | ")
 		}
 
 		if orgBranding.LogoURL != nil && strings.TrimSpace(*orgBranding.LogoURL) != "" {
@@ -1709,38 +1709,166 @@ func (s *service) GetCustomerQuotationPreview(ctx context.Context, orgID, quotat
 		}
 	}
 
+	equipment := "1 x 40' HC"
+	transitTime := "Approx. 12-16 days"
+	commodity := "General cargo (sample)"
+	cargoWeight := "18,000 kg (estimated)"
+	incoterm := "FOB (subject to confirmation)"
+	attention := "Logistics / Supply Chain Team"
+
+	if q.RFQID != nil && *q.RFQID > 0 {
+		if rfqCtx, err := s.repo.GetQuotationRFQContext(ctx, orgID, *q.RFQID); err == nil && rfqCtx != nil {
+			if rfqCtx.Incoterms != "" {
+				incoterm = fmt.Sprintf("%s (subject to confirmation)", rfqCtx.Incoterms)
+			}
+			if rfqCtx.CargoDesc != "" {
+				commodity = rfqCtx.CargoDesc
+			}
+			if rfqCtx.TotalWeightKg > 0 {
+				cargoWeight = fmt.Sprintf("%.0f kg (estimated)", rfqCtx.TotalWeightKg)
+			}
+			if rfqCtx.TransitTimeDays > 0 {
+				minDays := rfqCtx.TransitTimeDays - 2
+				if minDays < 1 {
+					minDays = 1
+				}
+				transitTime = fmt.Sprintf("Approx. %d-%d days", minDays, rfqCtx.TransitTimeDays+2)
+			}
+			if rfqCtx.ContainerType != "" {
+				equipment = rfqCtx.ContainerType
+			}
+		}
+	}
+
+	// Dynamic detection of equipment from charges if present
+	for _, c := range customerCharges {
+		lowerName := strings.ToLower(c.ChargeName + " " + c.CalculationBasis)
+		if strings.Contains(lowerName, "40' hc") || strings.Contains(lowerName, "40hc") {
+			equipment = "1 x 40' HC"
+			break
+		} else if strings.Contains(lowerName, "20' gp") || strings.Contains(lowerName, "20gp") {
+			equipment = "1 x 20' GP"
+			break
+		}
+	}
+
+	// Inclusions & Exclusions (from Option B standard specification)
+	inclusions := []string{
+		"Ocean freight as listed",
+		"Origin terminal handling as listed",
+		"Export documentation as listed",
+	}
+	exclusions := []string{
+		"Destination terminal/port charges",
+		"Customs clearance, duties and taxes",
+		"Delivery / inland haulage unless listed",
+		"Insurance, inspections, demurrage and detention",
+		"Storage, exams, penalties and exceptional charges",
+	}
+
+	preparedByName := ""
+	preparedByEmail := ""
+
+	// 1. Direct fetch from authenticated logged-in user context
+	if uc, ok := middleware.GetUserContext(ctx); ok && uc.UserID > 0 {
+		if u, err := s.repo.GetUserAccountInfo(ctx, uc.UserID); err == nil && u != nil {
+			name := strings.TrimSpace(u.FirstName + " " + u.LastName)
+			if name != "" {
+				preparedByName = name
+			}
+			if strings.TrimSpace(u.Email) != "" {
+				preparedByEmail = strings.TrimSpace(u.Email)
+			}
+		}
+	}
+
+	// 2. If not resolved, resolve from quotation's ApprovedBy or CreatedBy user in database
+	if preparedByEmail == "" || preparedByName == "" {
+		creator := strings.TrimSpace(q.ApprovedBy)
+		if creator == "" {
+			creator = strings.TrimSpace(q.CreatedBy)
+		}
+		if creator != "" {
+			if u, err := s.repo.GetUserAccountByName(ctx, creator); err == nil && u != nil {
+				name := strings.TrimSpace(u.FirstName + " " + u.LastName)
+				if preparedByName == "" {
+					if name != "" {
+						preparedByName = name
+					} else {
+						preparedByName = creator
+					}
+				}
+				if preparedByEmail == "" && strings.TrimSpace(u.Email) != "" {
+					preparedByEmail = strings.TrimSpace(u.Email)
+				}
+			} else if preparedByName == "" {
+				preparedByName = creator
+			}
+		}
+	}
+
+	// 3. Fallbacks to company branding contact or default operations identity
+	if preparedByName == "" {
+		preparedByName = "Varun Kanade"
+	}
+	if preparedByEmail == "" {
+		if strings.Contains(companyContact, "@") {
+			parts := strings.Fields(companyContact)
+			for _, p := range parts {
+				if strings.Contains(p, "@") {
+					preparedByEmail = strings.Trim(p, " |•,;()")
+					break
+				}
+			}
+		}
+		if preparedByEmail == "" {
+			preparedByEmail = "operations@freel.io"
+		}
+	}
+
 	preview := &CustomerQuotationPreview{
-		QuotationID:     q.ID,
-		QuotationNumber: q.QuotationNumber,
-		Status:          q.Status,
-		CustomerID:      q.CustomerID,
-		CustomerName:    q.CustomerName,
-		Origin:          q.Origin,
-		OriginCode:      q.OriginCode,
-		Destination:     q.Destination,
-		DestinationCode: q.DestinationCode,
-		ServiceType:     q.ServiceType,
-		TransportMode:   q.TransportMode,
-		Currency:        q.Currency,
-		PaymentTerms:    q.PaymentTerms,
-		ValidFrom:       q.ValidFrom,
-		ValidUntil:      q.ValidUntil,
-		ValidityStatus:  validityStatus,
-		Subtotal:        q.Subtotal,
-		DiscountTotal:   discountTotal,
-		TaxTotal:        taxTotal,
-		TotalAmount:     q.TotalAmount,
-		CommercialTerms: q.CommercialTerms,
-		CustomerNotes:   q.CustomerNotes,
-		SentAt:          q.SentAt,
-		ViewedAt:        q.ViewedAt,
-		AcceptedAt:      q.AcceptedAt,
-		DeclinedAt:      q.DeclinedAt,
-		Charges:         customerCharges,
-		CompanyName:     companyName,
-		CompanyAddress:  companyAddress,
-		CompanyContact:  companyContact,
-		CompanyLogoURL:  companyLogoURL,
+		QuotationID:       q.ID,
+		QuotationNumber:   q.QuotationNumber,
+		Status:            q.Status,
+		CustomerID:        q.CustomerID,
+		CustomerName:      q.CustomerName,
+		CustomerAttention: attention,
+		Origin:            q.Origin,
+		OriginCode:        q.OriginCode,
+		Destination:       q.Destination,
+		DestinationCode:   q.DestinationCode,
+		ServiceType:       q.ServiceType,
+		TransportMode:     q.TransportMode,
+		Equipment:         equipment,
+		TransitTime:       transitTime,
+		Commodity:         commodity,
+		CargoWeight:       cargoWeight,
+		Incoterm:          incoterm,
+		Currency:          q.Currency,
+		PaymentTerms:      q.PaymentTerms,
+		ValidFrom:         q.ValidFrom,
+		ValidUntil:        q.ValidUntil,
+		ValidityStatus:    validityStatus,
+		Subtotal:          q.Subtotal,
+		DiscountTotal:     discountTotal,
+		TaxTotal:          taxTotal,
+		TotalAmount:       q.TotalAmount,
+		CommercialTerms:   q.CommercialTerms,
+		CustomerNotes:     q.CustomerNotes,
+		SentAt:            q.SentAt,
+		ViewedAt:          q.ViewedAt,
+		AcceptedAt:        q.AcceptedAt,
+		DeclinedAt:        q.DeclinedAt,
+		Charges:           customerCharges,
+		CompanyName:       companyName,
+		CompanyAddress:    companyAddress,
+		CompanyContact:    companyContact,
+		CompanyLogoURL:    companyLogoURL,
+		PreparedByName:    preparedByName,
+		PreparedByEmail:   preparedByEmail,
+		Inclusions:        inclusions,
+		Exclusions:        exclusions,
+		ConditionsText:    "Rates are illustrative and subject to space/equipment availability, final cargo details, carrier confirmation, surcharges and changes imposed by carriers or authorities. Transit times are estimates, not guarantees. Any service or cost not expressly shown as included above is excluded. Taxes, duties and destination charges are payable separately where applicable. Final booking is subject to written acceptance and applicable service terms.",
 	}
 
 	return preview, nil
@@ -2051,30 +2179,30 @@ func (s *service) GetQuotationDocument(ctx context.Context, orgID, quotationID, 
 }
 
 func (s *service) GetOrGenerateQuotationPDF(ctx context.Context, orgID, quotationID, userID int64) (*QuotationDocument, []byte, error) {
-	// 1. Check if an existing PDF document is already stored and available on disk
-	docs, err := s.repo.GetQuotationDocuments(ctx, orgID, quotationID)
-	if err == nil && len(docs) > 0 {
-		for _, doc := range docs {
-			if doc.DocumentType == QuotationDocumentTypePDF && doc.FilePath != "" {
-				if content, readErr := os.ReadFile(doc.FilePath); readErr == nil && len(content) > 0 {
-					return doc, content, nil
+	// Generate a fresh, authoritative PDF document with the latest edits, charges, and RFQ terms
+	doc, err := s.GenerateQuotationDocument(ctx, orgID, quotationID, userID, QuotationDocumentTypePDF)
+	if err == nil && doc != nil {
+		if content, readErr := os.ReadFile(doc.FilePath); readErr == nil && len(content) > 0 {
+			return doc, content, nil
+		}
+	}
+
+	// Fallback to existing stored PDF if generation encountered an error
+	docs, docErr := s.repo.GetQuotationDocuments(ctx, orgID, quotationID)
+	if docErr == nil && len(docs) > 0 {
+		for _, d := range docs {
+			if d.DocumentType == QuotationDocumentTypePDF && d.FilePath != "" {
+				if content, readErr := os.ReadFile(d.FilePath); readErr == nil && len(content) > 0 {
+					return d, content, nil
 				}
 			}
 		}
 	}
 
-	// 2. Otherwise generate a fresh, authoritative PDF document
-	doc, err := s.GenerateQuotationDocument(ctx, orgID, quotationID, userID, QuotationDocumentTypePDF)
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate quotation pdf: %w", err)
 	}
-
-	content, err := os.ReadFile(doc.FilePath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("read generated pdf file: %w", err)
-	}
-
-	return doc, content, nil
+	return nil, nil, fmt.Errorf("read quotation pdf: file not found")
 }
 
 // ── Public Access & Sharing (Task 18.5) ──────────────────────────────────────

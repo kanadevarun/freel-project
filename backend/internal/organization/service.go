@@ -331,15 +331,30 @@ func (s *service) ConnectCarrier(ctx context.Context, orgID int64, req ConnectCa
 	if req.CarrierSCAC == "" {
 		return nil, errors.New("CarrierSCAC is required")
 	}
+
+	encKey := resolveCarrierKey()
+	var encryptedCreds *string
+	if req.CredentialsJSON != "" {
+		if encKey == "" {
+			return nil, errors.New("carrier encryption key is not configured; cannot process credentials safely")
+		}
+		encrypted, err := crypto.Encrypt(req.CredentialsJSON, encKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt carrier credentials: %w", err)
+		}
+		encryptedCreds = &encrypted
+	}
+
 	ci := &CarrierIntegration{
-		OrgID:            orgID,
-		CarrierSCAC:      req.CarrierSCAC,
-		ConnectionMethod: req.ConnectionMethod,
-		Environment:      req.Environment,
-		CredentialsJSON:  &req.CredentialsJSON,
-		Capabilities:     req.Capabilities,
-		ConnectionStatus: "Connected",
-		IsActive:         true,
+		OrgID:                orgID,
+		CarrierSCAC:          req.CarrierSCAC,
+		ConnectionMethod:     req.ConnectionMethod,
+		Environment:          req.Environment,
+		CredentialsJSON:      nil, // NEVER persist plaintext credentials
+		EncryptedCredentials: encryptedCreds,
+		Capabilities:         req.Capabilities,
+		ConnectionStatus:     "Connected",
+		IsActive:             true,
 	}
 	if err := s.repo.AddCarrierIntegration(ctx, ci); err != nil {
 		return nil, err
@@ -348,19 +363,39 @@ func (s *service) ConnectCarrier(ctx context.Context, orgID int64, req ConnectCa
 }
 
 func (s *service) UpdateCarrier(ctx context.Context, id int64, orgID int64, req UpdateCarrierRequest) error {
-	var creds *string
+	var encryptedCreds *string
 	if req.CredentialsJSON != "" {
-		creds = &req.CredentialsJSON
+		encKey := resolveCarrierKey()
+		if encKey == "" {
+			return errors.New("carrier encryption key is not configured; cannot process credentials safely")
+		}
+		encrypted, err := crypto.Encrypt(req.CredentialsJSON, encKey)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt carrier credentials: %w", err)
+		}
+		encryptedCreds = &encrypted
 	}
 	ci := &CarrierIntegration{
-		ID:               id,
-		OrgID:            orgID,
-		ConnectionMethod: req.ConnectionMethod,
-		Environment:      req.Environment,
-		CredentialsJSON:  creds,
-		Capabilities:     req.Capabilities,
+		ID:                   id,
+		OrgID:                orgID,
+		ConnectionMethod:     req.ConnectionMethod,
+		Environment:          req.Environment,
+		CredentialsJSON:      nil, // NEVER persist plaintext credentials
+		EncryptedCredentials: encryptedCreds,
+		Capabilities:         req.Capabilities,
 	}
 	return s.repo.UpdateCarrierIntegration(ctx, ci)
+}
+
+func resolveCarrierKey() string {
+	k := os.Getenv("CARRIER_ENCRYPTION_KEY")
+	if k == "" {
+		k = os.Getenv("MAILBOX_ENCRYPTION_KEY")
+	}
+	if idx := strings.Index(k, "#"); idx != -1 {
+		k = k[:idx]
+	}
+	return strings.TrimSpace(k)
 }
 
 func (s *service) RemoveCarrier(ctx context.Context, id int64, orgID int64) error {

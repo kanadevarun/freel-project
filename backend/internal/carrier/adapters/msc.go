@@ -25,10 +25,6 @@ func NewMscAdapter() *MscAdapter {
 			CarrierSCAC: "MSCU",
 			Capabilities: []domain.Capability{
 				domain.CapTracking,
-				domain.CapRates,
-				domain.CapContractRates,
-				domain.CapBooking,
-				domain.CapDocuments,
 			},
 		},
 	}

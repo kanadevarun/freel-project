@@ -290,7 +290,7 @@ export default function App() {
               <Route element={<AppShell />}>
                 {/* ── 1. OPERATIONS ── */}
                 <Route path="/dashboard" element={<DashboardHome />} />
-                <Route path="/dashboard/command-center" element={<AutonomousCommandCenterPage />} />
+                <Route path="/dashboard/command-center" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard/leads" element={<LeadsPage />} />
                 <Route path="/dashboard/rfqs" element={<RFQPage />} />
                 <Route path="/dashboard/rfqs/:id" element={<RFQDetailPage />} />

@@ -3,7 +3,6 @@ package adapters
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/freel/backend/internal/carrier/domain"
 )
@@ -43,33 +42,23 @@ func (b *BaseAdapter) CheckCapability(cap domain.Capability) error {
 	return nil
 }
 
-// TestConnection default implementation tests credential presence and environment URL resolution.
+func (b *BaseAdapter) SupportsCapability(cap domain.Capability) bool {
+	return b.HasCapability(cap)
+}
+
+// TestConnection default implementation returns an explicit not-implemented result.
+// Adapters for carriers with real external API support must override this method.
 func (b *BaseAdapter) TestConnection(ctx context.Context, creds domain.DecryptedCredentials, env domain.Environment) (*domain.TestConnectionResult, error) {
-	start := time.Now()
-	if creds.APIKey == "" && creds.ClientID == "" {
-		return &domain.TestConnectionResult{
-			Success:            false,
-			Message:            fmt.Sprintf("Carrier %s connection test failed: no API key or client ID configured", b.Code),
-			LatencyMs:          time.Since(start).Milliseconds(),
-			TestedCapabilities: b.Capabilities,
-			TestedEnvironment:  env,
-			ErrorCode:          "MISSING_CREDENTIALS",
-		}, nil
+	carrierName := b.Code
+	if carrierName == "" {
+		carrierName = "Carrier"
 	}
-
-	// Structured test response indicating adapter scaffolding is wired
-	latency := time.Since(start).Milliseconds()
-	if latency == 0 {
-		latency = 45 // Realistic simulation latency
-	}
-
 	return &domain.TestConnectionResult{
-		Success:            true,
-		Message:            fmt.Sprintf("Connection verified for %s (%s) in %s environment. Adapter is configured and ready.", b.Code, b.CarrierSCAC, env),
-		LatencyMs:          latency,
+		Success:            false,
+		Message:            fmt.Sprintf("Carrier %s API integration not yet implemented", carrierName),
+		ErrorCode:          domain.ErrCodeUnsupported,
 		TestedCapabilities: b.Capabilities,
 		TestedEnvironment:  env,
-		HTTPStatus:         200,
 	}, nil
 }
 

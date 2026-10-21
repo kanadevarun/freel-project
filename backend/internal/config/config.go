@@ -9,6 +9,7 @@ import (
 
 const (
 	EnvMailboxEncryptionKey = "MAILBOX_ENCRYPTION_KEY"
+	EnvCarrierEncryptionKey = "CARRIER_ENCRYPTION_KEY"
 	EnvGoogleClientID       = "GOOGLE_CLIENT_ID"
 	EnvGoogleClientSecret   = "GOOGLE_CLIENT_SECRET"
 	EnvGoogleRedirectURI    = "GOOGLE_REDIRECT_URI"
@@ -47,8 +48,9 @@ type Config struct {
 	SMTPUsername        string
 	SMTPPassword        string
 
-	// Connected Mailbox Encryption
+	// Connected Mailbox & Carrier Encryption
 	MailboxEncryptionKey string
+	CarrierEncryptionKey string
 
 	// Google OAuth Client Config
 	GoogleClientID     string
@@ -117,13 +119,28 @@ func LoadConfig() *Config {
 		SMTPPassword:        os.Getenv("SMTP_PASSWORD"),
 		StripeSecretKey:     os.Getenv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
-		MailboxEncryptionKey: os.Getenv(EnvMailboxEncryptionKey),
+		MailboxEncryptionKey: cleanKey(os.Getenv(EnvMailboxEncryptionKey)),
+		CarrierEncryptionKey: cleanKey(resolveCarrierKey()),
 		GoogleClientID:     os.Getenv(EnvGoogleClientID),
 		GoogleClientSecret: os.Getenv(EnvGoogleClientSecret),
 		GoogleRedirectURI:  os.Getenv(EnvGoogleRedirectURI),
 	}
 
 	return cfg
+}
+
+func cleanKey(val string) string {
+	if idx := strings.Index(val, "#"); idx != -1 {
+		val = val[:idx]
+	}
+	return strings.TrimSpace(val)
+}
+
+func resolveCarrierKey() string {
+	if k := os.Getenv(EnvCarrierEncryptionKey); k != "" {
+		return k
+	}
+	return os.Getenv(EnvMailboxEncryptionKey)
 }
 
 func getEnv(key, fallback string) string {

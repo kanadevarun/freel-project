@@ -28,6 +28,7 @@ import StatusBadge from '../../../components/dashboard/StatusBadge';
 import LocationPickerMap from '../../../components/dashboard/LocationPickerMap';
 import { LEAD_STATUS } from './LeadsPage';
 import CustomerLeadPredictiveIntelligenceCard from '../../../components/predictions/CustomerLeadPredictiveIntelligenceCard';
+import SHCBadge, { detectSHCCode } from '../../../components/common/SHCBadge';
 
 
 
@@ -42,7 +43,7 @@ AIScoreBadge.propTypes = {
   score: PropTypes.number,
 };
 
-/** EmailContentFormatter handles email body truncation and collapses quoted text history. */
+/** EmailContentFormatter handles email body truncation, collapses quoted text history, and highlights SHC codes & Incoterms. */
 function EmailContentFormatter({ content }) {
   const [showMore, setShowMore] = useState(false);
   const [showQuoted, setShowQuoted] = useState(false);
@@ -80,10 +81,49 @@ function EmailContentFormatter({ content }) {
   const isLong = regularText.length > maxChars;
   const displayedText = isLong && !showMore ? regularText.slice(0, maxChars) + '...' : regularText;
 
+  const renderFormattedBody = (text) => {
+    // Regex splits on [SHC: ...] or [Incoterms: ...]
+    const parts = text.split(/(\[SHC:[^\]]+\]|\[Incoterms:[^\]]+\])/gi);
+    return parts.map((part, pIdx) => {
+      const shcMatch = part.match(/^\[SHC:\s*([^\]]+)\]$/i);
+      if (shcMatch) {
+        return (
+          <span key={pIdx} style={{ display: 'inline-block', margin: '0 4px', verticalAlign: 'middle' }}>
+            <SHCBadge code={shcMatch[1].trim()} size="xs" />
+          </span>
+        );
+      }
+      const incotermMatch = part.match(/^\[Incoterms:\s*([^\]]+)\]$/i);
+      if (incotermMatch) {
+        return (
+          <span
+            key={pIdx}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '1px 8px',
+              fontSize: '11px',
+              fontWeight: 800,
+              borderRadius: '9999px',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #FDE68A',
+              color: '#92400E',
+              margin: '0 4px',
+              verticalAlign: 'middle',
+            }}
+          >
+            Incoterms: {incotermMatch[1].trim()}
+          </span>
+        );
+      }
+      return <span key={pIdx}>{part}</span>;
+    });
+  };
+
   return (
     <div className="email-formatted-content">
       <div className="email-main-body" style={{ whiteSpace: 'pre-line' }}>
-        {displayedText}
+        {renderFormattedBody(displayedText)}
       </div>
 
       {isLong && (
@@ -105,7 +145,7 @@ function EmailContentFormatter({ content }) {
           </button>
           {showQuoted && (
             <div className="email-quoted-body" style={{ whiteSpace: 'pre-line' }}>
-              {quotedText}
+              {renderFormattedBody(quotedText)}
             </div>
           )}
         </div>
@@ -283,7 +323,8 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
     { key: 'target_date', label: 'Ready Date' },
     { key: 'cargo_weight', label: 'Cargo Weight' },
     { key: 'cargo_volume', label: 'Cargo Volume' },
-    { key: 'incoterms', label: 'Incoterms' }
+    { key: 'incoterms', label: 'Incoterms' },
+    { key: 'special_handling_code', label: 'Special Handling (SHC)' }
   ];
 
   const getLatestRFQContext = () => {
@@ -1088,6 +1129,10 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
             )}
             <div className="panel-header-badges">
               <StatusBadge status={formState.status || 'NEW'} customLabel={statusConfig.label} customType={statusConfig.type} />
+              <SHCBadge
+                code={lead.special_handling_code || detectSHCCode(lead)}
+                size="sm"
+              />
               {isConverted && (
                 <button
                   type="button"
@@ -2556,7 +2601,9 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
                                         </strong>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 14px' }}>
                                           {mandatoryFields.map(f => {
-                                            const val = interContext[f.key];
+                                            const val = f.key === 'special_handling_code'
+                                              ? (interContext[f.key] || detectSHCCode(interContext))
+                                              : interContext[f.key];
                                             const isPresent = val !== undefined && val !== null && val !== '' && (typeof val !== 'number' || val > 0);
                                             return (
                                               <span key={f.key} style={{
@@ -2571,7 +2618,11 @@ export default function LeadDetailPanel({ lead, initialTab, onClose, onLeadUpdat
                                                 fontWeight: '600'
                                               }}>
                                                 {isPresent ? <CheckCircle2 size={13} color="#10B981" /> : <XCircle size={13} color="#EF4444" />}
-                                                {f.label}: {isPresent ? String(val) : 'Missing'}
+                                                {f.key === 'special_handling_code' ? (
+                                                  <SHCBadge code={String(val)} size="xs" />
+                                                ) : (
+                                                  `${f.label}: ${isPresent ? String(val) : 'Missing'}`
+                                                )}
                                               </span>
                                             );
                                           })}

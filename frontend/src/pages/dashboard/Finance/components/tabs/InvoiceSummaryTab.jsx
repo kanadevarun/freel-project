@@ -1,8 +1,20 @@
 import React from 'react';
-import { FileText, Eye, Download } from 'lucide-react';
-import BusinessIntelligenceCard from '../../../../../components/common/BusinessIntelligenceCard';
-import InvoiceFinanceIntelligenceSection from '../InvoiceFinanceIntelligenceSection';
-import FinanceCollectionsPredictiveIntelligenceCard from '../../../../../components/predictions/FinanceCollectionsPredictiveIntelligenceCard';
+import {
+  FileText,
+  Eye,
+  Download,
+  Building2,
+  Ship,
+  Calendar,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  ArrowRight,
+  Receipt,
+  CreditCard,
+  ShieldCheck,
+  Package
+} from 'lucide-react';
 import './InvoiceSubTabs.css';
 
 export default function InvoiceSummaryTab({ invoice, onActionClick }) {
@@ -12,195 +24,314 @@ export default function InvoiceSummaryTab({ invoice, onActionClick }) {
   const formatCurrency = (val) =>
     `$${(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+  const isPaid = (invoice?.balance === 0 || invoice?.status === 'Paid') && ((invoice?.amountPaid || 0) > 0 || (invoice?.amount || 0) > 0);
+  const isOverdue = invoice?.status === 'Overdue' || ((invoice?.balance || 0) > 0 && String(invoice?.daysLeft || '').toLowerCase().includes('overdue'));
+
+  const shipmentRef = invoice?.shipmentNumber || invoice?.shipmentId;
+  const bookingRef = invoice?.bookingNumber || invoice?.bookingId;
+  const quoteRef = invoice?.quoteNumber || invoice?.quoteId;
+
   return (
     <div className="invoice-subtab-container summary-tab">
-      {/* ── PHASE 4 TASK 4.6: PREDICTIVE FINANCE, CASH FLOW & COLLECTIONS INTELLIGENCE ── */}
-      {invoice?.id && (
-        <FinanceCollectionsPredictiveIntelligenceCard invoiceId={invoice.id} />
+
+      {/* ── 1. SETTLEMENT STATUS STAMP BANNER ── */}
+      {isPaid ? (
+        <div className="inv-settlement-card settled">
+          <div className="inv-settlement-left">
+            <div className="inv-settlement-icon settled">
+              <CheckCircle2 size={18} />
+            </div>
+            <div>
+              <div className="inv-settlement-title">Invoice Settled in Full</div>
+              <div className="inv-settlement-sub">
+                Realized cash inflow of <strong>{formatCurrency(invoice?.amountPaid || invoice?.amount)}</strong> confirmed. Zero outstanding receivables.
+              </div>
+            </div>
+          </div>
+          <div className="inv-settlement-stamp settled">SETTLED</div>
+        </div>
+      ) : isOverdue ? (
+        <div className="inv-settlement-card overdue">
+          <div className="inv-settlement-left">
+            <div className="inv-settlement-icon overdue">
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <div className="inv-settlement-title">Payment Overdue</div>
+              <div className="inv-settlement-sub">
+                Outstanding balance of <strong>{formatCurrency(invoice?.balance)}</strong> is past due ({invoice?.dueDate || 'immediate'}).
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="inv-settlement-btn overdue"
+            onClick={() => onActionClick?.('recordPayment', invoice)}
+          >
+            <CreditCard size={13} />
+            <span>Record Payment</span>
+          </button>
+        </div>
+      ) : (
+        <div className="inv-settlement-card active">
+          <div className="inv-settlement-left">
+            <div className="inv-settlement-icon active">
+              <Clock size={18} />
+            </div>
+            <div>
+              <div className="inv-settlement-title">Commercial Invoice Active</div>
+              <div className="inv-settlement-sub">
+                Total balance <strong>{formatCurrency(invoice?.balance || invoice?.amount)}</strong> due on <strong>{invoice?.dueDate || 'Net 30'}</strong>.
+              </div>
+            </div>
+          </div>
+          <span className="inv-settlement-stamp active">{invoice?.status?.toUpperCase() || 'ISSUED'}</span>
+        </div>
       )}
 
-      {/* ── DETERMINISTIC INVOICE & FINANCE INTELLIGENCE (Task 1.5) ── */}
-      {invoice?.id && (
-        <InvoiceFinanceIntelligenceSection invoiceId={invoice.id} />
-      )}
-
-      {/* ── UNIFIED BUSINESS CONTEXT & INTELLIGENCE LAYER ── */}
-      {invoice?.id && (
-        <BusinessIntelligenceCard
-          entityType="Invoice"
-          entityId={invoice.id}
-          title="Invoice Context & Operational Intelligence"
-          compact={true}
-        />
-      )}
-
-      {/* Operational Context & Cross-Module References Card */}
-      <div className="summary-operational-context-card">
-        <h4 className="context-card-title">Operational Context & References</h4>
-        <div className="context-links-grid">
-          <div className="context-link-item">
-            <span className="context-label">Customer</span>
-            <button
-              className="context-nav-btn"
-              onClick={() => onActionClick?.('navCustomer', invoice)}
-              title="View Customer Profile"
-            >
+      {/* ── 2. EXECUTIVE PARTIES & CORRIDOR (2-COLUMN CARDS) ── */}
+      <div className="inv-summary-grid">
+        {/* Bill-To Customer Card */}
+        <div className="inv-summary-card">
+          <div className="inv-card-header">
+            <div className="inv-card-header-icon customer">
+              <Building2 size={14} />
+            </div>
+            <span className="inv-card-header-title">Bill-To Customer</span>
+            <span className="inv-card-badge customer">Commercial</span>
+          </div>
+          <div className="inv-card-body">
+            <h4 className="inv-customer-name" title={invoice?.customer || 'Global Traders Inc.'}>
               {invoice?.customer || 'Global Traders Inc.'}
-            </button>
-          </div>
-
-          {invoice?.shipmentNumber && (
-            <div className="context-link-item">
-              <span className="context-label">Shipment</span>
-              <button
-                className="context-nav-btn"
-                onClick={() => onActionClick?.('navShipment', invoice)}
-                title="View Shipment Details"
-              >
-                {invoice.shipmentNumber} ({invoice?.route || 'Shanghai ➔ LA'})
-              </button>
+            </h4>
+            <div className="inv-meta-sub">
+              {invoice?.customerCountry || 'United States'} • Direct Freight Account
             </div>
-          )}
-
-          {invoice?.bookingNumber && (
-            <div className="context-link-item">
-              <span className="context-label">Booking</span>
-              <button
-                className="context-nav-btn"
-                onClick={() => onActionClick?.('navBooking', invoice)}
-                title="View Freight Booking"
-              >
-                {invoice.bookingNumber}
-              </button>
-            </div>
-          )}
-
-          {invoice?.quoteNumber && (
-            <div className="context-link-item">
-              <span className="context-label">Quotation</span>
-              <button
-                className="context-nav-btn"
-                onClick={() => onActionClick?.('navQuotation', invoice)}
-                title="View Commercial Quote"
-              >
-                {invoice.quoteNumber}
-              </button>
-            </div>
-          )}
-
-          <div className="context-link-item">
-            <span className="context-label">Approval Context</span>
             <button
-              className="context-nav-btn approval-link-btn"
-              onClick={() => onActionClick?.('navApproval', invoice)}
-              title="View Approvals Workspace"
+              type="button"
+              className="inv-link-action"
+              onClick={() => onActionClick?.('navCustomer', invoice)}
             >
-              {invoice?.status === 'Pending Approval' ? 'Pending Approval' : 'Finance Approval Standard'}
+              <span>View Customer 360</span>
+              <ArrowRight size={12} />
             </button>
+          </div>
+        </div>
+
+        {/* Freight Corridor & Logistics References */}
+        <div className="inv-summary-card">
+          <div className="inv-card-header">
+            <div className="inv-card-header-icon freight">
+              <Ship size={14} />
+            </div>
+            <span className="inv-card-header-title">Freight Route & Corridor</span>
+            <span className="inv-card-badge freight">Ocean FCL</span>
+          </div>
+          <div className="inv-card-body">
+            <div className="inv-route-row">
+              <span className="inv-route-port origin">{invoice?.origin || 'Shanghai'}</span>
+              <span className="inv-route-arrow">➔</span>
+              <span className="inv-route-port dest">{invoice?.destination || 'Los Angeles'}</span>
+            </div>
+            <div className="inv-linked-chips">
+              {shipmentRef && (
+                <button
+                  type="button"
+                  className="inv-chip-link"
+                  onClick={() => onActionClick?.('navShipment', invoice)}
+                  title="View Freight Shipment"
+                >
+                  <Package size={11} /> {shipmentRef}
+                </button>
+              )}
+              {bookingRef && (
+                <button
+                  type="button"
+                  className="inv-chip-link"
+                  onClick={() => onActionClick?.('navBooking', invoice)}
+                  title="View Master Booking"
+                >
+                  <FileText size={11} /> {bookingRef}
+                </button>
+              )}
+              {quoteRef && (
+                <button
+                  type="button"
+                  className="inv-chip-link"
+                  onClick={() => onActionClick?.('navQuotation', invoice)}
+                  title="View Commercial Quote"
+                >
+                  <Receipt size={11} /> {quoteRef}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Line Items Summary Section */}
-      {lineItems.length > 0 && (
-        <div className="summary-items-section" style={{ marginBottom: '20px' }}>
-          <div className="doc-section-header">
-            <h4 className="doc-section-title">Line Items ({lineItems.length})</h4>
-            <button className="btn-view-all-docs" onClick={() => onActionClick?.('switchTab', 'Items')}>
-              View details
-            </button>
+      {/* ── 3. BILLING SCHEDULE & LINE ITEMS TABLE ── */}
+      <div className="inv-items-card">
+        <div className="inv-card-header">
+          <div className="inv-card-header-icon items">
+            <Receipt size={14} />
           </div>
-          <table className="subtab-table" style={{ marginTop: '10px' }}>
-            <thead>
-              <tr>
-                <th>Description</th>
-                <th className="th-center">Qty</th>
-                <th className="th-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineItems.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <span className="item-description">{item.description}</span>
-                  </td>
-                  <td className="td-center">{item.quantity}</td>
-                  <td className="td-right bold-col">{formatCurrency(item.amount)}</td>
+          <div className="inv-items-header-text">
+            <span className="inv-card-header-title">Billed Line Items & Freight Charges</span>
+            <span className="inv-count-pill">{lineItems.length} charge{lineItems.length !== 1 ? 's' : ''}</span>
+          </div>
+          {lineItems.length > 0 && (
+            <button
+              type="button"
+              className="inv-header-action-btn"
+              onClick={() => onActionClick?.('switchTab', 'Items')}
+            >
+              Line item details →
+            </button>
+          )}
+        </div>
+
+        {lineItems.length === 0 ? (
+          <div className="inv-empty-state">No line items specified on this invoice file.</div>
+        ) : (
+          <div className="inv-items-table-wrap">
+            <table className="inv-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '56%' }}>Charge Description</th>
+                  <th className="th-center" style={{ width: '16%' }}>Qty</th>
+                  <th className="th-right" style={{ width: '28%' }}>Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {lineItems.map((item, idx) => (
+                  <tr key={item.id || idx}>
+                    <td>
+                      <div className="inv-item-desc-cell">
+                        <span className="inv-item-bullet" />
+                        <div>
+                          <span className="inv-item-name">{item.description}</span>
+                          {item.rate ? (
+                            <span className="inv-item-sub">Unit Rate: {formatCurrency(item.rate)}</span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="td-center">
+                      <span className="inv-qty-badge">{item.quantity || 1}</span>
+                    </td>
+                    <td className="td-right">
+                      <span className="inv-amount-bold">{formatCurrency(item.amount)}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
-      {/* Financial Totals Card */}
-      <div className="summary-financial-card">
-        <div className="summary-row">
-          <span className="summary-label">Subtotal</span>
-          <span className="summary-value">{formatCurrency(invoice?.subtotal)}</span>
+      {/* ── 4. FINANCIAL BREAKDOWN & SETTLEMENT LEDGER ── */}
+      <div className="inv-ledger-card">
+        <div className="inv-card-header">
+          <div className="inv-card-header-icon ledger">
+            <ShieldCheck size={14} />
+          </div>
+          <span className="inv-card-header-title">Settlement Breakdown & Ledger Totals</span>
+          <span className="inv-currency-tag">{invoice?.currency || 'USD'}</span>
         </div>
-        <div className="summary-row">
-          <span className="summary-label">Tax ({invoice?.tax > 0 ? '8%' : '0%'})</span>
-          <span className="summary-value">{formatCurrency(invoice?.tax)}</span>
-        </div>
-        <div className="summary-row">
-          <span className="summary-label">Discount</span>
-          <span className="summary-value">-${(invoice?.discount || 0).toFixed(2)}</span>
-        </div>
-        <div className="summary-row total-row">
-          <span className="summary-label-bold">Total</span>
-          <span className="summary-value-bold">{formatCurrency(invoice?.amount)}</span>
-        </div>
-        <div className="summary-row divider-top">
-          <span className="summary-label">Amount Paid</span>
-          <span className="summary-value">{formatCurrency(invoice?.amountPaid)}</span>
-        </div>
-        <div className="summary-row balance-row">
-          <span className="summary-label-balance">Balance Due</span>
-          <span className={`summary-value-balance ${invoice?.balance > 0 ? 'has-balance' : 'zero-balance'}`}>
-            {formatCurrency(invoice?.balance)}
-          </span>
+
+        <div className="inv-ledger-rows">
+          <div className="inv-ledger-row">
+            <span className="ledger-label">Subtotal</span>
+            <span className="ledger-val">{formatCurrency(invoice?.subtotal)}</span>
+          </div>
+
+          <div className="inv-ledger-row">
+            <span className="ledger-label">Tax / GST ({invoice?.tax > 0 ? '8%' : '0%'})</span>
+            <span className="ledger-val">{formatCurrency(invoice?.tax)}</span>
+          </div>
+
+          {invoice?.discount != null && invoice?.discount !== 0 && (
+            <div className="inv-ledger-row discount">
+              <span className="ledger-label">Contract Discount / Waiver</span>
+              <span className="ledger-val discount-val">-${Math.abs(invoice.discount).toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="inv-ledger-divider" />
+
+          <div className="inv-ledger-row total">
+            <span className="ledger-label total-label">Total Billed</span>
+            <span className="ledger-val total-val">{formatCurrency(invoice?.amount)}</span>
+          </div>
+
+          <div className="inv-ledger-row paid">
+            <span className="ledger-label">Amount Paid to Date</span>
+            <span className="ledger-val paid-val">{formatCurrency(invoice?.amountPaid)}</span>
+          </div>
+
+          <div className={`inv-balance-box ${isPaid ? 'paid-zero' : 'has-due'}`}>
+            <div className="inv-balance-left">
+              <span className="balance-label">Balance Due</span>
+              <span className="balance-status-text">
+                {isPaid ? 'Settlement verified • Closed file' : `Payment due ${invoice?.dueDate || 'on receipt'}`}
+              </span>
+            </div>
+            <span className="balance-amount">{formatCurrency(invoice?.balance)}</span>
+          </div>
         </div>
       </div>
 
-      {/* Attached Documents Section */}
-      <div className="summary-documents-section">
-        <div className="doc-section-header">
-          <h4 className="doc-section-title">Attached Documents ({documents.length})</h4>
+      {/* ── 5. ATTACHED DOCUMENTS ── */}
+      <div className="inv-docs-card">
+        <div className="inv-card-header">
+          <div className="inv-card-header-icon docs">
+            <FileText size={14} />
+          </div>
+          <div className="inv-items-header-text">
+            <span className="inv-card-header-title">Commercial Documents & Attachments</span>
+            <span className="inv-count-pill">{documents.length}</span>
+          </div>
           {documents.length > 0 && (
-            <button className="btn-view-all-docs" onClick={() => onActionClick?.('switchTab', 'Documents')}>
-              View all
+            <button
+              type="button"
+              className="inv-header-action-btn"
+              onClick={() => onActionClick?.('switchTab', 'Documents')}
+            >
+              All files →
             </button>
           )}
         </div>
 
         {documents.length === 0 ? (
-          <p className="no-docs-text">No documents attached to this invoice.</p>
+          <div className="inv-empty-state">No commercial documents attached.</div>
         ) : (
-          <div className="attached-doc-list">
+          <div className="inv-docs-grid">
             {documents.map((doc) => (
-              <div key={doc.id} className="attached-doc-item">
-                <div className="doc-item-icon">
-                  <FileText size={18} className="pdf-icon-red" />
+              <div key={doc.id} className="inv-doc-pill">
+                <div className="inv-doc-icon-wrap">
+                  <FileText size={16} className="pdf-icon" />
                 </div>
-                <div className="doc-item-meta">
-                  <span className="doc-filename" title={doc.name}>{doc.name}</span>
-                  <span className="doc-filesize">{doc.size}</span>
+                <div className="inv-doc-info">
+                  <span className="inv-doc-name" title={doc.name}>{doc.name}</span>
+                  <span className="inv-doc-size">{doc.size || 'PDF'} • Uploaded</span>
                 </div>
-                <div className="doc-item-actions">
+                <div className="inv-doc-btns">
                   <button
-                    className="doc-action-btn"
+                    type="button"
+                    className="inv-doc-btn"
                     title="View Document"
                     onClick={() => onActionClick?.('viewDoc', doc)}
                   >
-                    <Eye size={14} />
+                    <Eye size={13} />
                   </button>
                   <button
-                    className="doc-action-btn"
-                    title="Download Document"
+                    type="button"
+                    className="inv-doc-btn"
+                    title="Download File"
                     onClick={() => onActionClick?.('downloadDoc', doc)}
                   >
-                    <Download size={14} />
+                    <Download size={13} />
                   </button>
                 </div>
               </div>
@@ -208,6 +339,7 @@ export default function InvoiceSummaryTab({ invoice, onActionClick }) {
           </div>
         )}
       </div>
+
     </div>
   );
 }

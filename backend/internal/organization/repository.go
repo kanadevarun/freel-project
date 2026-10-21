@@ -282,10 +282,10 @@ func (r *repository) GetCarrierIntegrationByID(ctx context.Context, id int64, or
 func (r *repository) AddCarrierIntegration(ctx context.Context, ci *CarrierIntegration) error {
 	query := `
 		INSERT INTO carrier_integrations (
-			org_id, carrier_scac, connection_method, credentials_json, environment, 
+			org_id, carrier_scac, connection_method, credentials_json, encrypted_credentials, environment, 
 			connection_status, capabilities, is_active, created_at, updated_at
 		) VALUES (
-			:org_id, :carrier_scac, :connection_method, :credentials_json, :environment, 
+			:org_id, :carrier_scac, :connection_method, :credentials_json, :encrypted_credentials, :environment, 
 			:connection_status, :capabilities, :is_active, NOW(), NOW()
 		)`
 	res, err := r.db.NamedExecContext(ctx, query, ci)
@@ -303,7 +303,8 @@ func (r *repository) UpdateCarrierIntegration(ctx context.Context, ci *CarrierIn
 	query := `
 		UPDATE carrier_integrations SET 
 			connection_method = :connection_method,
-			credentials_json = COALESCE(:credentials_json, credentials_json),
+			credentials_json = :credentials_json,
+			encrypted_credentials = COALESCE(:encrypted_credentials, encrypted_credentials),
 			environment = :environment,
 			capabilities = :capabilities,
 			updated_at = NOW()

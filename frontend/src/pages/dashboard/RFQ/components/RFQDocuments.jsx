@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { API_BASE_URL } from '../../../../utils/apiUrl';
 import {
   FileText,
   Upload,
@@ -165,7 +166,7 @@ export default function RFQDocuments({ rfq, documentsData, onMutationSuccess }) 
       let finalFileName = selectedFile ? selectedFile.name : `${docType.toLowerCase()}_${Date.now()}.pdf`;
       let finalFileSize = selectedFile ? selectedFile.size : 1024 * 350; // fallback standard size
       let finalMimeType = selectedFile ? selectedFile.type : 'application/pdf';
-      let finalFileUrl = `http://localhost:8080/uploads/${finalFileName}`;
+      let finalFileUrl = `${API_BASE_URL}/uploads/${finalFileName}`;
 
       const payload = {
         document_type: docType,

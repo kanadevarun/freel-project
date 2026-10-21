@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import RFQStatusBadge from './RFQStatusBadge';
 import { rfqService } from '../../../../services/rfqService';
+import SHCBadge, { detectSHCCode } from '../../../../components/common/SHCBadge';
 import {
   FileText,
   Download,
@@ -455,6 +456,12 @@ export default function RFQHeader({ rfq, completeness, requirements, onTabChange
                 <Tag className="w-3 h-3 text-amber-600" />
                 <span>{rfq?.incoterms || 'FOB'}</span>
               </span>
+
+              {/* Special Handling Code (SHC) Badge */}
+              <SHCBadge
+                code={rfq?.special_handling_code || detectSHCCode(rfq)}
+                size="sm"
+              />
 
               <span className="inline-flex items-center gap-1.5 text-slate-500 font-semibold text-[11.5px]">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />

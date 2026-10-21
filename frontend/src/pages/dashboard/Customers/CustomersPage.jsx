@@ -252,14 +252,14 @@ export default function CustomersPage() {
       {/* Header Banner */}
       <div className="cust-header-bar">
         <div className="header-titles">
-          <h1 className="cust-page-title">Customers Commercial Intelligence Workspace</h1>
+          <h1 className="cust-page-title">Customer Accounts & Directory</h1>
           <p className="cust-page-subtitle">
-            Proactive account health, risk detection, relationship governance, and customer directory.
+            Comprehensive directory of verified shippers, commercial contracts, contacts, addresses, and finance terms.
           </p>
         </div>
         <div className="cust-header-actions">
           <button className="btn-secondary-action" onClick={fetchData}>
-            <RefreshCw size={15} /> Refresh Intelligence
+            <RefreshCw size={15} /> Refresh Directory
           </button>
           <button className="btn-primary-action" onClick={handleCreateNew}>
             <Plus size={16} /> New Customer
@@ -267,160 +267,58 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* Intelligence KPI Cards Grid */}
+      {/* Business KPI Cards Grid */}
       <div className="cust-kpi-grid">
         <div className="cust-kpi-card kpi-card-healthy">
-          <div className="kpi-icon-badge bg-green-badge">
-            <CheckCircle2 size={20} />
+          <div className="kpi-icon-badge bg-blue-badge" style={{ backgroundColor: '#eff6ff', color: '#2563eb' }}>
+            <Building2 size={20} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Healthy Accounts</span>
+            <span className="kpi-label">Total Accounts</span>
             <div className="kpi-value-row">
-              <span className="kpi-value">{intelSummary.healthy_count || total || 0}</span>
-              <span className="kpi-sub-tag text-emerald">80–100 Health Score</span>
+              <span className="kpi-value">{total || customers.length || 0}</span>
+              <span className="kpi-sub-tag text-emerald">Active Customer Directory</span>
             </div>
           </div>
         </div>
 
         <div className="cust-kpi-card kpi-card-watch">
-          <div className="kpi-icon-badge bg-amber-badge">
-            <Activity size={20} />
+          <div className="kpi-icon-badge bg-indigo-badge" style={{ backgroundColor: '#eef2ff', color: '#4f46e5' }}>
+            <Users size={20} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Under Watch</span>
+            <span className="kpi-label">Commercial Shippers</span>
             <div className="kpi-value-row">
-              <span className="kpi-value">{intelSummary.watch_count || 0}</span>
-              <span className="kpi-sub-tag text-amber">60–79 Health Score</span>
+              <span className="kpi-value">{customers.filter(c => (c.customer_type || 'SHIPPER') === 'SHIPPER').length || customers.length}</span>
+              <span className="kpi-sub-tag text-indigo" style={{ color: '#4f46e5' }}>Direct Cargo Owners</span>
             </div>
           </div>
         </div>
 
         <div className="cust-kpi-card kpi-card-atrisk">
-          <div className="kpi-icon-badge bg-orange-badge">
-            <AlertTriangle size={20} />
+          <div className="kpi-icon-badge bg-green-badge" style={{ backgroundColor: '#ecfdf5', color: '#059669' }}>
+            <CheckCircle2 size={20} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">At Risk Accounts</span>
+            <span className="kpi-label">Credit Approved</span>
             <div className="kpi-value-row">
-              <span className="kpi-value">{intelSummary.at_risk_count ?? 0}</span>
-              <span className="kpi-sub-tag text-orange">30–59 Health Score</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="cust-kpi-card kpi-card-critical">
-          <div className="kpi-icon-badge bg-red-badge">
-            <ShieldAlert size={20} />
-          </div>
-          <div className="kpi-info">
-            <span className="kpi-label">Critical Accounts</span>
-            <div className="kpi-value-row">
-              <span className="kpi-value">{intelSummary.critical_count ?? 0}</span>
-              <span className="kpi-sub-tag text-red">0–29 Health Score</span>
+              <span className="kpi-value">{customers.filter(c => (c.credit_status || 'GOOD_STANDING') === 'GOOD_STANDING').length || customers.length}</span>
+              <span className="kpi-sub-tag text-emerald">Good Financial Standing</span>
             </div>
           </div>
         </div>
 
         <div className="cust-kpi-card kpi-card-opps">
-          <div className="kpi-icon-badge bg-purple-badge">
-            <Zap size={20} />
+          <div className="kpi-icon-badge bg-teal-badge" style={{ backgroundColor: '#f0fdfa', color: '#0d9488' }}>
+            <DollarSign size={20} />
           </div>
           <div className="kpi-info">
-            <span className="kpi-label">Detected Opportunities</span>
+            <span className="kpi-label">Payment Terms</span>
             <div className="kpi-value-row">
-              <span className="kpi-value">{intelSummary.total_opportunities ?? 0}</span>
-              <span className="kpi-sub-tag text-purple">Renewals & Follow-ups</span>
+              <span className="kpi-value">NET15 / NET30</span>
+              <span className="kpi-sub-tag text-teal" style={{ color: '#0d9488' }}>Standard Terms Enforced</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Proactive Customer Attention Required Panel */}
-      <div className="cust-attention-panel">
-        <div className="attention-panel-header">
-          <div className="attention-title">
-            <div className="att-title-icon">
-              <ShieldAlert size={18} />
-            </div>
-            <div>
-              <h3>Attention Required Panel</h3>
-              <p className="att-subtitle">Proactive account alerts requiring commercial manager review</p>
-            </div>
-          </div>
-
-          <div className="attention-tabs">
-            <button
-              className={`att-tab tab-critical ${attentionTab === 'CRITICAL' ? 'active' : ''}`}
-              onClick={() => setAttentionTab('CRITICAL')}
-            >
-              🔴 Critical ({attentionItems.filter((i) => i.severity === 'CRITICAL').length})
-            </button>
-
-            <button
-              className={`att-tab tab-warning ${attentionTab === 'WARNING' ? 'active' : ''}`}
-              onClick={() => setAttentionTab('WARNING')}
-            >
-              🟠 Warnings ({attentionItems.filter((i) => i.severity === 'WARNING').length})
-            </button>
-
-            <button
-              className={`att-tab tab-attention ${attentionTab === 'ATTENTION' ? 'active' : ''}`}
-              onClick={() => setAttentionTab('ATTENTION')}
-            >
-              🟡 Attention ({attentionItems.filter((i) => i.severity === 'ATTENTION').length})
-            </button>
-          </div>
-        </div>
-
-        <div className="attention-items-feed">
-          {filteredAttentionItems.length === 0 ? (
-            <div className="attention-empty-state">
-              <CheckCircle2 size={20} className="text-emerald" />
-              <span>No active critical alerts under this classification. All monitored accounts are in good standing.</span>
-            </div>
-          ) : (
-            filteredAttentionItems.map((item, idx) => (
-              <div key={idx} className="attention-card-row">
-                <div className={`att-severity-bar bar-${item.severity.toLowerCase()}`} />
-                <div className="att-content">
-                  <div className="att-customer-line">
-                    <strong className="att-cust-name">
-                      {item.customer_name || 'Unnamed Customer'}
-                    </strong>
-
-                    {item.customer_code && (
-                      <span className="att-cust-code-badge">
-                        {item.customer_code}
-                      </span>
-                    )}
-
-                    <span className="att-owner-tag">
-                      Owner: {item.account_owner_name || 'Unassigned'}
-                    </span>
-                  </div>
-                  <div className="att-issue-row">
-                    <span className="att-issue-title">
-                      {item.title || 'Customer attention required'}
-                    </span>
-
-                    {item.reason && (
-                      <span className="att-reason-short">
-                        — {item.reason.split('.')[0]}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="att-actions">
-                  <button
-                    className="btn-investigate"
-                    onClick={() => navigate(`/dashboard/customers/${item.customer_id}`)}
-                  >
-                    Investigate 360° <ArrowRight size={13} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
         </div>
       </div>
 

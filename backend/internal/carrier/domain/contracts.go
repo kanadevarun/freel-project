@@ -102,6 +102,7 @@ type BookingRequest struct {
 	ShipperName       string    `json:"shipper_name"`
 	ConsigneeName     string    `json:"consignee_name"`
 	CustomerReference string    `json:"customer_reference,omitempty"`
+	IdempotencyKey    string    `json:"idempotency_key,omitempty"`
 }
 
 // NormalizedBookingResult holds carrier booking response and allocation state.

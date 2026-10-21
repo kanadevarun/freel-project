@@ -8,6 +8,7 @@ import {
   SlidersHorizontal, Plus, TrendingUp
 } from 'lucide-react';
 import CustomDropdown from './CustomDropdown';
+import SHCBadge, { detectSHCCode } from '../../../components/common/SHCBadge';
 import './Shipments.css';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -565,7 +566,10 @@ export default function ShipmentsPage() {
                     {/* 1. Shipment Ref */}
                     <td>
                       <div className="sl-ref-cell">
-                        <span className="sl-ref-id">SH-{s.id}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span className="sl-ref-id">SH-{s.id}</span>
+                          <SHCBadge item={s} size="xs" variant="compact" />
+                        </div>
                         <span className="sl-ref-sub">📦 {s.container_numbers?.length || 1} Container{s.container_numbers?.length === 1 ? '' : 's'}</span>
                       </div>
                     </td>

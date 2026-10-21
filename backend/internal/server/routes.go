@@ -220,6 +220,10 @@ func (s *Server) setupRoutes() {
 				Post("/carrier-integrations/{id}/rates", s.carrierHandler.HandleGetRates)
 			r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionUpdate)).
 				Post("/carrier-integrations/{id}/booking", s.carrierHandler.HandleCreateBooking)
+			r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionRead)).
+				Post("/carrier-integrations/{id}/documents", s.carrierHandler.HandleGetDocuments)
+			r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionRead)).
+				Get("/carrier-integrations/{id}/documents", s.carrierHandler.HandleGetDocuments)
 
 			// Universal Audit Logs (Task 1)
 			r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionRead)).
@@ -275,6 +279,10 @@ func (s *Server) setupRoutes() {
 			Post("/carrier-integrations/{id}/rates", s.carrierHandler.HandleGetRates)
 		r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionUpdate)).
 			Post("/carrier-integrations/{id}/booking", s.carrierHandler.HandleCreateBooking)
+		r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionRead)).
+			Post("/carrier-integrations/{id}/documents", s.carrierHandler.HandleGetDocuments)
+		r.With(rbacGuard.RequirePermission(rbac.ResourceSettings, rbac.ActionRead)).
+			Get("/carrier-integrations/{id}/documents", s.carrierHandler.HandleGetDocuments)
 
 		// Leads Endpoints
 		r.Route("/leads", func(r chi.Router) {

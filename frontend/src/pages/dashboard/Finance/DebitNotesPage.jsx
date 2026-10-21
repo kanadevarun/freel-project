@@ -3,11 +3,12 @@ import {
   Plus, Search, RefreshCw, FileWarning,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
   AlertTriangle, CheckCircle2, Ban, Clock, DollarSign,
-  TrendingUp,
+  TrendingUp, Download,
 } from 'lucide-react';
 import api from '../../../services/api';
 import CreateDebitNoteModal from './components/CreateDebitNoteModal';
 import DebitNoteDetailsPanel from './components/DebitNoteDetailsPanel';
+import { generateDebitNotePDF } from './utils/debitNotePdfGenerator';
 import './DebitNotesPage.css';
 
 const STATUS_FILTERS = ['All', 'DRAFT', 'ISSUED', 'ACKNOWLEDGED', 'VOID'];
@@ -250,7 +251,7 @@ export default function DebitNotesPage() {
       </div>
 
       {/* Main content layout */}
-      <div className={`dn-content-layout ${selectedDN ? 'has-panel' : ''}`}>
+      <div className="dn-content-layout">
         {/* Table */}
         <div className="dn-table-wrap">
           {loading ? (
@@ -319,6 +320,14 @@ export default function DebitNotesPage() {
                       <td className="dn-date-cell">{formatDate(dn.due_date)}</td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div className="dn-row-actions">
+                          <button
+                            className="dn-row-btn dn-row-btn-pdf"
+                            title="Download PDF"
+                            onClick={() => generateDebitNotePDF(dn)}
+                          >
+                            <Download size={12} />
+                            PDF
+                          </button>
                           {dn.status === 'DRAFT' && (
                             <button
                               className="dn-row-btn dn-row-btn-issue"
@@ -379,10 +388,20 @@ export default function DebitNotesPage() {
             </>
           )}
         </div>
+      </div>
 
-        {/* Detail Panel */}
-        {selectedDN && (
-          <div className="dn-panel-wrap">
+      {/* Slide-over Drawer with Dark Backdrop Shadow */}
+      {selectedDN && (
+        <div
+          className="dn-drawer-backdrop"
+          onClick={() => setSelectedDN(null)}
+          data-testid="dn-drawer-backdrop"
+        >
+          <div
+            className="dn-drawer-container"
+            onClick={(e) => e.stopPropagation()}
+            id="dn-drawer-container"
+          >
             <DebitNoteDetailsPanel
               debitNote={selectedDN}
               onClose={() => setSelectedDN(null)}
@@ -390,12 +409,7 @@ export default function DebitNotesPage() {
               onVoid={handleVoid}
             />
           </div>
-        )}
-      </div>
-
-      {/* Drawer overlay for smaller screens */}
-      {selectedDN && (
-        <div className="dn-drawer-overlay-mobile" onClick={() => setSelectedDN(null)} />
+        </div>
       )}
 
       {/* Create Modal */}

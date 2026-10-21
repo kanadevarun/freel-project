@@ -317,6 +317,14 @@ func AddBookingsWorkspaceHandlers(
 		encodeAPIResponse,
 		options...,
 	).ServeHTTP)
+
+	// GET /api/v1/bookings/{bookingId}/carrier-documents — Retrieve Carrier Transport Documents (Task 3.5)
+	router.With(authMiddleware).Get("/{bookingId:[0-9]+}/carrier-documents", kitHttp.NewServer(
+		endpoints.GetCarrierDocumentsEP,
+		decodeGetCarrierDocumentsRequest,
+		encodeAPIResponse,
+		options...,
+	).ServeHTTP)
 }
 
 
@@ -871,6 +879,19 @@ func decodeSyncCarrierBookingRequest(_ context.Context, r *http.Request) (interf
 		BookingID: bookingID,
 	}, nil
 }
+
+func decodeGetCarrierDocumentsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	bookingIDStr := chi.URLParam(r, "bookingId")
+	bookingID, err := strconv.ParseInt(bookingIDStr, 10, 64)
+	if err != nil || bookingID <= 0 {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+
+	return &spec.GetCarrierDocumentsRequest{
+		BookingID: bookingID,
+	}, nil
+}
+
 
 
 

@@ -19,6 +19,7 @@ import ShipmentReadinessPredictiveIntelligenceCard from '../../../components/pre
 import NetworkPerformancePredictiveCard from '../../../components/predictions/NetworkPerformancePredictiveCard';
 import api from '../../../services/api';
 import { shipmentService } from '../../../services/shipmentService';
+import SHCBadge, { detectSHCCode } from '../../../components/common/SHCBadge';
 import {
   Ship,
   Package,
@@ -724,6 +725,9 @@ export default function ShipmentDetail() {
                       <CheckCircle2 size={11} /> Closed & Archived
                     </span>
                   )}
+
+                  {/* Special Handling Code (SHC) Badge */}
+                  <SHCBadge item={shipment} size="sm" />
                 </div>
               </div>
 
@@ -750,6 +754,9 @@ export default function ShipmentDetail() {
                     <Clock size={12} /> Updated: <strong>{formatDate(shipment.updated_at)}</strong>
                   </span>
                 )}
+                <span className="sd-meta-chip">
+                  <SHCBadge item={shipment} size="xs" variant="compact" />
+                </span>
               </div>
             </div>
           </div>
@@ -1037,29 +1044,6 @@ export default function ShipmentDetail() {
       {/* ── TAB 1: OVERVIEW ── */}
       {activeTab === 'overview' && (
         <div className="sd-tab-content sd-tab-overview">
-          {/* Phase 4 Predictive ETA & Delay Intelligence */}
-          <ShipmentPredictiveETACard shipmentId={id} authoritativeEta={shipment.eta} />
-
-          {/* Phase 4 Predictive Exception & Disruption Forecasting */}
-          <ShipmentDisruptionForecastCard
-            shipmentId={id}
-            onNavigateException={() => setActiveTab('exceptions')}
-          />
-
-          {/* Phase 4 Predictive Documentation, Readiness & Compliance Intelligence */}
-          <ShipmentReadinessPredictiveIntelligenceCard
-            shipmentId={id}
-            shipment={shipment}
-          />
-
-          {/* Phase 4 Predictive Carrier & Network Performance Intelligence */}
-          {shipment.carrier_scac && (
-            <NetworkPerformancePredictiveCard
-              entityType="carrier"
-              entityId={shipment.carrier_scac}
-            />
-          )}
-
           {/* Transit Journey Ocean Corridor Flow */}
           <div className="sd-journey-card">
             <div className="sd-journey-header">
@@ -1269,6 +1253,10 @@ export default function ShipmentDetail() {
                   <div className="sd-meta-item">
                     <div className="sd-meta-label">CARRIER SCAC</div>
                     <div className="sd-meta-val"><span className="sd-scac-tag">{shipment.carrier_scac || '—'}</span></div>
+                  </div>
+                  <div className="sd-meta-item">
+                    <div className="sd-meta-label">SPECIAL HANDLING (SHC)</div>
+                    <div className="sd-meta-val"><SHCBadge item={shipment} size="sm" /></div>
                   </div>
                   <div className="sd-meta-item">
                     <div className="sd-meta-label">VESSEL</div>

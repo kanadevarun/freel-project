@@ -329,6 +329,11 @@ type SyncCarrierBookingRequest struct {
 	BookingID int64 `json:"booking_id"`
 }
 
+type GetCarrierDocumentsRequest struct {
+	OrgID     int32 `json:"-"`
+	BookingID int64 `json:"booking_id"`
+}
+
 
 
 

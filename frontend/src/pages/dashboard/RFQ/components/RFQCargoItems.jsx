@@ -18,6 +18,7 @@ import {
   Calendar,
   MapPin
 } from 'lucide-react';
+import SHCBadge, { detectSHCCode } from '../../../../components/common/SHCBadge';
 
 const INCOTERMS_EXPLANATIONS = {
   FOB: {
@@ -338,8 +339,9 @@ export default function RFQCargoItems({ rfq, completeness, requirements, onSwitc
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            Line item #{item.id || idx + 1}
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[11px] text-slate-400">Line item #{item.id || idx + 1}</span>
+                            <SHCBadge item={item} size="xs" variant="compact" />
                           </div>
                         </td>
                         <td>
@@ -415,18 +417,8 @@ export default function RFQCargoItems({ rfq, completeness, requirements, onSwitc
 
                               {/* Special Handling / Compliance tags */}
                               <div className="flex items-center gap-2 pt-1">
-                                <span className="text-xs text-slate-500 font-semibold">Special Handling:</span>
-                                {isDG ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-rose-50 text-rose-700 text-xs font-bold rounded border border-rose-200">
-                                    <Flame className="w-3 h-3 text-rose-600" /> Dangerous Goods Declaration Required
-                                  </span>
-                                ) : isReefer ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-xs font-bold rounded border border-blue-200">
-                                    <Thermometer className="w-3 h-3 text-blue-600" /> Temperature-Controlled Cargo
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-slate-400 font-medium">Standard General Cargo (Ambient)</span>
-                                )}
+                                <span className="text-xs text-slate-500 font-semibold">Special Handling (SHC):</span>
+                                <SHCBadge item={item} size="sm" />
                               </div>
                             </div>
                           </td>

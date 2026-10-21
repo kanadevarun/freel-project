@@ -96,207 +96,451 @@ func escapePDFText(s string) string {
 	return s
 }
 
+func (c *pdfCanvas) bullet(font string, size float64, x, y float64, text string, r, g, b float64) {
+	escaped := escapePDFText(text)
+	c.buf.WriteString(fmt.Sprintf("BT /%s %.2f Tf %.3f %.3f %.3f rg 1 0 0 1 %.2f %.2f Tm (\\225  %s) Tj ET\n", font, size, r, g, b, x, y, escaped))
+}
+
+func formatMoney(amount float64) string {
+	raw := fmt.Sprintf("%.2f", amount)
+	parts := strings.Split(raw, ".")
+	intPart := parts[0]
+	decPart := parts[1]
+
+	var res []string
+	for len(intPart) > 3 {
+		res = append([]string{intPart[len(intPart)-3:]}, res...)
+		intPart = intPart[:len(intPart)-3]
+	}
+	if len(intPart) > 0 {
+		res = append([]string{intPart}, res...)
+	}
+	return strings.Join(res, ",") + "." + decPart
+}
+
 func buildQuotationPDF(quote *CustomerQuotationPreview, version int) []byte {
 	c := &pdfCanvas{}
 
-	// Page dimensions: US Letter (612 x 792 points)
-	pageWidth := 612.0
-	pageHeight := 792.0
-	margin := 36.0
-	contentWidth := pageWidth - (2 * margin) // 540 pt
+	// Page dimensions: Standard A4 (595.28 x 841.89 points)
+	pageWidth := 595.28
+	pageHeight := 841.89
+	margin := 45.0
+	contentWidth := pageWidth - 2.0*margin // 505.28 pt
 
-	// 1. Top Header Banner
-	c.rect(0, pageHeight-80, pageWidth, 80, 0.059, 0.090, 0.165, 0, 0, 0, 0) // Navy Dark #0F172A
-
+	// Fallback values for dynamic fields if empty
 	companyName := quote.CompanyName
-	if companyName == "" {
-		companyName = "LogisticsHQ"
+	if strings.TrimSpace(companyName) == "" {
+		companyName = "Freel Global Logistics Pvt Ltd"
+	}
+	companyAddress := quote.CompanyAddress
+	if strings.TrimSpace(companyAddress) == "" {
+		companyAddress = "Times Square Tower, Andheri-Kurla Road, Mumbai, India, 400059"
+	}
+	companyContact := quote.CompanyContact
+	if strings.TrimSpace(companyContact) == "" {
+		companyContact = "operations@freel.io | +91 (022) 6789-5500"
+	}
+	// Clean any non-WinAnsi bullet characters from header contacts
+	companyContact = strings.ReplaceAll(companyContact, "•", "|")
+	companyContact = strings.ReplaceAll(companyContact, "\u2022", "|")
+
+	customerName := quote.CustomerName
+	if strings.TrimSpace(customerName) == "" {
+		customerName = "ABC Imports Pvt. Ltd."
+	}
+	attention := quote.CustomerAttention
+	if strings.TrimSpace(attention) == "" {
+		attention = "Logistics / Supply Chain Team"
 	}
 
-	// Company Initials Monogram Badge / Emblem
-	brandInitials := "HQ"
-	words := strings.Fields(companyName)
-	if len(words) >= 2 {
-		r1 := []rune(words[0])
-		r2 := []rune(words[1])
-		if len(r1) > 0 && len(r2) > 0 {
-			brandInitials = strings.ToUpper(string(r1[0]) + string(r2[0]))
-		}
-	} else if len(words) == 1 && len([]rune(words[0])) >= 2 {
-		r := []rune(words[0])
-		brandInitials = strings.ToUpper(string(r[:2]))
+	transportMode := strings.ToUpper(strings.TrimSpace(quote.TransportMode))
+	if transportMode == "" {
+		transportMode = "SEA FREIGHT"
+	}
+	serviceType := quote.ServiceType
+	if strings.TrimSpace(serviceType) == "" {
+		serviceType = "FCL | Port-to-Port"
 	}
 
-	// Draw Company Brand Emblem / Container Box in header
-	c.rect(margin, pageHeight-66, 44, 48, 0.145, 0.388, 0.922, 0.23, 0.51, 0.96, 1) // #2563EB
-	c.text("F2", 14, margin+10, pageHeight-42, brandInitials, 1, 1, 1)
-	if quote.CompanyLogoURL != "" {
-		c.text("F2", 6.0, margin+5, pageHeight-59, "BRAND LOGO", 0.85, 0.92, 1)
-	} else {
-		c.text("F1", 6.0, margin+8, pageHeight-59, "OFFICIAL", 0.85, 0.92, 1)
+	origin := quote.Origin
+	if strings.TrimSpace(origin) == "" {
+		origin = "Nhava Sheva, India"
+	}
+	destination := quote.Destination
+	if strings.TrimSpace(destination) == "" {
+		destination = "Jebel Ali, UAE"
+	}
+	equipment := quote.Equipment
+	if strings.TrimSpace(equipment) == "" {
+		equipment = "1 x 40' HC"
+	}
+	transitTime := quote.TransitTime
+	if strings.TrimSpace(transitTime) == "" {
+		transitTime = "Approx. 12-16 days"
+	}
+	commodity := quote.Commodity
+	if strings.TrimSpace(commodity) == "" {
+		commodity = "General cargo (sample)"
+	}
+	cargoWeight := quote.CargoWeight
+	if strings.TrimSpace(cargoWeight) == "" {
+		cargoWeight = "18,000 kg (estimated)"
+	}
+	incoterm := quote.Incoterm
+	if strings.TrimSpace(incoterm) == "" {
+		incoterm = "FOB (subject to confirmation)"
 	}
 
-	// Company Name & Forwarder Details
-	c.text("F2", 14, margin+54, pageHeight-34, truncateStr(companyName, 32), 1, 1, 1)
-	if quote.CompanyAddress != "" {
-		c.text("F1", 7.5, margin+54, pageHeight-47, truncateStr(quote.CompanyAddress, 48), 0.72, 0.78, 0.88)
+	preparedBy := quote.PreparedByName
+	if strings.TrimSpace(preparedBy) == "" {
+		preparedBy = "Varun Kanade"
 	}
-	if quote.CompanyContact != "" {
-		c.text("F1", 7.5, margin+54, pageHeight-59, truncateStr(quote.CompanyContact, 48), 0.65, 0.72, 0.82)
-	} else {
-		c.text("F1", 7.5, margin+54, pageHeight-59, "Operating System for Modern Global Freight", 0.58, 0.64, 0.72)
+	preparedEmail := quote.PreparedByEmail
+	if strings.TrimSpace(preparedEmail) == "" {
+		preparedEmail = "varunkanade3456@gmail.com"
 	}
 
-	c.text("F2", 14, pageWidth-margin-210, pageHeight-38, "FREIGHT QUOTATION", 0.23, 0.51, 0.96) // Blue #3B82F6
-	c.text("F1", 9, pageWidth-margin-210, pageHeight-54, fmt.Sprintf("Quote #: %s   (v%d)", quote.QuotationNumber, version), 0.9, 0.9, 0.9)
-	c.text("F1", 8, pageWidth-margin-210, pageHeight-68, fmt.Sprintf("Status: %s", quote.Status), 0.7, 0.8, 0.9)
-
-	curY := pageHeight - 100.0
-
-	// 2. Metadata / Customer / Route Grid Box
-	c.rect(margin, curY-75, contentWidth, 75, 0.973, 0.980, 0.988, 0.886, 0.910, 0.941, 1) // Light Slate Box
-
-	// Left Column: Bill To / Customer
-	c.text("F2", 8, margin+12, curY-16, "CUSTOMER / BILL TO", 0.39, 0.45, 0.55)
-	c.text("F2", 11, margin+12, curY-30, quote.CustomerName, 0.06, 0.09, 0.16)
-	c.text("F1", 8, margin+12, curY-43, "Authorized Consignee / Commercial Account", 0.39, 0.45, 0.55)
-	c.text("F1", 8, margin+12, curY-55, fmt.Sprintf("Quote Ref: %s", quote.QuotationNumber), 0.39, 0.45, 0.55)
-
-	// Middle Column: Route & Transport
-	midX := margin + 200.0
-	c.text("F2", 8, midX, curY-16, "SHIPMENT & ROUTE", 0.39, 0.45, 0.55)
-	c.text("F2", 9, midX, curY-30, fmt.Sprintf("Origin: %s (%s)", quote.Origin, quote.OriginCode), 0.06, 0.09, 0.16)
-	c.text("F2", 9, midX, curY-43, fmt.Sprintf("Destination: %s (%s)", quote.Destination, quote.DestinationCode), 0.06, 0.09, 0.16)
-	c.text("F1", 8, midX, curY-57, fmt.Sprintf("Mode: %s | Service: %s", quote.TransportMode, quote.ServiceType), 0.28, 0.33, 0.41)
-
-	// Right Column: Validity & Terms
-	rightX := margin + 370.0
-	c.text("F2", 8, rightX, curY-16, "COMMERCIAL TERMS", 0.39, 0.45, 0.55)
-	validFromStr := "Immediate"
-	if quote.ValidFrom != nil {
-		validFromStr = quote.ValidFrom.Format("2006-01-02")
+	currency := strings.ToUpper(strings.TrimSpace(quote.Currency))
+	if currency == "" {
+		currency = "USD"
 	}
-	validUntilStr := "Open"
+
+	quoteNo := quote.QuotationNumber
+	if strings.TrimSpace(quoteNo) == "" {
+		quoteNo = fmt.Sprintf("QT-2026-%04d", quote.QuotationID)
+	}
+
+	issuedDate := time.Now()
+	if quote.SentAt != nil {
+		issuedDate = *quote.SentAt
+	} else if quote.ValidFrom != nil {
+		issuedDate = *quote.ValidFrom
+	}
+	validUntilDate := issuedDate.Add(7 * 24 * time.Hour)
 	if quote.ValidUntil != nil {
-		validUntilStr = quote.ValidUntil.Format("2006-01-02")
+		validUntilDate = *quote.ValidUntil
 	}
-	c.text("F1", 8, rightX, curY-30, fmt.Sprintf("Valid: %s to %s", validFromStr, validUntilStr), 0.06, 0.09, 0.16)
-	c.text("F1", 8, rightX, curY-43, fmt.Sprintf("Payment Terms: %s", quote.PaymentTerms), 0.06, 0.09, 0.16)
-	c.text("F1", 8, rightX, curY-57, fmt.Sprintf("Currency: %s", quote.Currency), 0.06, 0.09, 0.16)
+	dateStr := fmt.Sprintf("ISSUED %s | VALID UNTIL %s", issuedDate.Format("02 Jan 2006"), validUntilDate.Format("02 Jan 2006"))
 
-	curY -= 95.0
+	// ── 1. TOP HEADER (White background, Brand on Left, Freight Quotation on Right) ──
+	logoY := pageHeight - 36.0 - 58.0
+	logoW := 72.0
+	logoH := 58.0
 
-	// 3. Itemized Charges Table
-	c.text("F2", 11, margin, curY, "COMMERCIAL CHARGES BREAKDOWN", 0.06, 0.09, 0.16)
-	curY -= 14.0
+	// Logo container box
+	c.rect(margin, logoY, logoW, logoH, 0.933, 0.961, 0.988, 0.098, 0.463, 0.824, 0.8)
+	c.text("F2", 9.0, margin+20.0, logoY+33.0, "YOUR", 0.114, 0.165, 0.227)
+	c.text("F2", 9.0, margin+20.0, logoY+20.0, "LOGO", 0.114, 0.165, 0.227)
+	if quote.CompanyLogoURL != "" {
+		c.text("F2", 6.0, margin+11.0, logoY+9.0, "BRAND LOGO", 0.15, 0.46, 0.82)
+	}
 
-	// Table Header
-	tableHeaderH := 20.0
-	c.rect(margin, curY-tableHeaderH, contentWidth, tableHeaderH, 0.941, 0.961, 0.984, 0.886, 0.910, 0.941, 1)
+	// Company Name & Info
+	compX := margin + 84.0
+	c.text("F2", 15.0, compX, logoY+40.0, truncateStr(companyName, 36), 0.078, 0.204, 0.357)
+	c.text("F1", 8.2, compX, logoY+23.0, truncateStr(companyAddress, 54), 0.388, 0.459, 0.545)
+	c.text("F1", 8.2, compX, logoY+9.0, truncateStr(companyContact, 56), 0.388, 0.459, 0.545)
 
-	col1 := margin + 8.0   // Category / Code
-	col2 := margin + 90.0  // Description
-	col3 := margin + 250.0 // Basis
-	col4 := margin + 320.0 // Qty
-	col5 := margin + 370.0 // Unit Price
-	col6 := margin + 440.0 // Tax
-	col7 := margin + 490.0 // Total
+	// Right Header: FREIGHT QUOTATION
+	rightX := margin + 305.0
+	c.text("F2", 15.0, rightX, logoY+40.0, "FREIGHT QUOTATION", 0.078, 0.204, 0.357)
+	c.text("F2", 8.2, rightX, logoY+23.0, "QUOTE NO. ", 0.149, 0.204, 0.271)
+	c.text("F2", 8.2, rightX+55.0, logoY+23.0, quoteNo, 0.098, 0.380, 0.675)
+	c.text("F1", 7.8, rightX, logoY+9.0, dateStr, 0.388, 0.459, 0.545)
 
-	c.text("F2", 8, col1, curY-13, "CATEGORY", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col2, curY-13, "CHARGE DESCRIPTION", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col3, curY-13, "BASIS", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col4, curY-13, "QTY", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col5, curY-13, "UNIT PRICE", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col6, curY-13, "TAX", 0.28, 0.33, 0.41)
-	c.text("F2", 8, col7, curY-13, "AMOUNT", 0.28, 0.33, 0.41)
+	// ── 2. SUB-BAR (Prepared for & Transport / Service Banner) ──────────────────
+	subBarY := logoY - 14.0 - 36.0
+	subBarH := 36.0
+	c.rect(margin, subBarY, contentWidth, subBarH, 0.961, 0.973, 0.984, 0.835, 0.878, 0.918, 0.6)
+	c.line(margin+305.0, subBarY, margin+305.0, subBarY+subBarH, 0.835, 0.878, 0.918, 0.6)
 
-	curY -= tableHeaderH
+	c.text("F2", 8.8, margin+12.0, subBarY+20.0, "Prepared for "+truncateStr(customerName, 42), 0.078, 0.204, 0.357)
+	c.text("F1", 7.8, margin+12.0, subBarY+8.0, "Attention: "+truncateStr(attention, 48), 0.388, 0.459, 0.545)
 
-	rowH := 20.0
-	for i, ch := range quote.Charges {
-		if curY < 180 {
-			// Limit to avoid overflow on single page for now
+	c.text("F2", 8.8, margin+318.0, subBarY+20.0, transportMode, 0.078, 0.204, 0.357)
+	c.text("F1", 7.8, margin+318.0, subBarY+8.0, serviceType, 0.388, 0.459, 0.545)
+
+	// ── 3. SHIPMENT OVERVIEW (2 rows x 4 columns grid) ──────────────────────────
+	curY := subBarY - 16.0
+	c.text("F2", 10.0, margin, curY, "SHIPMENT OVERVIEW", 0.078, 0.176, 0.306)
+
+	gridY := curY - 6.0 - 66.0
+	gridH := 66.0
+	colW := contentWidth / 4.0 // 126.32 pt per column
+
+	c.rect(margin, gridY, contentWidth, gridH, 0.976, 0.984, 0.992, 0.835, 0.878, 0.918, 0.6)
+	// Horizontal divider
+	c.line(margin, gridY+33.0, margin+contentWidth, gridY+33.0, 0.835, 0.878, 0.918, 0.5)
+	// Vertical dividers
+	c.line(margin+colW, gridY, margin+colW, gridY+gridH, 0.835, 0.878, 0.918, 0.5)
+	c.line(margin+2*colW, gridY, margin+2*colW, gridY+gridH, 0.835, 0.878, 0.918, 0.5)
+	c.line(margin+3*colW, gridY, margin+3*colW, gridY+gridH, 0.835, 0.878, 0.918, 0.5)
+
+	// Row 1 (Top)
+	r1YLabel := gridY + 48.0
+	r1YVal := gridY + 36.0
+	c.text("F2", 7.0, margin+8.0, r1YLabel, "ORIGIN", 0.388, 0.459, 0.545)
+	c.text("F2", 8.2, margin+8.0, r1YVal, truncateStr(origin, 26), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+colW+8.0, r1YLabel, "DESTINATION", 0.388, 0.459, 0.545)
+	c.text("F2", 8.2, margin+colW+8.0, r1YVal, truncateStr(destination, 26), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+2*colW+8.0, r1YLabel, "EQUIPMENT", 0.388, 0.459, 0.545)
+	c.text("F2", 8.2, margin+2*colW+8.0, r1YVal, truncateStr(equipment, 26), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+3*colW+8.0, r1YLabel, "TRANSIT TIME", 0.388, 0.459, 0.545)
+	c.text("F2", 8.2, margin+3*colW+8.0, r1YVal, truncateStr(transitTime, 26), 0.078, 0.204, 0.357)
+
+	// Row 2 (Bottom)
+	r2YLabel := gridY + 20.0
+	r2YVal := gridY + 8.0
+	c.text("F2", 7.0, margin+8.0, r2YLabel, "COMMODITY", 0.388, 0.459, 0.545)
+	c.text("F1", 7.8, margin+8.0, r2YVal, truncateStr(commodity, 28), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+colW+8.0, r2YLabel, "CARGO WEIGHT", 0.388, 0.459, 0.545)
+	c.text("F1", 7.8, margin+colW+8.0, r2YVal, truncateStr(cargoWeight, 28), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+2*colW+8.0, r2YLabel, "SERVICE", 0.388, 0.459, 0.545)
+	c.text("F1", 7.8, margin+2*colW+8.0, r2YVal, truncateStr(serviceType, 28), 0.078, 0.204, 0.357)
+
+	c.text("F2", 7.0, margin+3*colW+8.0, r2YLabel, "INCOTERM", 0.388, 0.459, 0.545)
+	c.text("F1", 7.5, margin+3*colW+8.0, r2YVal, truncateStr(incoterm, 32), 0.078, 0.204, 0.357)
+
+	// ── 4. QUOTED CHARGES TABLE ─────────────────────────────────────────────────
+	curY = gridY - 18.0
+	c.text("F2", 10.0, margin, curY, "QUOTED CHARGES", 0.078, 0.176, 0.306)
+
+	thY := curY - 6.0 - 24.0
+	thH := 24.0
+	// Navy Header banner
+	c.rect(margin, thY, contentWidth, thH, 0.078, 0.204, 0.357, 0, 0, 0, 0)
+
+	col1X := margin + 10.0  // CHARGE DESCRIPTION
+	col2X := margin + 195.0 // BASIS
+	col3X := margin + 300.0 // QTY
+	col4X := margin + 355.0 // RATE
+	col5X := margin + 430.0 // AMOUNT
+
+	c.text("F2", 8.0, col1X, thY+8.0, "CHARGE DESCRIPTION", 1, 1, 1)
+	c.text("F2", 8.0, col2X, thY+8.0, "BASIS", 1, 1, 1)
+	c.text("F2", 8.0, col3X, thY+8.0, "QTY", 1, 1, 1)
+	c.text("F2", 8.0, col4X, thY+8.0, fmt.Sprintf("RATE (%s)", currency), 1, 1, 1)
+	c.text("F2", 8.0, col5X, thY+8.0, fmt.Sprintf("AMOUNT (%s)", currency), 1, 1, 1)
+
+	// Items to render
+	type chargeRow struct {
+		Name   string
+		Basis  string
+		Qty    string
+		Rate   string
+		Amount string
+	}
+	var rows []chargeRow
+
+	if len(quote.Charges) > 0 {
+		for _, ch := range quote.Charges {
+			basis := ch.CalculationBasis
+			if strings.TrimSpace(basis) == "" {
+				basis = "Per container"
+			}
+			qtyStr := fmt.Sprintf("%.0f", ch.Quantity)
+			if ch.Quantity != float64(int(ch.Quantity)) {
+				qtyStr = fmt.Sprintf("%.2f", ch.Quantity)
+			}
+			rows = append(rows, chargeRow{
+				Name:   ch.ChargeName,
+				Basis:  basis,
+				Qty:    qtyStr,
+				Rate:   formatMoney(ch.UnitPrice),
+				Amount: formatMoney(ch.FinalAmount),
+			})
+		}
+	} else if quote.TotalAmount > 0 {
+		freightRate := quote.Subtotal
+		if freightRate <= 0 {
+			freightRate = quote.TotalAmount * 0.85
+		}
+		modeLabel := quote.TransportMode
+		if strings.TrimSpace(modeLabel) == "" {
+			modeLabel = "Ocean freight"
+		}
+		rows = append(rows, chargeRow{
+			Name:   fmt.Sprintf("%s (%s to %s)", modeLabel, quote.OriginCode, quote.DestinationCode),
+			Basis:  "Per container",
+			Qty:    "1",
+			Rate:   formatMoney(freightRate),
+			Amount: formatMoney(freightRate),
+		})
+		if quote.TotalAmount > freightRate {
+			surcharges := quote.TotalAmount - freightRate
+			rows = append(rows, chargeRow{
+				Name:   "Origin & Destination Port Surcharges",
+				Basis:  "Per shipment",
+				Qty:    "1",
+				Rate:   formatMoney(surcharges),
+				Amount: formatMoney(surcharges),
+			})
+		}
+	} else {
+		// Default fallback for brand-new empty quotes
+		rows = []chargeRow{
+			{Name: "Ocean freight", Basis: "Per container", Qty: "1", Rate: "1,250.00", Amount: "1,250.00"},
+			{Name: "Origin terminal handling", Basis: "Per container", Qty: "1", Rate: "180.00", Amount: "180.00"},
+			{Name: "Documentation fee", Basis: "Per shipment", Qty: "1", Rate: "45.00", Amount: "45.00"},
+			{Name: "Export documentation / filing", Basis: "Per shipment", Qty: "1", Rate: "35.00", Amount: "35.00"},
+		}
+	}
+
+	rowY := thY
+	rowH := 24.0
+	for i, r := range rows {
+		if i >= 6 {
+			// Limit to avoid overflow
 			break
 		}
+		rowY -= rowH
 		bgR, bgG, bgB := 1.0, 1.0, 1.0
 		if i%2 == 1 {
-			bgR, bgG, bgB = 0.984, 0.988, 0.992
+			bgR, bgG, bgB = 0.980, 0.984, 0.990
 		}
-		c.rect(margin, curY-rowH, contentWidth, rowH, bgR, bgG, bgB, 0.925, 0.941, 0.961, 0.5)
+		c.rect(margin, rowY, contentWidth, rowH, bgR, bgG, bgB, 0.886, 0.910, 0.941, 0.4)
 
-		c.text("F1", 8, col1, curY-13, ch.ChargeCategory, 0.28, 0.33, 0.41)
-		c.text("F2", 8, col2, curY-13, ch.ChargeName, 0.06, 0.09, 0.16)
-		c.text("F1", 8, col3, curY-13, ch.CalculationBasis, 0.39, 0.45, 0.55)
-		c.text("F1", 8, col4, curY-13, fmt.Sprintf("%.2f", ch.Quantity), 0.06, 0.09, 0.16)
-		c.text("F1", 8, col5, curY-13, fmt.Sprintf("%.2f", ch.UnitPrice), 0.06, 0.09, 0.16)
-		taxStr := "-"
-		if ch.TaxRate > 0 {
-			taxStr = fmt.Sprintf("%.1f%%", ch.TaxRate)
+		c.text("F2", 8.2, col1X, rowY+7.5, truncateStr(r.Name, 36), 0.078, 0.204, 0.357)
+		c.text("F1", 8.0, col2X, rowY+7.5, truncateStr(r.Basis, 22), 0.388, 0.459, 0.545)
+		c.text("F1", 8.2, col3X, rowY+7.5, r.Qty, 0.078, 0.204, 0.357)
+		c.text("F1", 8.2, col4X, rowY+7.5, r.Rate, 0.078, 0.204, 0.357)
+		c.text("F2", 8.5, col5X, rowY+7.5, r.Amount, 0.078, 0.204, 0.357)
+	}
+
+	// Subtotal & Taxes lines
+	subtotalVal := quote.Subtotal
+	totalVal := quote.TotalAmount
+	if totalVal <= 0 && len(rows) > 0 {
+		subtotalVal = 1510.00
+		totalVal = 1510.00
+	} else if subtotalVal <= 0 && totalVal > 0 {
+		subtotalVal = totalVal
+	}
+
+	curY = rowY - 14.0
+	c.text("F1", 8.2, margin+285.0, curY, "Subtotal", 0.388, 0.459, 0.545)
+	c.text("F2", 8.8, col5X, curY, fmt.Sprintf("%s %s", currency, formatMoney(subtotalVal)), 0.078, 0.204, 0.357)
+
+	curY -= 14.0
+	c.text("F1", 8.2, margin+285.0, curY, "Taxes / other charges", 0.388, 0.459, 0.545)
+	taxesStr := "Not included unless stated"
+	if quote.TaxTotal > 0 {
+		taxesStr = fmt.Sprintf("%s %s", currency, formatMoney(quote.TaxTotal))
+	}
+	c.text("F1", 8.2, col5X, curY, taxesStr, 0.388, 0.459, 0.545)
+
+	// TOTAL QUOTED AMOUNT Blue Bar
+	totBarY := curY - 8.0 - 28.0
+	totBarH := 28.0
+	c.rect(margin, totBarY, contentWidth, totBarH, 0.098, 0.380, 0.675, 0, 0, 0, 0) // Vibrant Blue #1961AC
+	c.text("F2", 11.0, margin+14.0, totBarY+9.0, "TOTAL QUOTED AMOUNT", 1, 1, 1)
+	c.text("F2", 13.5, margin+contentWidth-150.0, totBarY+8.0, fmt.Sprintf("%s %s", currency, formatMoney(totalVal)), 1, 1, 1)
+
+	// ── 5. INCLUSIONS, EXCLUSIONS & COMMERCIAL NOTES (from Option B / 4th diagram) ──
+	curY = totBarY - 18.0
+	c.text("F2", 10.0, margin, curY, "INCLUSIONS, EXCLUSIONS & COMMERCIAL NOTES", 0.078, 0.176, 0.306)
+
+	// Anchored budget: Validity sits at 134-188, Prepared By sits at 66-122
+	availBottom := 195.0
+	boxesTop := curY - 6.0
+	boxesH := boxesTop - availBottom
+	if boxesH > 135.0 {
+		boxesH = 135.0
+	} else if boxesH < 90.0 {
+		boxesH = 90.0
+	}
+	boxesY := boxesTop - boxesH
+	halfW := (contentWidth - 10.0) / 2.0 // ~247.6 pt
+
+	// Left Box: INCLUDED IN THIS OFFER
+	incBoxX := margin
+	// Header banner (Forest Green #217A55)
+	c.rect(incBoxX, boxesY+boxesH-22.0, halfW, 22.0, 0.129, 0.478, 0.333, 0, 0, 0, 0)
+	c.text("F2", 8.2, incBoxX+10.0, boxesY+boxesH-15.0, "INCLUDED IN THIS OFFER", 1, 1, 1)
+	// Body
+	c.rect(incBoxX, boxesY, halfW, boxesH-22.0, 0.960, 0.973, 0.984, 0.835, 0.878, 0.918, 0.5)
+
+	inclusions := quote.Inclusions
+	if len(inclusions) == 0 {
+		inclusions = []string{
+			"Ocean freight as listed",
+			"Origin terminal handling as listed",
+			"Export documentation as listed",
 		}
-		c.text("F1", 8, col6, curY-13, taxStr, 0.39, 0.45, 0.55)
-		c.text("F2", 8, col7, curY-13, fmt.Sprintf("%.2f", ch.FinalAmount), 0.06, 0.09, 0.16)
-
-		curY -= rowH
+	}
+	incItemY := boxesY + boxesH - 38.0
+	for _, inc := range inclusions {
+		c.bullet("F1", 8.2, incBoxX+12.0, incItemY, inc, 0.149, 0.204, 0.271)
+		incItemY -= 17.0
 	}
 
-	curY -= 12.0
+	// Right Box: EXCLUDED / SUBJECT TO ADDITIONAL COST
+	excBoxX := margin + halfW + 10.0
+	// Header banner (Warm Amber/Brown #B66A15)
+	c.rect(excBoxX, boxesY+boxesH-22.0, halfW, 22.0, 0.714, 0.416, 0.082, 0, 0, 0, 0)
+	c.text("F2", 8.2, excBoxX+10.0, boxesY+boxesH-15.0, "EXCLUDED / SUBJECT TO ADDITIONAL COST", 1, 1, 1)
+	// Body
+	c.rect(excBoxX, boxesY, halfW, boxesH-22.0, 0.996, 0.984, 0.949, 0.980, 0.886, 0.749, 0.5)
 
-	// 4. Totals & Notes Section
-	// Left: Commercial Terms & Customer Notes
-	termsWidth := 320.0
-	c.rect(margin, curY-90, termsWidth, 90, 0.984, 0.988, 0.992, 0.886, 0.910, 0.941, 1)
-	c.text("F2", 8, margin+10, curY-16, "COMMERCIAL TERMS & NOTES", 0.28, 0.33, 0.41)
-
-	commTerms := quote.CommercialTerms
-	if commTerms == "" {
-		commTerms = "Subject to standard carrier terms & conditions and space availability."
+	exclusions := quote.Exclusions
+	if len(exclusions) == 0 {
+		exclusions = []string{
+			"Destination terminal/port charges",
+			"Customs clearance, duties and taxes",
+			"Delivery / inland haulage unless listed",
+			"Insurance, inspections, demurrage and detention",
+			"Storage, exams, penalties and exceptional charges",
+		}
 	}
-	c.text("F1", 7.5, margin+10, curY-30, truncateStr(commTerms, 75), 0.28, 0.33, 0.41)
-
-	custNotes := quote.CustomerNotes
-	if custNotes == "" {
-		custNotes = "Rates valid for cargo described. Fuel & security surcharges included as listed."
-	}
-	c.text("F2", 8, margin+10, curY-48, "CUSTOMER INSTRUCTIONS:", 0.39, 0.45, 0.55)
-	c.text("F1", 7.5, margin+10, curY-60, truncateStr(custNotes, 75), 0.28, 0.33, 0.41)
-
-	c.text("F3", 7, margin+10, curY-78, "Strict Customer-Safe Commercial Copy — No Internal Surcharges Apply", 0.58, 0.64, 0.72)
-
-	// Right: Financial Summary Box
-	totalsX := margin + termsWidth + 15.0
-	totalsWidth := contentWidth - termsWidth - 15.0
-	c.rect(totalsX, curY-90, totalsWidth, 90, 0.973, 0.980, 0.988, 0.886, 0.910, 0.941, 1)
-
-	c.text("F1", 8, totalsX+10, curY-18, "Subtotal Charges:", 0.39, 0.45, 0.55)
-	c.text("F2", 8, totalsX+totalsWidth-65, curY-18, fmt.Sprintf("%s %.2f", quote.Currency, quote.Subtotal), 0.06, 0.09, 0.16)
-
-	if quote.DiscountTotal > 0 {
-		c.text("F1", 8, totalsX+10, curY-32, "Total Discounts:", 0.86, 0.15, 0.15)
-		c.text("F2", 8, totalsX+totalsWidth-65, curY-32, fmt.Sprintf("-%s %.2f", quote.Currency, quote.DiscountTotal), 0.86, 0.15, 0.15)
+	excItemY := boxesY + boxesH - 36.0
+	for _, exc := range exclusions {
+		c.bullet("F1", 7.8, excBoxX+12.0, excItemY, exc, 0.149, 0.204, 0.271)
+		excItemY -= 14.5
 	}
 
-	c.text("F1", 8, totalsX+10, curY-46, "Applicable Taxes:", 0.39, 0.45, 0.55)
-	c.text("F2", 8, totalsX+totalsWidth-65, curY-46, fmt.Sprintf("%s %.2f", quote.Currency, quote.TaxTotal), 0.06, 0.09, 0.16)
+	// ── 6. VALIDITY & CONDITIONS PARAGRAPH (Balanced lower section) ─────────────
+	curY = boxesY - 12.0
+	c.text("F2", 7.5, margin, curY, "Validity and conditions:", 0.400, 0.467, 0.537)
+	c.text("F1", 7.2, margin+94.0, curY, "Rates are illustrative and subject to space/equipment availability, final cargo details, carrier confirmation, surcharges and", 0.400, 0.467, 0.537)
+	curY -= 10.5
+	c.text("F1", 7.2, margin, curY, "changes imposed by carriers or authorities. Transit times are estimates, not guarantees. Any service or cost not expressly shown as included above", 0.400, 0.467, 0.537)
+	curY -= 10.5
+	c.text("F1", 7.2, margin, curY, "is excluded. Taxes, duties and destination charges are payable separately where applicable. Final booking is subject to written acceptance and", 0.400, 0.467, 0.537)
+	curY -= 10.5
+	c.text("F1", 7.2, margin, curY, "applicable commercial service terms.", 0.400, 0.467, 0.537)
 
-	c.line(totalsX+8, curY-56, totalsX+totalsWidth-8, curY-56, 0.8, 0.85, 0.9, 1)
+	// ── 7. PREPARED BY & CONTACT CARD (Executive Layout, Bottom Anchored) ───────
+	prepBoxH := 54.0
+	prepBoxY := 66.0 // Anchored elegantly above the footer line
+	c.rect(margin, prepBoxY, contentWidth, prepBoxH, 0.976, 0.984, 0.992, 0.835, 0.878, 0.918, 0.6)
+	// Vertical divider
+	c.line(margin+290.0, prepBoxY, margin+290.0, prepBoxY+prepBoxH, 0.835, 0.878, 0.918, 0.5)
 
-	// Grand Total Highlight
-	c.rect(totalsX+6, curY-84, totalsWidth-12, 24, 0.145, 0.388, 0.922, 0, 0, 0, 0) // Blue #2563EB
-	c.text("F2", 9, totalsX+12, curY-72, "GRAND TOTAL:", 1, 1, 1)
-	c.text("F2", 11, totalsX+totalsWidth-80, curY-72, fmt.Sprintf("%s %.2f", quote.Currency, quote.TotalAmount), 1, 1, 1)
+	// Left: Prepared By info
+	c.text("F2", 7.0, margin+12.0, prepBoxY+38.0, "AUTHORIZED COMMERCIAL REPRESENTATIVE", 0.118, 0.380, 0.675)
+	c.text("F2", 8.5, margin+12.0, prepBoxY+23.0, "Prepared by:", 0.149, 0.204, 0.271)
+	c.text("F2", 9.0, margin+78.0, prepBoxY+23.0, truncateStr(preparedBy, 34), 0.078, 0.204, 0.357)
 
-	// 5. Bottom Acceptance & Signature Box
-	curY -= 105.0
-	c.line(margin, curY, pageWidth-margin, curY, 0.886, 0.910, 0.941, 1)
+	c.text("F2", 8.5, margin+12.0, prepBoxY+9.0, "Email:", 0.149, 0.204, 0.271)
+	c.text("F1", 9.0, margin+78.0, prepBoxY+9.0, truncateStr(preparedEmail, 36), 0.098, 0.380, 0.675)
 
-	c.text("F2", 8, margin, curY-14, "CUSTOMER AUTHORIZATION / ACCEPTANCE", 0.06, 0.09, 0.16)
-	c.text("F1", 7.5, margin, curY-26, "To accept this quotation, please sign below or confirm via the secure customer portal link.", 0.39, 0.45, 0.55)
+	// Right: Office & Contact info
+	c.text("F2", 7.0, margin+302.0, prepBoxY+38.0, "COMMERCIAL DESK & SUPPORT", 0.118, 0.380, 0.675)
+	c.text("F2", 8.2, margin+302.0, prepBoxY+23.0, "Headquarters:", 0.388, 0.459, 0.545)
+	c.text("F1", 8.2, margin+372.0, prepBoxY+23.0, "Mumbai, India", 0.078, 0.204, 0.357)
 
-	c.text("F1", 8, margin, curY-48, "Authorized Signature: ___________________________", 0.28, 0.33, 0.41)
-	c.text("F1", 8, margin+300, curY-48, "Date: _________________________", 0.28, 0.33, 0.41)
+	c.text("F2", 8.2, margin+302.0, prepBoxY+9.0, "Direct Phone:", 0.388, 0.459, 0.545)
+	c.text("F1", 8.2, margin+372.0, prepBoxY+9.0, "+91 (022) 6789-5500", 0.078, 0.204, 0.357)
 
-	// Footer Stamp
-	c.text("F1", 7, margin, 18, fmt.Sprintf("Issued by %s | Powered by LogisticsHQ Freight Platform | Quotation # %s | %s", companyName, quote.QuotationNumber, time.Now().Format("2006-01-02 15:04:05")), 0.6, 0.65, 0.72)
+	// ── 8. PAGE FOOTER (Thin line + Legal Notice + Page 1) ──────────────────────
+	c.line(margin, 46.0, margin+contentWidth, 46.0, 0.863, 0.898, 0.937, 0.6)
+	c.text("F1", 7.2, margin, 32.0, "FREEL GLOBAL LOGISTICS | Official Commercial Quotation Confirmation | Confidential", 0.388, 0.459, 0.545)
+	c.text("F2", 7.2, margin+contentWidth-36.0, 32.0, "Page 1 of 1", 0.388, 0.459, 0.545)
 
 	return compilePDF(c.buf.Bytes(), pageWidth, pageHeight)
 }

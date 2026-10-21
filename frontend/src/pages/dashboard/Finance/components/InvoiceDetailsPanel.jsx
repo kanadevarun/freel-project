@@ -24,17 +24,14 @@ import {
   ShieldCheck,
   Receipt,
   FileSpreadsheet,
-  ArrowRight,
-  Sparkles
+  ArrowRight
 } from 'lucide-react';
 import InvoiceSummaryTab from './tabs/InvoiceSummaryTab';
 import InvoiceItemsTab from './tabs/InvoiceItemsTab';
 import InvoicePaymentsTab from './tabs/InvoicePaymentsTab';
 import InvoiceDocumentsTab from './tabs/InvoiceDocumentsTab';
 import InvoiceHistoryTab from './tabs/InvoiceHistoryTab';
-import InvoiceFinanceIntelligenceSection from './InvoiceFinanceIntelligenceSection';
-import FinanceCollectionsAutomationSection from './FinanceCollectionsAutomationSection';
-import FinanceCollectionsPredictiveIntelligenceCard from '../../../../components/predictions/FinanceCollectionsPredictiveIntelligenceCard';
+import { generateInvoicePDF } from '../utils/invoicePdfGenerator';
 import './InvoiceDetailsPanel.css';
 
 export default function InvoiceDetailsPanel({
@@ -49,6 +46,11 @@ export default function InvoiceDetailsPanel({
   const [copiedField, setCopiedField] = useState(null);
 
   if (!invoice) return null;
+
+  const handleDownloadPdf = () => {
+    generateInvoicePDF(invoice);
+    onActionClick?.('downloadPdf', invoice);
+  };
 
   const handleCopy = (text, fieldName) => {
     if (!text) return;
@@ -167,8 +169,9 @@ export default function InvoiceDetailsPanel({
 
           <button
             className="panel-header-btn"
-            onClick={() => onActionClick?.('downloadPdf', invoice)}
+            onClick={handleDownloadPdf}
             title="Download PDF"
+            id="inv-header-download-pdf-btn"
           >
             <Download size={14} />
           </button>
@@ -321,8 +324,6 @@ export default function InvoiceDetailsPanel({
         <div className="details-subtabs-nav">
           {[
             { id: 'Summary', label: 'Summary' },
-            { id: 'Collections', label: 'Collections AI' },
-            { id: 'Intelligence', label: 'Intelligence' },
             { id: 'Items', label: 'Line Items', count: invoice.lineItems?.length || 0 },
             { id: 'Payments', label: 'Payments', count: invoice.payments?.length || 0 },
             { id: 'Documents', label: 'Documents', count: invoice.documents?.length || 0 },
@@ -346,49 +347,6 @@ export default function InvoiceDetailsPanel({
         <div className="details-subtab-content">
           {activeTab === 'Summary' && (
             <InvoiceSummaryTab invoice={invoice} onActionClick={handleTabAction} />
-          )}
-          {activeTab === 'Collections' && (
-            <div className="space-y-4">
-              <div style={{
-                padding: '12px 14px',
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={16} style={{ color: '#2563eb' }} />
-                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#1e3a8a' }}>
-                    Phase 5 Task 5.6: Adaptive Finance & Collections Intelligence Active
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  style={{
-                    padding: '5px 10px',
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    backgroundColor: '#2563eb',
-                    color: '#ffffff',
-                    borderRadius: '5px',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                  onClick={() => onActionClick?.('adaptiveCollections', invoice)}
-                  data-testid="btn-panel-open-adaptive-collections"
-                >
-                  Open Adaptive Drawer
-                </button>
-              </div>
-              <FinanceCollectionsPredictiveIntelligenceCard invoiceId={invoice.id} />
-              <FinanceCollectionsAutomationSection invoiceId={invoice.id} />
-            </div>
-          )}
-          {activeTab === 'Intelligence' && (
-            <InvoiceFinanceIntelligenceSection invoiceId={invoice.id} />
           )}
           {activeTab === 'Items' && (
             <InvoiceItemsTab invoice={invoice} />
@@ -451,6 +409,13 @@ export default function InvoiceDetailsPanel({
             </button>
             <button
               className="btn-panel-secondary"
+              onClick={handleDownloadPdf}
+              id="inv-footer-download-pdf-btn"
+            >
+              <Download size={15} /> Download PDF
+            </button>
+            <button
+              className="btn-panel-secondary"
               onClick={() => onActionClick?.('sendInvoice', invoice)}
             >
               <Mail size={15} /> Send Invoice
@@ -462,7 +427,8 @@ export default function InvoiceDetailsPanel({
           <>
             <button
               className="btn-panel-primary"
-              onClick={() => onActionClick?.('downloadPdf', invoice)}
+              onClick={handleDownloadPdf}
+              id="inv-footer-download-pdf-btn"
             >
               <Download size={15} /> Download PDF
             </button>
@@ -473,6 +439,16 @@ export default function InvoiceDetailsPanel({
               <Mail size={15} /> Email Receipt
             </button>
           </>
+        )}
+
+        {(invoice.status === 'Draft' || invoice.status === 'Pending Approval') && (
+          <button
+            className="btn-panel-secondary"
+            onClick={handleDownloadPdf}
+            id="inv-footer-download-pdf-btn"
+          >
+            <Download size={15} /> Download PDF
+          </button>
         )}
 
         {invoice.status === 'Cancelled' && (
@@ -500,10 +476,10 @@ export default function InvoiceDetailsPanel({
                     <Clock size={13} /> Send for Approval
                   </button>
                 )}
-                <button onClick={() => { setShowMoreActions(false); onActionClick?.('downloadPdf', invoice); }}>
+                <button onClick={() => { setShowMoreActions(false); handleDownloadPdf(); }}>
                   <Download size={13} /> Download PDF
                 </button>
-                <button onClick={() => { setShowMoreActions(false); window.print(); }}>
+                <button onClick={() => { setShowMoreActions(false); handleDownloadPdf(); }}>
                   <Printer size={13} /> Print Invoice
                 </button>
                 {invoice.status !== 'Paid' && (

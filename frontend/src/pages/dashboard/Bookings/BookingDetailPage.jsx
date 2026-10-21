@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Ship, Zap, ShieldCheck, RefreshCw, ArrowRight, Anchor, MapPin, 
@@ -6,6 +6,7 @@ import {
   Globe, ExternalLink, Sliders, ChevronRight, Check
 } from 'lucide-react';
 import bookingService from '../../../services/bookingService';
+import CarrierDocumentsCard from './CarrierDocumentsCard';
 import './BookingDetailPage.css';
 import './BookingsPage.css';
 
@@ -37,6 +38,19 @@ export default function BookingDetailPage() {
   const [autoProvisionTracking, setAutoProvisionTracking] = useState(true);
   const [submittingCarrierBook, setSubmittingCarrierBook] = useState(false);
   const [syncingCarrier, setSyncingCarrier] = useState(false);
+
+  // Timeline Scroll & Interaction State
+  const [isTimelineScrolledEnd, setIsTimelineScrolledEnd] = useState(false);
+  const timelineListRef = useRef(null);
+
+  const handleTimelineScroll = (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 20) {
+      setIsTimelineScrolledEnd(true);
+    } else {
+      setIsTimelineScrolledEnd(false);
+    }
+  };
 
   const loadBookingDetail = useCallback(async () => {
     try {
@@ -460,6 +474,13 @@ export default function BookingDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Card: Carrier Transport Documents (Task 3.5) */}
+          <CarrierDocumentsCard
+            bookingId={booking.id}
+            carrierName={booking.carrier_name}
+            carrierBookingRef={booking.carrier_booking_reference || booking.booking_number}
+          />
         </div>
 
         {/* RIGHT COLUMN: Cargo & Upstream Quotation Details */}
@@ -580,35 +601,68 @@ export default function BookingDetailPage() {
             </div>
 
             {activity_events && activity_events.length > 0 ? (
-              <div className="booking-timeline-list" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {activity_events.map((evt, idx) => (
-                  <div key={evt.id || idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
-                      background: evt.type?.includes('CONFIRMED') ? '#dcfce7' : evt.type?.includes('SHIPMENT') ? '#e0f2fe' : evt.type?.includes('REJECTED') ? '#fee2e2' : '#f1f5f9',
-                      color: evt.type?.includes('CONFIRMED') ? '#16a34a' : evt.type?.includes('SHIPMENT') ? '#0284c7' : evt.type?.includes('REJECTED') ? '#dc2626' : '#475569',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0, marginTop: '2px'
-                    }}>
-                      {evt.type?.includes('CONFIRMED') ? '✓' : evt.type?.includes('SHIPMENT') ? '🚢' : evt.type?.includes('REJECTED') ? '✕' : '•'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
-                          {evt.title ? evt.title.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : evt.type}
-                        </span>
-                        <span style={{ fontSize: '0.74rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
-                          {evt.timestamp ? new Date(evt.timestamp).toLocaleString() : ''}
-                        </span>
+              <div className="booking-timeline-container">
+                <div
+                  className="booking-timeline-list"
+                  ref={timelineListRef}
+                  onScroll={handleTimelineScroll}
+                >
+                  {activity_events.map((evt, idx) => (
+                    <div key={evt.id || idx} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '50%',
+                        background: evt.type?.includes('CONFIRMED') ? '#dcfce7' : evt.type?.includes('SHIPMENT') ? '#e0f2fe' : evt.type?.includes('REJECTED') ? '#fee2e2' : '#f1f5f9',
+                        color: evt.type?.includes('CONFIRMED') ? '#16a34a' : evt.type?.includes('SHIPMENT') ? '#0284c7' : evt.type?.includes('REJECTED') ? '#dc2626' : '#475569',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, flexShrink: 0, marginTop: '2px'
+                      }}>
+                        {evt.type?.includes('CONFIRMED') ? '✓' : evt.type?.includes('SHIPMENT') ? '🚢' : evt.type?.includes('REJECTED') ? '✕' : '•'}
                       </div>
-                      <p style={{ fontSize: '0.82rem', color: '#475569', margin: '4px 0 0 0', lineHeight: 1.4 }}>
-                        {evt.description}
-                      </p>
-                      <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
-                        Actor: <strong>{evt.actor_name || 'Operations Coordinator'}</strong>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>
+                            {evt.title ? evt.title.toLowerCase().replace(/\b\w/g, c => c.toUpperCase()) : evt.type}
+                          </span>
+                          <span style={{ fontSize: '0.74rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                            {evt.timestamp ? new Date(evt.timestamp).toLocaleString() : ''}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: '0.82rem', color: '#475569', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+                          {evt.description}
+                        </p>
+                        <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                          Actor: <strong>{evt.actor_name || 'Operations Coordinator'}</strong>
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+
+                {activity_events.length > 3 && (
+                  <div
+                    className="booking-timeline-scroll-cue"
+                    onClick={() => {
+                      if (!isTimelineScrolledEnd) {
+                        timelineListRef.current?.scrollBy({ top: 140, behavior: 'smooth' });
+                      } else {
+                        timelineListRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                    title={!isTimelineScrolledEnd ? "Click or scroll down to view more events" : "Click to scroll back to top"}
+                  >
+                    {!isTimelineScrolledEnd ? (
+                      <>
+                        <span style={{ fontSize: '0.9rem', color: '#2563eb' }}>↓</span>
+                        <span>Scroll down or swipe inside to view more ({activity_events.length} total)</span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ color: '#16a34a' }}>✓</span>
+                        <span>All {activity_events.length} audit events viewed • Click to return to top ↑</span>
+                      </>
+                    )}
                   </div>
-                ))}
+                )}
               </div>
             ) : (
               <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem' }}>

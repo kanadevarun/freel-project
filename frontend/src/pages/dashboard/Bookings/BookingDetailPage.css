@@ -891,3 +891,64 @@
   cursor: not-allowed;
 }
 
+/* Operational Audit & Activity Timeline Scrollable Container */
+.booking-timeline-container {
+  position: relative;
+  margin-top: 12px;
+}
+
+.booking-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+  scroll-behavior: smooth;
+}
+
+.booking-timeline-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.booking-timeline-list::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.booking-timeline-list::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.booking-timeline-list::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.booking-timeline-scroll-cue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #475569;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.booking-timeline-scroll-cue:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+

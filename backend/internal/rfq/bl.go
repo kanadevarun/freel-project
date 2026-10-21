@@ -17,6 +17,7 @@ import (
 	"github.com/freel/backend/internal/audit"
 	"github.com/freel/backend/internal/audit/domain"
 	"github.com/freel/backend/internal/carrier"
+	carrierDomain "github.com/freel/backend/internal/carrier/domain"
 	carrierService "github.com/freel/backend/internal/carrier/service"
 	"github.com/freel/backend/internal/common/events"
 	"github.com/freel/backend/internal/rates"
@@ -82,6 +83,7 @@ type BusinessLogic interface {
 	// Task 5: Live Carrier Booking Integration
 	BookWithCarrier(ctx context.Context, orgID int32, bookingID int64, req spec.BookWithCarrierRequest, user string) (*spec.BookingDetailResponse, error)
 	SyncCarrierBooking(ctx context.Context, orgID int32, bookingID int64, user string) (*spec.BookingDetailResponse, error)
+	GetCarrierDocuments(ctx context.Context, orgID int32, bookingID int64) ([]carrierDomain.NormalizedDocumentResult, error)
 	SetCarrierIntegrationService(carrierSvc carrierService.CarrierService)
 }
 
@@ -1570,6 +1572,17 @@ func (b *businessLogic) SyncCarrierBooking(ctx context.Context, orgID int32, boo
 	}
 	return b.carrierBookingEngine.SyncCarrierBooking(ctx, orgID, bookingID, user)
 }
+
+func (b *businessLogic) GetCarrierDocuments(ctx context.Context, orgID int32, bookingID int64) ([]carrierDomain.NormalizedDocumentResult, error) {
+	if orgID <= 0 || bookingID <= 0 {
+		return nil, svcerror.NewServiceError(svcerror.ErrInvalidArgument)
+	}
+	if b.carrierBookingEngine == nil {
+		return nil, svcerror.NewServiceError(svcerror.ErrInternal)
+	}
+	return b.carrierBookingEngine.GetCarrierDocuments(ctx, orgID, bookingID)
+}
+
 
 
 

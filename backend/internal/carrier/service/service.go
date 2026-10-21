@@ -22,7 +22,9 @@ var (
 	ErrDuplicateIntegration   = errors.New("an integration already exists for this carrier and environment")
 	ErrMissingCredentials     = errors.New("credentials must be provided to connect carrier")
 	ErrDecryptionFailed       = errors.New("failed to decrypt carrier credentials")
+	ErrEncryptionKeyMissing   = errors.New("carrier encryption key is not configured; cannot process credentials safely")
 	ErrCapabilityDisabled     = errors.New("requested capability is not enabled for this carrier integration")
+	ErrCapabilityNotSupported = errors.New("requested capability is not supported by this carrier adapter")
 	ErrIntegrationDisabled    = errors.New("carrier integration is currently disabled")
 )
 
@@ -70,13 +72,10 @@ type carrierService struct {
 }
 
 func NewCarrierService(repo repository.CarrierRepository, encryptionKey string) CarrierService {
-	if encryptionKey == "" {
-		encryptionKey = "LogisticsHQ_Carrier_Secret_Encryption_Key_32B!"
-	}
 	s := &carrierService{
 		repo:          repo,
 		registry:      adapters.GetDefaultRegistry(),
-		encryptionKey: encryptionKey,
+		encryptionKey: strings.TrimSpace(encryptionKey),
 	}
 	s.syncEngine = NewCarrierSyncEngine(nil, repo, s)
 	return s
@@ -96,7 +95,17 @@ func (s *carrierService) SetBookingSyncer(handler BookingSyncHandler) {
 }
 
 func (s *carrierService) GetProviders(ctx context.Context) ([]domain.CarrierProvider, error) {
-	return s.repo.ListProviders(ctx)
+	providers, err := s.repo.ListProviders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range providers {
+		adapter := s.registry.GetAdapterBySCAC(providers[i].SCAC)
+		if adapter != nil {
+			providers[i].SupportedCapabilities = adapter.SupportedCapabilities()
+		}
+	}
+	return providers, nil
 }
 
 func (s *carrierService) GetIntegrations(ctx context.Context, orgID int64) ([]domain.CarrierIntegrationView, error) {
@@ -174,6 +183,9 @@ func (s *carrierService) ConnectCarrier(ctx context.Context, orgID int64, userID
 	}
 
 	// Encrypt credentials at rest
+	if s.encryptionKey == "" {
+		return nil, ErrEncryptionKeyMissing
+	}
 	encryptedCreds, err := crypto.Encrypt(credsJSON, s.encryptionKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt carrier credentials: %w", err)
@@ -207,7 +219,7 @@ func (s *carrierService) ConnectCarrier(ctx context.Context, orgID int64, userID
 		Environment:          env,
 		ConnectionStatus:     domain.StatusDisconnected,
 		IsEnabled:            true,
-		CredentialsJSON:      &credsJSON,
+		CredentialsJSON:      nil, // Plaintext persistence removed; credentials stored encrypted only
 		EncryptedCredentials: &encryptedCreds,
 		CredentialMaskJSON:   &maskedJSONStr,
 		CapabilitiesJSON:     &capsJSONStr,
@@ -293,11 +305,14 @@ func (s *carrierService) UpdateCarrier(ctx context.Context, orgID int64, userID 
 	}
 
 	if credsJSON != "" {
+		if s.encryptionKey == "" {
+			return nil, ErrEncryptionKeyMissing
+		}
 		encryptedCreds, err := crypto.Encrypt(credsJSON, s.encryptionKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encrypt carrier credentials: %w", err)
 		}
-		ci.CredentialsJSON = &credsJSON
+		ci.CredentialsJSON = nil // Plaintext persistence removed; credentials stored encrypted only
 		ci.EncryptedCredentials = &encryptedCreds
 
 		maskedMap := domain.MaskCredentials(credsJSON)
@@ -552,7 +567,7 @@ func (s *carrierService) testIntegrationConnection(ctx context.Context, ci *doma
 	if err != nil {
 		return &domain.TestConnectionResult{
 			Success:   false,
-			Message:   "Failed to decrypt credentials: " + err.Error(),
+			Message:   "Failed to decrypt credentials: " + domain.SanitizeError(err),
 			ErrorCode: "DECRYPTION_ERROR",
 		}, nil
 	}
@@ -562,28 +577,37 @@ func (s *carrierService) testIntegrationConnection(ctx context.Context, ci *doma
 }
 
 func (s *carrierService) decryptCredentials(ci *domain.CarrierIntegration) (domain.DecryptedCredentials, error) {
+	if s.encryptionKey == "" {
+		return domain.DecryptedCredentials{}, ErrEncryptionKeyMissing
+	}
+
 	var rawJSON string
 
 	if ci.EncryptedCredentials != nil && *ci.EncryptedCredentials != "" {
 		decrypted, err := crypto.Decrypt(*ci.EncryptedCredentials, s.encryptionKey)
 		if err != nil {
-			// Fallback to cleartext if migration is in transition
-			if ci.CredentialsJSON != nil {
-				rawJSON = *ci.CredentialsJSON
-			} else {
-				return domain.DecryptedCredentials{}, ErrDecryptionFailed
-			}
-		} else {
-			rawJSON = decrypted
+			// Ciphertext is present but decryption failed (malformed ciphertext, invalid key, tampered).
+			// MUST fail safely with ErrDecryptionFailed. DO NOT fallback to plaintext.
+			return domain.DecryptedCredentials{}, ErrDecryptionFailed
 		}
-	} else if ci.CredentialsJSON != nil {
+		rawJSON = decrypted
+	} else if ci.CredentialsJSON != nil && *ci.CredentialsJSON != "" {
+		// Migration transition: only unencrypted credentials exist in the record.
+		// Encrypt on-the-fly and safely clear plaintext persistence.
 		rawJSON = *ci.CredentialsJSON
+		if encrypted, encErr := crypto.Encrypt(rawJSON, s.encryptionKey); encErr == nil {
+			ci.EncryptedCredentials = &encrypted
+			ci.CredentialsJSON = nil
+			_ = s.repo.UpdateIntegration(context.Background(), ci)
+		}
+	} else {
+		return domain.DecryptedCredentials{}, errors.New("no credentials configured for this integration")
 	}
 
 	var creds domain.DecryptedCredentials
 	if rawJSON != "" {
 		if err := json.Unmarshal([]byte(rawJSON), &creds); err != nil {
-			return domain.DecryptedCredentials{}, err
+			return domain.DecryptedCredentials{}, fmt.Errorf("failed to parse decrypted credentials: %w", err)
 		}
 	}
 	return creds, nil
@@ -651,6 +675,11 @@ func (s *carrierService) resolveIntegrationAndAdapter(ctx context.Context, orgID
 		return nil, nil, domain.DecryptedCredentials{}, ErrIntegrationDisabled
 	}
 
+	adapter := s.registry.GetAdapterBySCAC(ci.CarrierSCAC)
+	if adapter != nil && !adapter.SupportsCapability(requiredCap) {
+		return nil, nil, domain.DecryptedCredentials{}, ErrCapabilityNotSupported
+	}
+
 	// Capability enforcement
 	hasCap := false
 	for _, c := range ci.Capabilities {
@@ -669,7 +698,6 @@ func (s *carrierService) resolveIntegrationAndAdapter(ctx context.Context, orgID
 		return nil, nil, domain.DecryptedCredentials{}, err
 	}
 
-	adapter := s.registry.GetAdapterBySCAC(ci.CarrierSCAC)
 	return ci, adapter, creds, nil
 }
 

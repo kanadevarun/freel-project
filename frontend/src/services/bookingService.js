@@ -82,6 +82,15 @@ export const bookingService = {
   syncCarrierBooking: async (bookingId) => {
     return api.post(`/api/v1/bookings/${bookingId}/carrier-sync`, {});
   },
+
+  /**
+   * Retrieve carrier transport documents (e.g. Maersk Waybill, Bill of Lading).
+   * @param {number|string} bookingId
+   */
+  getCarrierDocuments: async (bookingId) => {
+    return api.get(`/api/v1/bookings/${bookingId}/carrier-documents`);
+  },
 };
 
 export default bookingService;
+

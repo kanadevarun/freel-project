@@ -25,7 +25,6 @@ import {
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
-  Sliders,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useRBAC } from '../../context/RBACContext';
@@ -38,7 +37,6 @@ const NAV_GROUPS = [
   {
     section: 'OPERATIONS',
     items: [
-      { path: '/dashboard/command-center', label: 'Command Center', Icon: Sliders, module: 'SHIPMENTS', action: 'READ' },
       { path: '/dashboard/leads', label: 'Leads', Icon: Target, badgeKey: 'open_leads', module: 'LEADS', action: 'READ' },
       { path: '/dashboard/rfqs', label: 'RFQs', Icon: FileText, badgeKey: 'open_rfqs', module: 'RFQS', action: 'READ' },
       { path: '/dashboard/shipments', label: 'Shipments', Icon: Ship, badgeKey: 'active_shipments', module: 'SHIPMENTS', action: 'READ' },

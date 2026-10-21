@@ -91,6 +91,7 @@ ai_sidecar/sidecar_stdout.log
 
 # --- Local configuration & secrets ---
 .env*
+!.env.example
 .vercel/
 
 # --- OS generated ---

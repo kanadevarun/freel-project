@@ -307,25 +307,26 @@
   color: #94a3b8;
 }
 
-/* Content Layout (Split Screen with Drawer Panel) */
+/* Content Layout (Always Full Width Table) */
 .dn-content-layout {
   display: flex;
   flex: 1;
   padding: 0 28px 28px;
-  gap: 20px;
   min-height: 420px;
-  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dn-table-wrap {
   flex: 1;
+  width: 100%;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: auto;
   min-width: 0;
 }
 
@@ -419,11 +420,11 @@
 }
 
 .dn-table th {
-  padding: 12px 16px;
+  padding: 13px 18px;
   background: #f8fafc;
   color: #475569;
   font-weight: 700;
-  font-size: 0.74rem;
+  font-size: 0.73rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid #e2e8f0;
@@ -431,7 +432,7 @@
 }
 
 .dn-table td {
-  padding: 14px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   vertical-align: middle;
@@ -452,32 +453,37 @@
 }
 
 .dn-dn-number {
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
   color: #2563eb;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .dn-customer-name {
   font-weight: 600;
   color: #0f172a;
   display: block;
+  white-space: nowrap;
 }
 
 .dn-customer-country {
   font-size: 0.74rem;
   color: #64748b;
   display: block;
+  margin-top: 1px;
 }
 
 .dn-invoice-link {
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, monospace;
   font-size: 0.78rem;
   color: #475569;
   background: #f1f5f9;
-  padding: 2px 7px;
+  padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .dn-none {
@@ -487,6 +493,8 @@
 .dn-amount {
   font-weight: 700;
   color: #0f172a;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  white-space: nowrap;
 }
 
 /* Status Pill */
@@ -501,11 +509,13 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   border: 1px solid currentColor;
+  white-space: nowrap;
 }
 
 .dn-date-cell {
   color: #64748b;
   font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* Row Action Buttons */
@@ -513,16 +523,33 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
 }
 
 .dn-row-btn {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
   border-radius: 6px;
   font-size: 0.74rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.dn-row-btn-pdf {
+  background: #f0fdf4;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+.dn-row-btn-pdf:hover {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
 }
 
 .dn-row-btn-issue {
@@ -585,21 +612,39 @@
   cursor: not-allowed;
 }
 
-/* Slide-over Drawer Panel Container */
-.dn-panel-drawer {
-  width: 440px;
-  flex-shrink: 0;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
-  overflow: hidden;
+/* =========================================================
+   Slide-Over Drawer Overlay with Dark Backdrop Shadow
+   ========================================================= */
+.dn-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
   display: flex;
-  flex-direction: column;
-  animation: dnSlideIn 0.25s ease-out;
+  justify-content: flex-end;
+  animation: dnBackdropFadeIn 0.2s ease-out;
 }
 
-@keyframes dnSlideIn {
-  from { transform: translateX(30px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+@keyframes dnBackdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dn-drawer-container {
+  width: 620px;
+  max-width: 95vw;
+  height: 100%;
+  background: #ffffff;
+  box-shadow: -8px 0 36px rgba(15, 23, 42, 0.28);
+  display: flex;
+  flex-direction: column;
+  animation: dnSlideInRight 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes dnSlideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }

@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus, Search, Filter, ChevronDown, X, Eye, Edit2, Send,
-  Download, MoreHorizontal, ArrowRight, RefreshCw, FileText,
+  Download, MoreHorizontal, ArrowRight, ArrowLeft, RefreshCw, FileText,
   ChevronLeft, ChevronRight, User, MapPin, Calendar, DollarSign,
   Clock, CheckCircle, XCircle, AlertCircle, TrendingUp,
   Trash2, Layers, Percent, Sparkles, Check, Info, ShieldAlert,
@@ -15,10 +16,9 @@ import {
 import quotationService from '../../../services/quotationService';
 import QuotationAnalyticsWorkspace from './QuotationAnalyticsWorkspace';
 import RateSelectionSection from './RateSelectionSection';
-import AutonomousCommercialLifecycleCard from './components/AutonomousCommercialLifecycleCard';
-import AutonomousRevenueOptimizationCard from './components/AutonomousRevenueOptimizationCard';
-import ModuleRecommendationsWidget from '../../../components/recommendations/ModuleRecommendationsWidget';
+
 import ModuleHeroEmptyState from '../../../components/dashboard/ModuleHeroEmptyState';
+import SHCBadge, { detectSHCCode } from '../../../components/common/SHCBadge';
 import './QuotationsPage.css';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -1522,7 +1522,32 @@ function PricingChargesTab({ quotation, onPricingUpdated, onOpenApplyTemplate, o
   };
 
   const items = pricing?.charge_items || [];
-  const summary = pricing?.summary;
+  const rawSummary = pricing?.summary;
+  const summary = useMemo(() => {
+    if (rawSummary && rawSummary.total_amount > 0) return rawSummary;
+    if (quotation && quotation.total_amount > 0) {
+      return {
+        currency: quotation.currency || 'USD',
+        freight_amount: quotation.subtotal || quotation.total_amount,
+        origin_charges: 0,
+        destination_charges: 0,
+        surcharges: quotation.surcharges || 0,
+        documentation_charges: 0,
+        customs_charges: 0,
+        insurance_charges: 0,
+        other_charges: 0,
+        taxes: quotation.taxes || 0,
+        discounts: 0,
+        subtotal: quotation.subtotal || quotation.total_amount,
+        total_amount: quotation.total_amount,
+        total_cost: quotation.total_cost || 0,
+        gross_profit: quotation.gross_profit || 0,
+        gross_margin_percentage: quotation.gross_margin_pct || 0,
+        margin_health: 'HEALTHY'
+      };
+    }
+    return rawSummary;
+  }, [rawSummary, quotation]);
 
   const grouped = items.reduce((acc, item) => {
     const cat = item.charge_category || 'OTHER';
@@ -1902,7 +1927,7 @@ function NewQuotationModal({ onClose, onCreated }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="qt-modal-overlay" onClick={onClose}>
       <div className="qt-modal" onClick={e => e.stopPropagation()}>
         <div className="qt-modal-header">
@@ -2028,7 +2053,8 @@ function NewQuotationModal({ onClose, onCreated }) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -2176,6 +2202,7 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
           </div>
           <div className="qt-detail-header-right">
             {q?.status && <StatusBadge status={q.status} />}
+            <SHCBadge item={q} size="sm" />
             <button className="qt-detail-close" onClick={onClose}><X size={16} /></button>
           </div>
         </div>
@@ -2248,14 +2275,7 @@ function QuotationDetailPanel({ quotationId, onClose, onQuotationUpdated, onOpen
       </div>
 
       <div className="qt-detail-body">
-        {!loading && (
-          <ModuleRecommendationsWidget
-            sourceType="QUOTATION"
-            sourceId={quotationId}
-            sourceRef={q?.quotation_number}
-            onRefreshNeeded={fetchDetail}
-          />
-        )}
+
         {loading ? (
           <div className="qt-detail-skeleton">
             {[80, 60, 90, 50, 70].map((w, i) => (
@@ -3132,7 +3152,7 @@ export default function QuotationsPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [validityFilter, setValidityFilter] = useState('ALL');
   const [page, setPage] = useState(1);
-  const LIMIT = 10;
+  const LIMIT = 25;
 
   const [viewMode, setViewMode] = useState('workspace'); // 'workspace' | 'analytics'
   const [selectedId, setSelectedId] = useState(null);
@@ -3170,7 +3190,7 @@ export default function QuotationsPage() {
   const fetchQuotations = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const status = tabToStatus(activeTab);
+    const status = statusFilter !== 'ALL' ? statusFilter : tabToStatus(activeTab);
     quotationService.listQuotations({
       search, status, validity: validityFilter, page, limit: LIMIT,
     }).then(res => {
@@ -3181,7 +3201,7 @@ export default function QuotationsPage() {
       setError('Failed to load quotations. Please try again.');
       console.error(err);
     }).finally(() => setLoading(false));
-  }, [activeTab, search, validityFilter, page, tabToStatus]);
+  }, [activeTab, statusFilter, search, validityFilter, page, tabToStatus]);
 
   useEffect(() => {
     fetchSummary();
@@ -3210,6 +3230,7 @@ export default function QuotationsPage() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    setStatusFilter('ALL');
     setPage(1);
   };
 
@@ -3228,25 +3249,28 @@ export default function QuotationsPage() {
   };
 
   return (
-    <div className={`qt-page ${selectedId && viewMode === 'workspace' ? 'qt-page--split' : ''}`}>
-      {/* ── Left Panel ── */}
+    <div className="qt-page">
+      {/* ── Main Workspace ── */}
       <div className="qt-main">
         {/* Header with Top-Level Workspace Switcher */}
         <div className="qt-header">
           <div className="qt-header-left">
             <div className="qt-top-nav-switcher">
               <button
-                className={`qt-top-nav-btn ${viewMode === 'workspace' ? 'active' : ''}`}
-                onClick={() => setViewMode('workspace')}
-              >
-                <FileText size={14} /> Quotations Workspace
-              </button>
-              <button
                 className={`qt-top-nav-btn ${viewMode === 'analytics' ? 'active' : ''}`}
-                onClick={() => setViewMode('analytics')}
+                onClick={() => setViewMode(v => v === 'analytics' ? 'workspace' : 'analytics')}
               >
                 <BarChart3 size={14} /> Performance & Analytics
               </button>
+              {viewMode === 'analytics' && (
+                <button
+                  className="qt-top-nav-btn"
+                  onClick={() => setViewMode('workspace')}
+                  style={{ marginLeft: '6px' }}
+                >
+                  <ArrowLeft size={14} /> Back to Quotations
+                </button>
+              )}
             </div>
             <p className="qt-subtitle" style={{ marginTop: '6px' }}>
               {viewMode === 'workspace'
@@ -3315,18 +3339,6 @@ export default function QuotationsPage() {
               })}
             </div>
 
-            {/* Phase 7.3 Autonomous Quote-to-Cash Commercial Lifecycle Operations */}
-            <AutonomousCommercialLifecycleCard
-              rfqId={quotes?.[0]?.rfq_number || quotes?.[0]?.rfq_id || "RFQ-2026-DEV-001"}
-              quotationId={selectedId || quotes?.[0]?.id}
-            />
-
-            {/* Phase 7.6 Autonomous Revenue & Margin Optimization Operations */}
-            <AutonomousRevenueOptimizationCard
-              entityType={selectedId ? "QUOTATION" : "RFQ"}
-              entityId={selectedId ? `QT-${selectedId}` : (quotes?.[0]?.rfq_number || "RFQ-2026-DEV-001")}
-            />
-
         {/* Status Tabs */}
         <div className="qt-tabs">
           {STATUS_TABS.map(tab => (
@@ -3358,7 +3370,7 @@ export default function QuotationsPage() {
               <span className="qt-filter-label">Status</span>
               <CustomSelect
                 value={statusFilter}
-                onChange={v => { setStatusFilter(v); setPage(1); }}
+                onChange={v => { setStatusFilter(v); setActiveTab('All'); setPage(1); }}
                 options={[
                   { value: 'ALL', label: 'All Statuses' },
                   ...Object.keys(STATUS_CONFIG).map(s => ({
@@ -3509,7 +3521,10 @@ export default function QuotationsPage() {
                               <span>{q.destination || '—'}{q.destination_code ? ` (${q.destination_code})` : ''}</span>
                             </div>
                             {q.service_type && (
-                              <div className="qt-cell-sub">{q.service_type} • {q.transport_mode}</div>
+                              <div className="qt-cell-sub" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '2px' }}>
+                                <span>{q.service_type} • {q.transport_mode}</span>
+                                <SHCBadge item={q} size="xs" variant="compact" />
+                              </div>
                             )}
                           </>
                         ) : <span className="qt-cell-empty">—</span>}
@@ -3617,14 +3632,22 @@ export default function QuotationsPage() {
         )}
       </div>
 
-      {/* ── Right Detail Panel ── */}
-      {selectedId && (
-        <QuotationDetailPanel
-          quotationId={selectedId}
-          onClose={() => setSelectedId(null)}
-          onQuotationUpdated={() => setRefreshKey(k => k + 1)}
-          onOpenTemplatesManager={() => setShowTemplatesDrawer(true)}
-        />
+      {/* ── Quotation Detail Slide-Over Drawer with Dark Shadow Overlay ── */}
+      {selectedId && createPortal(
+        <>
+          <div 
+            className="qt-drawer-overlay" 
+            onClick={() => setSelectedId(null)}
+            title="Click to close quotation details"
+          />
+          <QuotationDetailPanel
+            quotationId={selectedId}
+            onClose={() => setSelectedId(null)}
+            onQuotationUpdated={() => setRefreshKey(k => k + 1)}
+            onOpenTemplatesManager={() => setShowTemplatesDrawer(true)}
+          />
+        </>,
+        document.body
       )}
 
       {/* ── New Quotation Modal ── */}
@@ -3636,10 +3659,11 @@ export default function QuotationsPage() {
       )}
 
       {/* ── Reusable Templates Library Drawer ── */}
-      {showTemplatesDrawer && (
+      {showTemplatesDrawer && createPortal(
         <TemplatesManagementDrawer
           onClose={() => setShowTemplatesDrawer(false)}
-        />
+        />,
+        document.body
       )}
     </div>
   );

@@ -638,226 +638,6 @@ export default function OperationalDashboard({ data, user }) {
       {/* ════════════════════════════════════════════════════════════════════
           SECTION 3 — PRIORITY ACTIONS
           ════════════════════════════════════════════════════════════════════ */}
-      <section className="dashboard-priority-actions-section" aria-label="Priority Actions">
-        <div className="op-card priority-actions-card">
-          {/* Card Header with Real Operational Context */}
-          <div className="card-header-flex">
-            <div className="section-title-wrap">
-              <h2 className="op-card-title">
-                <AlertTriangle size={16} className="text-amber-500" />
-                Priority Actions
-                {attentionItems.length > 0 && (
-                  <span className="priority-count-pill">{attentionItems.length} require attention</span>
-                )}
-              </h2>
-              <span className="section-subtitle-text">
-                Real operational tasks requiring attention, prioritized by operational urgency and business impact.
-              </span>
-            </div>
-            <button
-              className="card-action-link-btn"
-              onClick={() => navigate('/dashboard/approvals')}
-              title="View all pending approvals"
-            >
-              View Approvals ({stats.pending_approvals ?? pendingApprovals.length ?? 0}) →
-            </button>
-          </div>
-
-          {/* Compact Summary & Filter Controls */}
-          <div className="priority-actions-filter-bar">
-            <div className="priority-filter-tabs" role="tablist" aria-label="Filter Priority Actions by Urgency">
-              <button
-                type="button"
-                className={`priority-filter-chip ${priorityFilter === 'ALL' ? 'active' : ''}`}
-                onClick={() => setPriorityFilter('ALL')}
-                role="tab"
-                aria-selected={priorityFilter === 'ALL'}
-              >
-                All <span className="chip-count">{attentionItems.length}</span>
-              </button>
-              <button
-                type="button"
-                className={`priority-filter-chip critical ${priorityFilter === 'CRITICAL' ? 'active' : ''}`}
-                onClick={() => setPriorityFilter('CRITICAL')}
-                role="tab"
-                aria-selected={priorityFilter === 'CRITICAL'}
-              >
-                <span className="priority-dot critical" />
-                Critical <span className="chip-count">{criticalCount}</span>
-              </button>
-              <button
-                type="button"
-                className={`priority-filter-chip important ${priorityFilter === 'IMPORTANT' ? 'active' : ''}`}
-                onClick={() => setPriorityFilter('IMPORTANT')}
-                role="tab"
-                aria-selected={priorityFilter === 'IMPORTANT'}
-              >
-                <span className="priority-dot important" />
-                Important <span className="chip-count">{importantCount}</span>
-              </button>
-              <button
-                type="button"
-                className={`priority-filter-chip informational ${priorityFilter === 'INFORMATIONAL' ? 'active' : ''}`}
-                onClick={() => setPriorityFilter('INFORMATIONAL')}
-                role="tab"
-                aria-selected={priorityFilter === 'INFORMATIONAL'}
-              >
-                <span className="priority-dot informational" />
-                Informational <span className="chip-count">{informationalCount}</span>
-              </button>
-            </div>
-
-            <div className="priority-actions-counter-summary">
-              <span className="counter-summary-text">
-                <strong>{criticalCount}</strong> Critical · <strong>{importantCount}</strong> Important · <strong>{informationalCount}</strong> Informational
-              </span>
-            </div>
-          </div>
-
-          {/* Priority Items Grid */}
-          <div className="priority-actions-items-container">
-            {filteredPriorityItems.length > 0 ? (
-              <div className="priority-actions-cards-list">
-                {filteredPriorityItems.map((item, idx) => {
-                  const isAllowed = checkItemPermission(item);
-                  const urgency = (item.urgency || item.priority || 'INFORMATIONAL').toUpperCase();
-                  const isCritical = urgency === 'CRITICAL';
-                  const isImportant = urgency === 'IMPORTANT' || urgency === 'HIGH';
-                  const severityClass = isCritical ? 'urgency-critical' : isImportant ? 'urgency-important' : 'urgency-informational';
-                  const severityLabel = isCritical ? 'Critical' : isImportant ? 'Important' : 'Informational';
-
-                  return (
-                    <article
-                      key={item.id ? `priority-${item.id}-${item.type || item.module || idx}` : `priority-idx-${idx}`}
-                      className={`priority-action-card ${severityClass} ${!isAllowed ? 'restricted' : ''}`}
-                      onClick={() => {
-                        if (isAllowed && item.action_url) {
-                          navigate(item.action_url);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (isAllowed && (e.key === 'Enter' || e.key === ' ')) {
-                          e.preventDefault();
-                          navigate(item.action_url || '/dashboard');
-                        }
-                      }}
-                      role="button"
-                      tabIndex={isAllowed ? 0 : -1}
-                      aria-label={`${severityLabel} task: ${item.title}`}
-                    >
-                      {/* Top metadata row */}
-                      <div className="card-top-meta">
-                        <div className="meta-left-badges">
-                          <span className={`urgency-badge ${severityClass}`}>
-                            <span className="badge-dot" />
-                            {severityLabel}
-                          </span>
-                          <span className="module-tag">{item.module || item.category || 'Operations'}</span>
-                          {item.source_reference && (
-                            <span className="source-ref-badge" title={`Reference: ${item.source_reference}`}>
-                              {item.source_reference}
-                            </span>
-                          )}
-                        </div>
-                        <div className="meta-right-indicators">
-                          {item.requires_approval && (
-                            <span className="approval-required-pill" title="Operational approval is required before execution">
-                              <CheckSquare size={11} /> Approval Required
-                            </span>
-                          )}
-                          {item.capability && (
-                            <span className="capability-pill">
-                              {item.capability === 'APPROVAL_GATED'
-                                ? 'Approval Gated'
-                                : item.capability === 'DRAFT_ONLY'
-                                ? 'Draft Only'
-                                : item.capability === 'READ_ONLY'
-                                ? 'Read-Only'
-                                : 'Actionable'}
-                            </span>
-                          )}
-                          {(item.age_text || item.timestamp) && (
-                            <span className="age-pill">
-                              <Clock size={11} /> {item.age_text || item.timestamp}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Content row */}
-                      <div className="card-content-body">
-                        <h3 className="card-item-title">{item.title}</h3>
-                        <p className="card-item-explanation">{item.explanation || item.subtitle}</p>
-                      </div>
-
-                      {/* Action row */}
-                      <div className="card-action-bar">
-                        {!isAllowed ? (
-                          <div className="restricted-permission-banner">
-                            <Lock size={12} className="text-amber-600" />
-                            <span>{`Restricted Access: Requires ${item.required_role || 'elevated'} permission to review`}</span>
-                          </div>
-                        ) : (
-                          <div className="action-buttons-group">
-                            <button
-                              type="button"
-                              className={`btn-priority-primary ${isCritical ? 'btn-critical' : isImportant ? 'btn-important' : 'btn-informational'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(item.action_url || '/dashboard');
-                              }}
-                            >
-                              {item.action_label || (item.requires_approval ? 'Review Approvals →' : 'Review →')}
-                            </button>
-                            {item.secondary_url && (
-                              <button
-                                type="button"
-                                className="btn-priority-secondary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(item.secondary_url);
-                                }}
-                              >
-                                View Record
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="priority-empty-state">
-                <div className="empty-icon-circle">
-                  <CheckCircle2 size={24} className="text-emerald-600" />
-                </div>
-                <div className="empty-text-wrap">
-                  <p className="empty-primary-msg">No priority actions require your attention right now.</p>
-                  <p className="empty-sub-msg">
-                    All operational tasks, shipment exceptions, approvals, and invoices are up to date.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 3.5 — PREDICTIVE DEMAND, CAPACITY & WORKLOAD INTELLIGENCE (TASK 4.10)
-          ════════════════════════════════════════════════════════════════════ */}
-      <WorkloadCapacityPredictiveCard defaultTab="summary" />
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTION 3.6 — PREDICTIVE RESOURCE ALLOCATION & BOTTLENECK INTELLIGENCE (TASK 4.11)
-          ════════════════════════════════════════════════════════════════════ */}
-      <ResourceBottleneckPredictiveCard defaultTab="summary" />
-
-      {/* ════════════════════════════════════════════════════════════════════
-          SECTIONS 4 & 5 — OPERATIONS OVERVIEW & FINANCE/APPROVALS (2-COL DESKTOP)
-          ════════════════════════════════════════════════════════════════════ */}
       <div className="dashboard-two-col-container">
         {/* ── SECTION A: OPERATIONS OVERVIEW ── */}
         <section className="dashboard-operations-column" aria-label="Operations Overview">
@@ -1234,6 +1014,215 @@ export default function OperationalDashboard({ data, user }) {
           </div>
         </section>
       </div>
+
+
+      <section className="dashboard-priority-actions-section" aria-label="Priority Actions">
+        <div className="op-card priority-actions-card">
+          {/* Card Header with Real Operational Context */}
+          <div className="card-header-flex">
+            <div className="section-title-wrap">
+              <h2 className="op-card-title">
+                <AlertTriangle size={16} className="text-amber-500" />
+                Priority Actions
+                {attentionItems.length > 0 && (
+                  <span className="priority-count-pill">{attentionItems.length} require attention</span>
+                )}
+              </h2>
+              <span className="section-subtitle-text">
+                Real operational tasks requiring attention, prioritized by operational urgency and business impact.
+              </span>
+            </div>
+            <button
+              className="card-action-link-btn"
+              onClick={() => navigate('/dashboard/approvals')}
+              title="View all pending approvals"
+            >
+              View Approvals ({stats.pending_approvals ?? pendingApprovals.length ?? 0}) →
+            </button>
+          </div>
+
+          {/* Compact Summary & Filter Controls */}
+          <div className="priority-actions-filter-bar">
+            <div className="priority-filter-tabs" role="tablist" aria-label="Filter Priority Actions by Urgency">
+              <button
+                type="button"
+                className={`priority-filter-chip ${priorityFilter === 'ALL' ? 'active' : ''}`}
+                onClick={() => setPriorityFilter('ALL')}
+                role="tab"
+                aria-selected={priorityFilter === 'ALL'}
+              >
+                All <span className="chip-count">{attentionItems.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`priority-filter-chip critical ${priorityFilter === 'CRITICAL' ? 'active' : ''}`}
+                onClick={() => setPriorityFilter('CRITICAL')}
+                role="tab"
+                aria-selected={priorityFilter === 'CRITICAL'}
+              >
+                <span className="priority-dot critical" />
+                Critical <span className="chip-count">{criticalCount}</span>
+              </button>
+              <button
+                type="button"
+                className={`priority-filter-chip important ${priorityFilter === 'IMPORTANT' ? 'active' : ''}`}
+                onClick={() => setPriorityFilter('IMPORTANT')}
+                role="tab"
+                aria-selected={priorityFilter === 'IMPORTANT'}
+              >
+                <span className="priority-dot important" />
+                Important <span className="chip-count">{importantCount}</span>
+              </button>
+              <button
+                type="button"
+                className={`priority-filter-chip informational ${priorityFilter === 'INFORMATIONAL' ? 'active' : ''}`}
+                onClick={() => setPriorityFilter('INFORMATIONAL')}
+                role="tab"
+                aria-selected={priorityFilter === 'INFORMATIONAL'}
+              >
+                <span className="priority-dot informational" />
+                Informational <span className="chip-count">{informationalCount}</span>
+              </button>
+            </div>
+
+            <div className="priority-actions-counter-summary">
+              <span className="counter-summary-text">
+                <strong>{criticalCount}</strong> Critical · <strong>{importantCount}</strong> Important · <strong>{informationalCount}</strong> Informational
+              </span>
+            </div>
+          </div>
+
+          {/* Priority Items Grid */}
+          <div className="priority-actions-items-container">
+            {filteredPriorityItems.length > 0 ? (
+              <div className="priority-actions-cards-list">
+                {filteredPriorityItems.map((item, idx) => {
+                  const isAllowed = checkItemPermission(item);
+                  const urgency = (item.urgency || item.priority || 'INFORMATIONAL').toUpperCase();
+                  const isCritical = urgency === 'CRITICAL';
+                  const isImportant = urgency === 'IMPORTANT' || urgency === 'HIGH';
+                  const severityClass = isCritical ? 'urgency-critical' : isImportant ? 'urgency-important' : 'urgency-informational';
+                  const severityLabel = isCritical ? 'Critical' : isImportant ? 'Important' : 'Informational';
+
+                  return (
+                    <article
+                      key={item.id ? `priority-${item.id}-${item.type || item.module || idx}` : `priority-idx-${idx}`}
+                      className={`priority-action-card ${severityClass} ${!isAllowed ? 'restricted' : ''}`}
+                      onClick={() => {
+                        if (isAllowed && item.action_url) {
+                          navigate(item.action_url);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (isAllowed && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          navigate(item.action_url || '/dashboard');
+                        }
+                      }}
+                      role="button"
+                      tabIndex={isAllowed ? 0 : -1}
+                      aria-label={`${severityLabel} task: ${item.title}`}
+                    >
+                      {/* Top metadata row */}
+                      <div className="card-top-meta">
+                        <div className="meta-left-badges">
+                          <span className={`urgency-badge ${severityClass}`}>
+                            <span className="badge-dot" />
+                            {severityLabel}
+                          </span>
+                          <span className="module-tag">{item.module || item.category || 'Operations'}</span>
+                          {item.source_reference && (
+                            <span className="source-ref-badge" title={`Reference: ${item.source_reference}`}>
+                              {item.source_reference}
+                            </span>
+                          )}
+                        </div>
+                        <div className="meta-right-indicators">
+                          {item.requires_approval && (
+                            <span className="approval-required-pill" title="Operational approval is required before execution">
+                              <CheckSquare size={11} /> Approval Required
+                            </span>
+                          )}
+                          {item.capability && (
+                            <span className="capability-pill">
+                              {item.capability === 'APPROVAL_GATED'
+                                ? 'Approval Gated'
+                                : item.capability === 'DRAFT_ONLY'
+                                ? 'Draft Only'
+                                : item.capability === 'READ_ONLY'
+                                ? 'Read-Only'
+                                : 'Actionable'}
+                            </span>
+                          )}
+                          {(item.age_text || item.timestamp) && (
+                            <span className="age-pill">
+                              <Clock size={11} /> {item.age_text || item.timestamp}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Content row */}
+                      <div className="card-content-body">
+                        <h3 className="card-item-title">{item.title}</h3>
+                        <p className="card-item-explanation">{item.explanation || item.subtitle}</p>
+                      </div>
+
+                      {/* Action row */}
+                      <div className="card-action-bar">
+                        {!isAllowed ? (
+                          <div className="restricted-permission-banner">
+                            <Lock size={12} className="text-amber-600" />
+                            <span>{`Restricted Access: Requires ${item.required_role || 'elevated'} permission to review`}</span>
+                          </div>
+                        ) : (
+                          <div className="action-buttons-group">
+                            <button
+                              type="button"
+                              className={`btn-priority-primary ${isCritical ? 'btn-critical' : isImportant ? 'btn-important' : 'btn-informational'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(item.action_url || '/dashboard');
+                              }}
+                            >
+                              {item.action_label || (item.requires_approval ? 'Review Approvals →' : 'Review →')}
+                            </button>
+                            {item.secondary_url && (
+                              <button
+                                type="button"
+                                className="btn-priority-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(item.secondary_url);
+                                }}
+                              >
+                                View Record
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="priority-empty-state">
+                <div className="empty-icon-circle">
+                  <CheckCircle2 size={24} className="text-emerald-600" />
+                </div>
+                <div className="empty-text-wrap">
+                  <p className="empty-primary-msg">No priority actions require your attention right now.</p>
+                  <p className="empty-sub-msg">
+                    All operational tasks, shipment exceptions, approvals, and invoices are up to date.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
 
       {/* ════════════════════════════════════════════════════════════════════
           SECTION C & D — RECENT BUSINESS ACTIVITY & OPERATIONAL REMINDERS

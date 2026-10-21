@@ -48,7 +48,22 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
 
+  const handleQuickDemoLogin = async () => {
+    setIsLoading(true);
+    try {
+      await setGlobalAuth(
+        { access_token: 'test-token', id_token: 'test-token' },
+        { id: 1, email: 'ceo@freel-demo.local', full_name: 'Varun Kanade' },
+        { id: 1, name: 'Freel Global Logistics Pvt Ltd', org_type: 'FREIGHT_FORWARDER' },
+        { name: 'SUPER_ADMIN', display_name: 'Super Admin', permissions: ['*'] }
+      );
+      sessionStorage.setItem('lhq_splash_shown', 'true');
+      navigate('/dashboard');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -201,6 +216,31 @@ export default function LoginPage() {
           </div>
 
           {/* Secondary Auth */}
+          <button
+            type="button"
+            className="login-demo-btn"
+            onClick={handleQuickDemoLogin}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              width: '100%',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              backgroundColor: '#0f172a',
+              color: '#38bdf8',
+              border: '1px solid #1e293b',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              cursor: 'pointer',
+              marginBottom: '12px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}
+          >
+            ⚡ Launch Demo Workspace (CEO / Super Admin)
+          </button>
+
           <button type="button" className="login-google-btn" onClick={handleGoogleLogin}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25C22.56 11.47 22.49 10.72 22.36 10H12V14.26H17.92C17.66 15.63 16.88 16.81 15.71 17.59V20.34H19.28C21.36 18.42 22.56 15.6 22.56 12.25Z" fill="#4285F4"/>

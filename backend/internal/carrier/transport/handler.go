@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/freel/backend/internal/carrier/domain"
 	"github.com/freel/backend/internal/carrier/service"
@@ -488,4 +489,57 @@ func (h *CarrierHandler) HandleCreateBooking(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	utils.Success(w, http.StatusCreated, "Carrier booking initiated successfully", result)
+}
+
+// HandleGetDocuments fetches carrier transport documents from the carrier adapter.
+// POST /api/v1/carrier-integrations/{id}/documents
+// GET  /api/v1/carrier-integrations/{id}/documents
+func (h *CarrierHandler) HandleGetDocuments(w http.ResponseWriter, r *http.Request) {
+	userCtx, ok := middleware.GetUserContext(r.Context())
+	if !ok || userCtx.OrgID <= 0 {
+		utils.Error(w, http.StatusUnauthorized, "Unauthorized", "AUTH_REQUIRED")
+		return
+	}
+
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid carrier integration ID", "INVALID_ID")
+		return
+	}
+
+	var req domain.DocumentRequest
+	if r.Method == http.MethodPost && r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+	if req.BookingNumber == "" {
+		req.BookingNumber = r.URL.Query().Get("booking_number")
+	}
+	if req.BookingNumber == "" {
+		req.BookingNumber = r.URL.Query().Get("ref")
+	}
+	if req.DocumentType == "" {
+		req.DocumentType = r.URL.Query().Get("document_type")
+	}
+
+	if strings.TrimSpace(req.BookingNumber) == "" {
+		utils.Error(w, http.StatusBadRequest, "Booking number or document reference is required", "MISSING_REFERENCE")
+		return
+	}
+
+	result, err := h.svc.GetDocuments(r.Context(), userCtx.OrgID, id, req)
+	if err != nil {
+		var intErr *domain.IntegrationError
+		if errors.As(err, &intErr) {
+			utils.Error(w, intErr.HTTPStatus, intErr.UserMessage, intErr.ErrorCode)
+			return
+		}
+		if errors.Is(err, service.ErrIntegrationNotFound) {
+			utils.Error(w, http.StatusNotFound, "Carrier integration not found", "NOT_FOUND")
+			return
+		}
+		utils.Error(w, http.StatusBadRequest, err.Error(), "CARRIER_DOCUMENTS_FAILED")
+		return
+	}
+	utils.Success(w, http.StatusOK, "Carrier documents retrieved successfully", result)
 }
